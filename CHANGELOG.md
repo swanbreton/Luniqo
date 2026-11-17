@@ -9,6 +9,7 @@ Chaque ligne cite son ticket Jira `LUN-<n>`.
 
 ### Ajouté
 
+- Stratégie de gestion des erreurs (`docs/projet/ERREURS.md`) : état des lieux de l'API et du front, contrat cible (message, code stable, erreurs par champ, identifiant de requête), catalogue de toutes les erreurs levées par l'API, traitement par catégorie côté front, marche à suivre pour ajouter une erreur ; critère ajouté à la Definition of Done (LUN-129).
 - Historique des fiches de ménage : tâches cochées sur une période, annulées comprises, filtrables par pièce, et export CSV pour un contrôle (tableur en français, formules neutralisées) (LUN-71).
 - Comptes des employés : la direction crée le compte et transmet un lien d'invitation à usage unique, l'employé choisit son mot de passe ; départ d'un salarié avec fermeture immédiate de ses sessions ; changement de mot de passe qui ferme les autres sessions (LUN-55).
 - Documentation de l'API complétée (Swagger, `/api/docs`) : présentation de l'authentification et des conventions, chaque route décrite avec ses erreurs possibles et leurs messages, cookies déclarés comme schémas de sécurité, exemple pour chaque corps de requête ; schéma validé à chaque test (LUN-118).
