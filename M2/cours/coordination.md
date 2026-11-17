@@ -89,7 +89,14 @@ l'[issue #86](https://github.com/zharrow/Luniqo/issues/86). Mission et déroulé
 répond `all_external_contributors` ; `GET /repos/zharrow/Luniqo/rules/branches/staging`
 répond `required_approving_review_count` = 1 (export dans
 [.github/rulesets/staging.json](../../.github/rulesets/staging.json)) ; étiquette
-`stage` et issue #86 créées.
+`stage` et issue #86 créées. **Onboarding rejoué** le même jour depuis un clone
+neuf de la branche de la PR, en suivant les étapes 2 et 3 (projet Compose et
+port distincts, une autre pile occupant le port 8080) : pile saine en 30 s,
+6 comptes de démonstration créés, `/`, `/api/health` et `/api/docs` en 200 ;
+API : 368 tests unitaires puis 609 avec l'intégration, `ruff` sans remarque ;
+front : installation, lint, typage et 169 tests verts, contrat de l'API
+régénéré sans différence. Ni la connexion dans le navigateur, ni Storybook,
+ni `pnpm dev` n'ont été ouverts.
 
 **À vérifier le jour du stage**, avec le compte du stagiaire : sa CI attend
 l'accord ; il ne peut ni pousser sur le dépôt ni approuver une PR ; sa PR fait
