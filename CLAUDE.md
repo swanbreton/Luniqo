@@ -65,6 +65,8 @@ corepack pnpm storybook              # http://127.0.0.1:6006
 E2E_PASSWORD=… corepack pnpm test:e2e   # Playwright contre une pile neuve
 ```
 
+L’accueil affiche le résumé de chaque crèche (`GET /api/v2/nurseries/{id}/summary`, LUN-124) : enfants aux statuts `CAN_ATTEND`, présents du jour à Paris et employés actifs ayant accès. Chaque carte charge et actualise ses chiffres indépendamment ; états et vérifications : [docs/projet/nursery-summary.md](docs/projet/nursery-summary.md).
+
 Stack : React 19 + Vite 8, TypeScript 6 strict, React Compiler, TanStack Router (routes par fichier) et Query, `openapi-fetch` + `openapi-react-query`, Tailwind v4 + shadcn/ui, React Hook Form + Zod 4, Storybook 10, Vitest 5 + MSW 3, Playwright, ESLint 10. Détail : [front/README.md](front/README.md), choix : [ADR-002](M2/decisions/ADR-002-front-v2.md). Pièges rencontrés : la CLI shadcn a installé un paquet `cn` non demandé (relire ses ajouts) ; MSW 3 nomme `onUnhandledFrame` l'ancien `onUnhandledRequest` ; le Dialog de Radix injecte une balise `<style>` refusée par la CSP, d'où l'élément natif `<dialog>` dans `src/components/ui/dialog.tsx` (LUN-121).
 
 ### Pile Docker (`docker/`)

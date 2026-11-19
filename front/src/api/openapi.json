@@ -3611,6 +3611,111 @@
         ]
       }
     },
+    "/api/v2/nurseries/{nursery_id}/summary": {
+      "get": {
+        "tags": [
+          "crèches"
+        ],
+        "summary": "Résumé de la crèche",
+        "description": "Résumé de la crèche : enfants accueillis, présents aujourd'hui à Paris et personnel actif.\n\n« Accueillis » suit les statuts CAN_ATTEND (active et adaptation).\n« Présents » compte les arrivées du jour sans départ ; une présence annulée\nest retirée du pointage et ne compte plus. Le personnel comprend uniquement\nles employés actifs ayant un accès à cette crèche.",
+        "operationId": "get_nursery_summary_api_v2_nurseries__nursery_id__summary_get",
+        "parameters": [
+          {
+            "name": "nursery_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Nursery Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NurserySummary"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentification requise",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "Authentification requise": {
+                    "value": {
+                      "detail": "Authentification requise"
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Action non autorisée pour ce rôle ; Second facteur requis",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "Action non autorisée pour ce rôle": {
+                    "value": {
+                      "detail": "Action non autorisée pour ce rôle"
+                    }
+                  },
+                  "Second facteur requis": {
+                    "value": {
+                      "detail": "Second facteur requis"
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Crèche introuvable",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "Crèche introuvable": {
+                    "value": {
+                      "detail": "Crèche introuvable"
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "webSession": []
+          }
+        ]
+      }
+    },
     "/api/v2/nurseries/{nursery_id}/staff": {
       "get": {
         "tags": [
@@ -13318,6 +13423,35 @@
           "is_active"
         ],
         "title": "NurseryOut"
+      },
+      "NurserySummary": {
+        "properties": {
+          "children": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Children",
+            "description": "Enfants aux statuts active ou adaptation (CAN_ATTEND)"
+          },
+          "present": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Present",
+            "description": "Enfants arrivés sans départ aujourd'hui, en heure de Paris"
+          },
+          "staff": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Staff",
+            "description": "Employés actifs ayant un accès à la crèche"
+          }
+        },
+        "type": "object",
+        "required": [
+          "children",
+          "present",
+          "staff"
+        ],
+        "title": "NurserySummary"
       },
       "NurseryUpdate": {
         "properties": {

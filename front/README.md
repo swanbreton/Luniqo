@@ -18,6 +18,12 @@ changement du PIN de tablette par l'employé (LUN-119) ; historique des présenc
 sur une période et export CSV (LUN-92). La v1 reste en
 production jusqu'à la bascule, prévue quand la v2 sera complète.
 
+Sur l'accueil, chaque crèche accessible affiche ses enfants accueillis (actifs
+et en adaptation), les enfants présents aujourd'hui à Paris et les employés
+actifs ayant accès. Les résumés sont relus toutes les 30 secondes ; une erreur
+reste dans la carte concernée, avec un bouton « Réessayer », et ses liens restent
+utilisables.
+
 ## Lancer
 
 Prérequis : Node 22.12 ou plus, pnpm 11 (la version exacte est dans

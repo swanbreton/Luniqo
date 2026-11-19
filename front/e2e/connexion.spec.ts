@@ -24,6 +24,19 @@ async function login(page: Page, email: string, secret = password) {
   await page.getByRole('button', { name: 'Se connecter' }).click()
 }
 
+async function expectSummary(page: Page, name: string, children: number, present: number, staff: number) {
+  const card = page.getByRole('region', { name })
+  for (const [label, value] of [
+    ['Enfants accueillis', children],
+    ['Présents en ce moment', present],
+    ['Personnel', staff],
+  ] as const) {
+    await expect(card.getByText(label, { exact: true }).locator('xpath=following-sibling::dd')).toHaveText(
+      String(value),
+    )
+  }
+}
+
 test.describe.configure({ mode: 'serial' })
 
 // Codes de secours de la direction, montrés à l'activation : les parcours suivants s'en servent.
@@ -36,6 +49,7 @@ test('employé : connexion puis ses crèches, sans second facteur', async ({ pag
   await login(page, 'employe@demo.test')
   await expect(page.getByRole('heading', { name: 'Bonjour Lucas' })).toBeVisible()
   await expect(page.getByText('Crèche Démo Nord')).toBeVisible()
+  await expectSummary(page, 'Crèche Démo Nord', 3, 0, 1)
   // L'employé n'a accès qu'à sa crèche : l'isolation vient de l'API.
   await expect(page.getByText('Micro-crèche Démo Sud')).toHaveCount(0)
   expect(errors).toEqual([])
@@ -47,7 +61,7 @@ test('mot de passe refusé', async ({ page }) => {
   await expect(page.getByRole('alert')).toHaveText('Identifiants invalides')
 })
 
-test("direction : activation de l'application d'authentification, puis second facteur", async ({ page }) => {
+test("direction : activation de l'application d'authentification, puis second facteur", async ({ page }, testInfo) => {
   const errors = watchConsole(page)
   await page.goto('/connexion')
   await login(page, 'direction@demo.test')
@@ -63,6 +77,11 @@ test("direction : activation de l'application d'authentification, puis second fa
   await page.getByRole('button', { name: "J'ai noté mes codes" }).click()
   await expect(page.getByRole('heading', { name: 'Bonjour Camille' })).toBeVisible()
   await expect(page.getByText('Micro-crèche Démo Sud')).toBeVisible()
+  await page.setViewportSize({ width: 800, height: 600 })
+  await expectSummary(page, 'Crèche Démo Nord', 3, 0, 1)
+  await expectSummary(page, 'Micro-crèche Démo Sud', 1, 0, 1)
+  expect(await page.evaluate<boolean>('document.documentElement.scrollWidth <= window.innerWidth')).toBe(true)
+  await page.screenshot({ path: testInfo.outputPath('accueil-800x600.png'), fullPage: true })
 
   // Connexion suivante : le code est demandé.
   await page.getByRole('button', { name: 'Se déconnecter' }).click()

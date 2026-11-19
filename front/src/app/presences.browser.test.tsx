@@ -3,7 +3,7 @@ import { http, HttpResponse } from 'msw'
 import { describe, expect } from 'vitest'
 import { render } from 'vitest-browser-react'
 
-import { dayAttendance, employee, nursery } from '../../test/fixtures'
+import { dayAttendance, employee, nursery, nurserySummary } from '../../test/fixtures'
 import { test } from '../../test/msw'
 import { App, createApp } from './app'
 
@@ -17,6 +17,7 @@ describe('présences du jour', () => {
     worker.use(
       http.get('/api/v2/auth/me', () => HttpResponse.json(employee)),
       http.get('/api/v2/nurseries', () => HttpResponse.json([nursery])),
+      http.get(`/api/v2/nurseries/${nursery.id}/summary`, () => HttpResponse.json(nurserySummary)),
       http.get(`/api/v2/nurseries/${nursery.id}`, () => HttpResponse.json(nursery)),
       http.get(`/api/v2/nurseries/${nursery.id}/attendance`, () => HttpResponse.json(dayAttendance)),
     )

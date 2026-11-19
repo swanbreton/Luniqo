@@ -3,7 +3,7 @@ import { http, HttpResponse } from 'msw'
 import { describe, expect } from 'vitest'
 import { render } from 'vitest-browser-react'
 
-import { employee, nursery, owner } from '../../test/fixtures'
+import { employee, nursery, nurserySummary, owner } from '../../test/fixtures'
 import { test } from '../../test/msw'
 import { App, createApp } from './app'
 
@@ -80,6 +80,7 @@ describe('connexion', () => {
         return HttpResponse.json(session)
       }),
       http.get('/api/v2/nurseries', () => HttpResponse.json([nursery])),
+      http.get(`/api/v2/nurseries/${nursery.id}/summary`, () => HttpResponse.json(nurserySummary)),
     )
     const screen = await start('/connexion')
     await screen.getByLabelText('Adresse e-mail').fill('direction@demo.test')

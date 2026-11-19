@@ -18,6 +18,12 @@ class NurseryOut(BaseModel):
     is_active: bool = Field(description="Faux : crèche fermée, ses tablettes ne fonctionnent plus")
 
 
+class NurserySummary(BaseModel):
+    children: int = Field(ge=0, description="Enfants aux statuts active ou adaptation (CAN_ATTEND)")
+    present: int = Field(ge=0, description="Enfants arrivés sans départ aujourd'hui, en heure de Paris")
+    staff: int = Field(ge=0, description="Employés actifs ayant un accès à la crèche")
+
+
 class NurseryCreate(BaseModel):
     model_config = ConfigDict(json_schema_extra={"examples": [
         {"name": "Les Petits Pas", "address": "1 rue de l'Exemple", "postal_code": "31000", "city": "Toulouse",
