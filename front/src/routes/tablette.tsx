@@ -4,7 +4,7 @@ import { CircleCheck } from 'lucide-react'
 import { useEffect, useState } from 'react'
 
 import { $api } from '@/api/client'
-import { ApiError, ERROR_CODES, errorMessage } from '@/api/errors'
+import { ApiError, ERROR_CODES, errorCategory, errorMessage } from '@/api/errors'
 import type { Schemas } from '@/api/types'
 import { FormError } from '@/components/form-error'
 import { Alert, AlertDescription } from '@/components/ui/alert'
@@ -70,7 +70,7 @@ function TabletPage() {
   }
 
   if (info.isPending || actor.isPending) return <Screen>Chargement…</Screen>
-  if (info.error instanceof ApiError && info.error.status === 401) return <NotEnrolled />
+  if (errorCategory(info.error) === 'authentication') return <NotEnrolled />
   if (info.isError) {
     return (
       <Screen>
@@ -140,7 +140,7 @@ function ActorWorkspace({ actor, onEnd, ending, onSessionLost }: ActorWorkspaceP
     void expected.refetch()
   }
   function failed(error: unknown) {
-    if (error instanceof ApiError && error.status === 401) onSessionLost()
+    if (errorCategory(error) === 'authentication') onSessionLost()
   }
   const arrival = $api.useMutation('post', '/api/v2/tablet/children/{child_id}/arrival', {
     onSuccess: (presence) => pointed(`Arrivée de ${presence.child_name} pointée à ${formatTime(presence.arrived_at)}.`),

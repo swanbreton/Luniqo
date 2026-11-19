@@ -2,7 +2,7 @@ import { type QueryClient, queryOptions } from '@tanstack/react-query'
 import { z } from 'zod'
 
 import { fetchClient } from '@/api/client'
-import { ApiError } from '@/api/errors'
+import { errorCategory } from '@/api/errors'
 import type { Session } from '@/api/types'
 
 /**
@@ -27,7 +27,7 @@ export async function loadSession(queryClient: QueryClient): Promise<Session | n
   try {
     return await queryClient.query(sessionQuery)
   } catch (error) {
-    if (error instanceof ApiError && error.status === 401) return null
+    if (errorCategory(error) === 'authentication') return null
     throw error
   }
 }

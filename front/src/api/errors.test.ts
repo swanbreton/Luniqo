@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { ApiError, errorMessage, toApiError } from './errors'
+import { ApiError, type ErrorCategory, errorCategory, errorMessage, isRetryable, toApiError } from './errors'
 
 describe('toApiError', () => {
   it("reprend le message et le code de l'API", () => {
@@ -11,11 +11,10 @@ describe('toApiError', () => {
     expect(error.code).toBe('invalid_credentials')
   })
 
-  it('ajoute le délai de Retry-After, en minutes arrondies au-dessus', () => {
+  it('lit le délai de Retry-After sans l’écrire dans le message (décompté à l’écran)', () => {
     const error = toApiError(429, { detail: 'Trop de tentatives, réessayez plus tard' }, '61')
     expect(error.retryAfter).toBe(61)
-    expect(error.message).toBe('Trop de tentatives, réessayez plus tard (dans 2 minutes)')
-    expect(toApiError(429, { detail: 'Attendez' }, '30').message).toBe('Attendez (dans 1 minute)')
+    expect(error.message).toBe('Trop de tentatives, réessayez plus tard')
   })
 
   it('ignore un Retry-After qui n’est pas un nombre de secondes', () => {
@@ -82,5 +81,46 @@ describe('errorMessage', () => {
     expect(errorMessage(toApiError(502, '<html>', null))).toBe(
       'Le service est momentanément indisponible. Réessayez dans un instant.',
     )
+  })
+})
+
+describe('errorCategory', () => {
+  it.for<[number, ErrorCategory]>([
+    [400, 'validation'],
+    [401, 'authentication'],
+    [403, 'forbidden'],
+    [404, 'not_found'],
+    [409, 'conflict'],
+    [422, 'validation'],
+    [423, 'locked'],
+    [429, 'too_many_attempts'],
+    [500, 'server'],
+    [502, 'server'],
+    [503, 'server'],
+    [418, 'unexpected'],
+  ])('%i → %s', ([status, category]) => {
+    expect(errorCategory(new ApiError(status, 'message'))).toBe(category)
+  })
+
+  it('coupure réseau : fetch lève une TypeError', () => {
+    expect(errorCategory(new TypeError('Failed to fetch'))).toBe('network')
+  })
+
+  it('toute autre erreur est inattendue', () => {
+    expect(errorCategory(new Error('rendu'))).toBe('unexpected')
+    expect(errorCategory(undefined)).toBe('unexpected')
+  })
+})
+
+describe('isRetryable', () => {
+  it('panne du serveur ou du réseau : un nouvel essai peut réussir', () => {
+    expect(isRetryable(new ApiError(503, 'indisponible'))).toBe(true)
+    expect(isRetryable(new TypeError('Failed to fetch'))).toBe(true)
+  })
+
+  it('refus (4xx) ou erreur inattendue : réessayer ne change rien', () => {
+    for (const status of [400, 401, 403, 404, 409, 422, 423, 429])
+      expect(isRetryable(new ApiError(status, 'refus'))).toBe(false)
+    expect(isRetryable(new Error('rendu'))).toBe(false)
   })
 })

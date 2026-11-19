@@ -42,9 +42,7 @@ describe('connexion', () => {
     await screen.getByLabelText('Adresse e-mail').fill('employe@demo.test')
     await screen.getByLabelText('Mot de passe').fill('x')
     await screen.getByRole('button', { name: 'Se connecter' }).click()
-    await expect
-      .element(screen.getByRole('alert'))
-      .toHaveTextContent('Trop de tentatives, réessayez plus tard (dans 15 minutes)')
+    await expect.element(screen.getByText('Trop de tentatives, réessayez plus tard', { exact: true })).toBeVisible()
   })
 
   test("valide la saisie avant d'appeler l'API", async ({ worker }) => {
