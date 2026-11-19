@@ -4,7 +4,7 @@ import { CircleCheck } from 'lucide-react'
 import { useEffect, useState } from 'react'
 
 import { $api } from '@/api/client'
-import { ApiError, errorMessage } from '@/api/errors'
+import { ApiError, ERROR_CODES, errorMessage } from '@/api/errors'
 import type { Schemas } from '@/api/types'
 import { FormError } from '@/components/form-error'
 import { Alert, AlertDescription } from '@/components/ui/alert'
@@ -26,7 +26,7 @@ export const Route = createFileRoute('/tablette')({
 })
 
 // Refus qui renvoient à la liste : l'état de l'employé a changé (PIN bloqué, ou plus de PIN).
-const BACK_TO_LIST = new Set([409, 423])
+const BACK_TO_LIST = new Set<string | null>([ERROR_CODES.pinNotSet, ERROR_CODES.pinLocked])
 
 function TabletPage() {
   const queryClient = useQueryClient()
@@ -41,7 +41,7 @@ function TabletPage() {
       setMember(null)
     },
     onError: (error) => {
-      if (error instanceof ApiError && BACK_TO_LIST.has(error.status)) {
+      if (error instanceof ApiError && BACK_TO_LIST.has(error.code)) {
         setNotice(error.message)
         setMember(null)
         void info.refetch()

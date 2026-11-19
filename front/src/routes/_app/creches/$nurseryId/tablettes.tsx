@@ -3,7 +3,7 @@ import { createFileRoute, Link, redirect } from '@tanstack/react-router'
 import { CircleCheck, LogOut } from 'lucide-react'
 
 import { $api } from '@/api/client'
-import { errorMessage } from '@/api/errors'
+import { errorMessage, fieldErrorsOf } from '@/api/errors'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -79,6 +79,7 @@ function TabletsPage() {
               onSubmit={(body) => enroll.mutate({ ...params, body })}
               pending={enroll.isPending}
               error={enroll.isError ? errorMessage(enroll.error) : null}
+              fieldErrors={fieldErrorsOf(enroll.error)}
             />
           )}
         </CardContent>

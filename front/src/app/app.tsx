@@ -1,7 +1,7 @@
 import { MutationCache, QueryCache, QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { createRouter, type RouterHistory, RouterProvider } from '@tanstack/react-router'
 
-import { ApiError } from '@/api/errors'
+import { ApiError, ERROR_CODES } from '@/api/errors'
 import { routeTree } from '@/routeTree.gen'
 
 /**
@@ -11,8 +11,9 @@ import { routeTree } from '@/routeTree.gen'
 export function createApp(history?: RouterHistory) {
   /**
    * Erreurs communes traitées à un seul endroit (ADR-002 § 4) : session expirée
-   * (401) → connexion ; second facteur à présenter (403) → écran du second
-   * facteur. Les autres erreurs restent aux écrans, qui les affichent.
+   * (401) → connexion ; second facteur à présenter (code `mfa_required`) → écran
+   * du second facteur. Décision sur le code, jamais sur le texte du message.
+   * Les autres erreurs restent aux écrans, qui les affichent.
    */
   function onApiError(error: Error, meta: Record<string, unknown> | undefined) {
     if (!(error instanceof ApiError) || meta?.handlesAuthErrors === true) return
@@ -22,7 +23,7 @@ export function createApp(history?: RouterHistory) {
     if (error.status === 401) {
       queryClient.removeQueries({ queryKey: ['session'] })
       void router.navigate({ to: '/connexion', search: { redirect: href } })
-    } else if (error.status === 403 && error.message === 'Second facteur requis') {
+    } else if (error.code === ERROR_CODES.mfaRequired) {
       void router.navigate({ to: '/connexion/second-facteur' })
     }
   }

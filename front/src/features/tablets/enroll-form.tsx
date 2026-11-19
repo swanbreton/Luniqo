@@ -5,6 +5,7 @@ import { z } from 'zod'
 import { Field } from '@/components/field'
 import { FormError } from '@/components/form-error'
 import { Button } from '@/components/ui/button'
+import { type FieldMap, type ServerFieldErrors, useServerFieldErrors } from '@/lib/server-field-errors'
 
 // Mêmes bornes que l'API (TabletCreate) ; l'API reste la référence.
 const schema = z.object({
@@ -13,18 +14,23 @@ const schema = z.object({
 
 export type EnrollValues = z.infer<typeof schema>
 
+const FIELDS: FieldMap<EnrollValues> = { label: 'label' }
+
 type EnrollFormProps = {
   onSubmit: (values: EnrollValues) => void
   pending?: boolean
   error?: string | null
+  /** Erreurs par champ renvoyées par l'API (422), affichées sous chaque champ. */
+  fieldErrors?: ServerFieldErrors | undefined
 }
 
 /**
  * Enrôle l'appareil sur lequel la page est ouverte : l'API pose le cookie
  * d'appareil sur ce navigateur. D'où l'avertissement, avant le bouton.
  */
-export function EnrollForm({ onSubmit, pending = false, error = null }: EnrollFormProps) {
+export function EnrollForm({ onSubmit, pending = false, error = null, fieldErrors }: EnrollFormProps) {
   const form = useForm<EnrollValues>({ resolver: zodResolver(schema), defaultValues: { label: '' } })
+  useServerFieldErrors(form, fieldErrors, FIELDS)
   const { errors } = form.formState
 
   return (

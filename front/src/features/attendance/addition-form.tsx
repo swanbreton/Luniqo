@@ -5,8 +5,19 @@ import type { Schemas } from '@/api/types'
 import { Field, SelectField, TextareaField } from '@/components/field'
 import { FormError } from '@/components/form-error'
 import { Button } from '@/components/ui/button'
+import { type FieldMap, type ServerFieldErrors, useServerFieldErrors } from '@/lib/server-field-errors'
 
 import { additionBody, additionSchema, type AdditionValues, correctableDays, guardianName, NOBODY } from './correction'
+
+// Champs de l'API (PresenceCreate) → champs du formulaire. Le jour se déduit des heures.
+const FIELDS: FieldMap<AdditionValues> = {
+  child_id: 'childId',
+  arrived_at: 'arrival',
+  departed_at: 'departure',
+  dropped_off_by: 'droppedOffBy',
+  picked_up_by: 'pickedUpBy',
+  reason: 'reason',
+}
 
 type AdditionFormProps = {
   /** Enfants de la crèche. */
@@ -21,6 +32,8 @@ type AdditionFormProps = {
   onSubmit: (body: Schemas['PresenceCreate']) => void
   pending?: boolean
   error?: string | null
+  /** Erreurs par champ renvoyées par l'API (422), affichées sous chaque champ. */
+  fieldErrors?: ServerFieldErrors | undefined
 }
 
 /** Présence oubliée (arrivée jamais pointée), ajoutée après coup par la direction, avec un motif. */
@@ -33,6 +46,7 @@ export function AdditionForm({
   onSubmit,
   pending = false,
   error = null,
+  fieldErrors,
 }: AdditionFormProps) {
   const days = correctableDays(today)
   const form = useForm<AdditionValues>({
@@ -47,6 +61,7 @@ export function AdditionForm({
       reason: '',
     },
   })
+  useServerFieldErrors(form, fieldErrors, FIELDS)
   const { errors } = form.formState
   const child = form.register('childId')
 
