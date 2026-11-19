@@ -4,6 +4,7 @@ import { expect } from 'storybook/test'
 import { ApiError } from '@/api/errors'
 
 import { periodAttendance } from '../../../test/fixtures'
+import { apiErrors, networkFailure, raised } from '../../../test/handlers/errors'
 import { HistoryBoard } from './history-board'
 
 const meta = {
@@ -37,4 +38,20 @@ export const AucunePresence: Story = { args: { presences: [] } }
 
 export const Erreur: Story = {
   args: { presences: undefined, error: new ApiError(422, 'Période limitée à 366 jours par requête') },
+}
+
+/** Exception imprévue côté serveur (500), après les nouveaux essais automatiques de la lecture. */
+export const ErreurServeur: Story = {
+  args: { ...Erreur.args, error: raised(apiErrors.serverError()) },
+  play: async ({ canvas }) => {
+    await expect(canvas.getByRole('alert')).toHaveTextContent('Une erreur est survenue de notre côté.')
+  },
+}
+
+/** Coupure réseau : aucune réponse de l'API. */
+export const HorsLigne: Story = {
+  args: { ...Erreur.args, error: networkFailure() },
+  play: async ({ canvas }) => {
+    await expect(canvas.getByRole('alert')).toHaveTextContent('Connexion au serveur impossible. Vérifiez le réseau.')
+  },
 }

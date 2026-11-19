@@ -1,9 +1,9 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { expect } from 'storybook/test'
 
-import { ApiError } from '@/api/errors'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 
+import { apiErrors, networkFailure, raised } from '../../../test/handlers/errors'
 import { NurserySummaryFigures } from './nursery-summary'
 
 const meta = {
@@ -54,9 +54,25 @@ export const Zero: Story = {
 
 export const Erreur: Story = {
   args: {
-    error: new ApiError(503, 'Le service est momentanément indisponible. Réessayez dans un instant.'),
+    error: raised(apiErrors.unavailable()),
   },
   play: async ({ canvas }) => {
     await expect(canvas.getByRole('alert')).toHaveTextContent('Impossible de charger le résumé.')
+  },
+}
+
+/** Exception imprévue côté serveur (500), après les nouveaux essais automatiques de la lecture. */
+export const ErreurServeur: Story = {
+  args: { ...Erreur.args, error: raised(apiErrors.serverError()) },
+  play: async ({ canvas }) => {
+    await expect(canvas.getByRole('alert')).toHaveTextContent('Une erreur est survenue de notre côté.')
+  },
+}
+
+/** Coupure réseau : aucune réponse de l'API. */
+export const HorsLigne: Story = {
+  args: { ...Erreur.args, error: networkFailure() },
+  play: async ({ canvas }) => {
+    await expect(canvas.getByRole('alert')).toHaveTextContent('Connexion au serveur impossible. Vérifiez le réseau.')
   },
 }

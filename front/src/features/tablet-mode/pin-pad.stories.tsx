@@ -1,6 +1,9 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { expect, fn } from 'storybook/test'
 
+import { errorMessage } from '@/api/errors'
+
+import { apiErrors, networkFailure, raised } from '../../../test/handlers/errors'
 import { PinPad } from './pin-pad'
 
 const meta = {
@@ -44,6 +47,26 @@ export const EnCours: Story = { args: { pending: true } }
 
 export const PinIncorrect: Story = { args: { error: 'PIN incorrect' } }
 
+/** Trop de PIN faux sur la tablette (429) : le délai de `Retry-After` est ajouté au message. */
 export const TropDErreurs: Story = {
-  args: { error: "Trop d'erreurs de PIN sur cette tablette, réessayez plus tard" },
+  args: { error: raised(apiErrors.tabletThrottled()).message },
+  play: async ({ canvas }) => {
+    await expect(canvas.getByRole('alert')).toHaveTextContent('réessayez plus tard (dans 10 minutes)')
+  },
+}
+
+/** Exception imprévue côté serveur (500) : message générique, rien n'est rejoué tout seul. */
+export const ErreurServeur: Story = {
+  args: { error: raised(apiErrors.serverError()).message },
+  play: async ({ canvas }) => {
+    await expect(canvas.getByRole('alert')).toHaveTextContent('Une erreur est survenue de notre côté.')
+  },
+}
+
+/** Coupure réseau : aucune réponse de l'API (la demande a pu partir ou non). */
+export const HorsLigne: Story = {
+  args: { error: errorMessage(networkFailure()) },
+  play: async ({ canvas }) => {
+    await expect(canvas.getByRole('alert')).toHaveTextContent('Connexion au serveur impossible. Vérifiez le réseau.')
+  },
 }

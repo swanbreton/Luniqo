@@ -1,9 +1,8 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { expect } from 'storybook/test'
 
-import { ApiError } from '@/api/errors'
-
 import { dayAttendance } from '../../../test/fixtures'
+import { apiErrors, networkFailure, raised } from '../../../test/handlers/errors'
 import { DayBoard } from './day-board'
 
 const meta = {
@@ -32,5 +31,21 @@ export const Chargement: Story = { args: { presences: undefined, pending: true }
 export const AucunPointage: Story = { args: { presences: [] } }
 
 export const Erreur: Story = {
-  args: { presences: undefined, error: new ApiError(404, 'Crèche introuvable') },
+  args: { presences: undefined, error: raised(apiErrors.nurseryNotFound()) },
+}
+
+/** Exception imprévue côté serveur (500), après les nouveaux essais automatiques de la lecture. */
+export const ErreurServeur: Story = {
+  args: { ...Erreur.args, error: raised(apiErrors.serverError()) },
+  play: async ({ canvas }) => {
+    await expect(canvas.getByRole('alert')).toHaveTextContent('Une erreur est survenue de notre côté.')
+  },
+}
+
+/** Coupure réseau : aucune réponse de l'API. */
+export const HorsLigne: Story = {
+  args: { ...Erreur.args, error: networkFailure() },
+  play: async ({ canvas }) => {
+    await expect(canvas.getByRole('alert')).toHaveTextContent('Connexion au serveur impossible. Vérifiez le réseau.')
+  },
 }
