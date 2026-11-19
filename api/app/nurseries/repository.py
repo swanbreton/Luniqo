@@ -1,17 +1,23 @@
 """Accès aux données des crèches. Implémentation en mémoire pour les tests : tests/nurseries/fakes.py."""
 
 import uuid
+from datetime import date
 from typing import Protocol
 
-from sqlalchemy import delete, select
+from sqlalchemy import delete, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.attendance.models import Attendance
+from app.attendance.policy import CAN_ATTEND
 from app.auth.models import AppUser, UserRole
+from app.children.models import Child
 from app.nurseries.models import Nursery, NurseryAccess
+from app.nurseries.schemas import NurserySummary
 
 
 class NurseryRepository(Protocol):
     async def get(self, nursery_id: uuid.UUID) -> Nursery | None: ...
+    async def get_summary(self, nursery_id: uuid.UUID, day: date) -> NurserySummary: ...
     async def list_for_enterprise(self, enterprise_id: uuid.UUID, *, include_inactive: bool) -> list[Nursery]: ...
     async def list_granted(self, user_id: uuid.UUID) -> list[Nursery]: ...
     async def is_granted(self, user_id: uuid.UUID, nursery_id: uuid.UUID) -> bool: ...
@@ -31,6 +37,23 @@ class SqlNurseryRepository:
 
     async def get(self, nursery_id: uuid.UUID) -> Nursery | None:
         return await self.session.get(Nursery, nursery_id)
+
+    async def get_summary(self, nursery_id: uuid.UUID, day: date) -> NurserySummary:
+        # Trois sous-requêtes indépendantes : une seule lecture, sans multiplier
+        # les enfants par leurs présences ou les accès du personnel.
+        children = select(func.count()).select_from(Child).where(
+            Child.nursery_id == nursery_id, Child.status.in_(CAN_ATTEND))
+        present = select(func.count()).select_from(Attendance).where(
+            Attendance.nursery_id == nursery_id, Attendance.day == day, Attendance.departed_at.is_(None))
+        staff = select(func.count()).select_from(AppUser).join(
+            NurseryAccess, NurseryAccess.user_id == AppUser.id).where(
+                NurseryAccess.nursery_id == nursery_id, AppUser.role == UserRole.EMPLOYEE, AppUser.is_active)
+        row = (await self.session.execute(select(
+            children.scalar_subquery().label("children"),
+            present.scalar_subquery().label("present"),
+            staff.scalar_subquery().label("staff"),
+        ))).one()
+        return NurserySummary(**row._mapping)
 
     async def list_for_enterprise(self, enterprise_id: uuid.UUID, *, include_inactive: bool) -> list[Nursery]:
         statement = select(Nursery).where(Nursery.enterprise_id == enterprise_id).order_by(Nursery.name)

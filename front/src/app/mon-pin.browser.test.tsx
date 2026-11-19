@@ -3,7 +3,7 @@ import { http, HttpResponse } from 'msw'
 import { describe, expect } from 'vitest'
 import { render } from 'vitest-browser-react'
 
-import { employee, nursery, owner } from '../../test/fixtures'
+import { employee, nursery, nurserySummary, owner } from '../../test/fixtures'
 import { test } from '../../test/msw'
 import { App, createApp } from './app'
 
@@ -18,6 +18,7 @@ describe('PIN de tablette', () => {
     worker.use(
       http.get('/api/v2/auth/me', () => HttpResponse.json(employee)),
       http.get('/api/v2/nurseries', () => HttpResponse.json([nursery])),
+      http.get(`/api/v2/nurseries/${nursery.id}/summary`, () => HttpResponse.json(nurserySummary)),
       http.put('/api/v2/auth/me/pin', async ({ request }) => {
         sent = await request.json()
         return new HttpResponse(null, { status: 204 })
@@ -58,6 +59,7 @@ describe('PIN de tablette', () => {
     worker.use(
       http.get('/api/v2/auth/me', () => HttpResponse.json({ ...owner, mfa: 'verified' })),
       http.get('/api/v2/nurseries', () => HttpResponse.json([nursery])),
+      http.get(`/api/v2/nurseries/${nursery.id}/summary`, () => HttpResponse.json(nurserySummary)),
     )
     const { app, screen } = await start('/mon-pin')
     await expect.element(screen.getByRole('heading', { name: 'Bonjour Camille' })).toBeVisible()

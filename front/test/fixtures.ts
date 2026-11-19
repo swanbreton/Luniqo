@@ -34,6 +34,8 @@ export const nursery: Schemas['NurseryOut'] = {
   is_active: true,
 }
 
+export const nurserySummary: Schemas['NurserySummary'] = { children: 12, present: 8, staff: 4 }
+
 /** Tablette de la Crèche Démo Nord, vue depuis la tablette elle-même (`GET /api/v2/tablet`). */
 export const tabletInfo: Schemas['TabletInfo'] = {
   tablet_id: '00000000-0000-4000-8000-0000000000a1',

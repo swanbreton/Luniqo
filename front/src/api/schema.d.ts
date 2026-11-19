@@ -375,6 +375,31 @@ export interface paths {
         patch: operations["update_nursery_api_v2_nurseries__nursery_id__patch"];
         trace?: never;
     };
+    "/api/v2/nurseries/{nursery_id}/summary": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Résumé de la crèche
+         * @description Résumé de la crèche : enfants accueillis, présents aujourd'hui à Paris et personnel actif.
+         *
+         *     « Accueillis » suit les statuts CAN_ATTEND (active et adaptation).
+         *     « Présents » compte les arrivées du jour sans départ ; une présence annulée
+         *     est retirée du pointage et ne compte plus. Le personnel comprend uniquement
+         *     les employés actifs ayant un accès à cette crèche.
+         */
+        get: operations["get_nursery_summary_api_v2_nurseries__nursery_id__summary_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v2/nurseries/{nursery_id}/staff": {
         parameters: {
             query?: never;
@@ -2309,6 +2334,24 @@ export interface components {
              * @description Faux : crèche fermée, ses tablettes ne fonctionnent plus
              */
             is_active: boolean;
+        };
+        /** NurserySummary */
+        NurserySummary: {
+            /**
+             * Children
+             * @description Enfants aux statuts active ou adaptation (CAN_ATTEND)
+             */
+            children: number;
+            /**
+             * Present
+             * @description Enfants arrivés sans départ aujourd'hui, en heure de Paris
+             */
+            present: number;
+            /**
+             * Staff
+             * @description Employés actifs ayant un accès à la crèche
+             */
+            staff: number;
         };
         /**
          * NurseryUpdate
@@ -4918,6 +4961,64 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Error"] | components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_nursery_summary_api_v2_nurseries__nursery_id__summary_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                nursery_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NurserySummary"];
+                };
+            };
+            /** @description Authentification requise */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Action non autorisée pour ce rôle ; Second facteur requis */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Crèche introuvable */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };

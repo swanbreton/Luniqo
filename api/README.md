@@ -34,6 +34,7 @@ sans mot de passe par passkey. Pas encore de données réelles
 | `GET /api/v2/nurseries` | Crèches accessibles : toutes celles de l'entreprise (direction, `?include_inactive=true` pour les fermées), celles accordées (employé) |
 | `POST /api/v2/nurseries` | Créer une crèche dans son entreprise (direction) |
 | `GET /api/v2/nurseries/{id}` | Lire une crèche (404 si inexistante **ou** inaccessible) |
+| `GET /api/v2/nurseries/{id}/summary` | Résumé pour la direction et les employés ayant accès : `children` (statuts active et adaptation), `present` (arrivés sans départ aujourd'hui à Paris), `staff` (employés actifs avec accès) ; 404 si inexistante ou inaccessible |
 | `PATCH /api/v2/nurseries/{id}` | Modifier ou fermer une crèche (direction) |
 | `GET /api/v2/nurseries/{id}/staff` | Employés ayant accès à la crèche (direction) |
 | `PUT`, `DELETE /api/v2/nurseries/{id}/staff/{user_id}` | Accorder, retirer l'accès d'un employé de l'entreprise (direction) ; effet immédiat |

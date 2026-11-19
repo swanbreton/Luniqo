@@ -5,7 +5,7 @@ import { render } from 'vitest-browser-react'
 
 import type { Schemas } from '@/api/types'
 
-import { employee, nursery, owner, tablet } from '../../test/fixtures'
+import { employee, nursery, nurserySummary, owner, tablet } from '../../test/fixtures'
 import { test } from '../../test/msw'
 import { App, createApp } from './app'
 
@@ -24,6 +24,7 @@ describe('tablettes', () => {
     worker.use(
       http.get('/api/v2/auth/me', () => HttpResponse.json(director)),
       http.get('/api/v2/nurseries', () => HttpResponse.json([nursery])),
+      http.get(`/api/v2/nurseries/${nursery.id}/summary`, () => HttpResponse.json(nurserySummary)),
       http.get(`/api/v2/nurseries/${nursery.id}`, () => HttpResponse.json(nursery)),
       http.get(TABLETS, () => HttpResponse.json(tablets)),
       http.post(TABLETS, async ({ request }) => {
@@ -93,6 +94,7 @@ describe('tablettes', () => {
     worker.use(
       http.get('/api/v2/auth/me', () => HttpResponse.json(employee)),
       http.get('/api/v2/nurseries', () => HttpResponse.json([nursery])),
+      http.get(`/api/v2/nurseries/${nursery.id}/summary`, () => HttpResponse.json(nurserySummary)),
     )
     const { app, screen } = await start(`/creches/${nursery.id}/tablettes`)
     await expect.element(screen.getByRole('heading', { name: 'Bonjour Lucas' })).toBeVisible()

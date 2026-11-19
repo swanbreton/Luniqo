@@ -9,7 +9,8 @@ Chaque ligne cite son ticket Jira `LUN-<n>`.
 
 ### Ajouté
 
-- Stratégie de gestion des erreurs (`docs/projet/ERREURS.md`) : état des lieux de l'API et du front, contrat cible (message, code stable, erreurs par champ, identifiant de requête), catalogue de toutes les erreurs levées par l'API, traitement par catégorie côté front, marche à suivre pour ajouter une erreur ; critère ajouté à la Definition of Done (LUN-129).
+- API : résumé de chaque crèche (`GET /api/v2/nurseries/{id}/summary`) avec les enfants accueillis (actifs et en adaptation), présents du jour à Paris et employés actifs ayant accès ; mêmes contrôles d'accès que la lecture d'une crèche (LUN-124).
+- Front v2 : chaque carte de l'accueil affiche les enfants accueillis, présents et le personnel de la crèche, avec actualisation toutes les 30 secondes ; chargement, valeurs nulles et erreur locale avec possibilité de réessayer, sans bloquer les autres cartes ni leurs liens ; présentation adaptée à 800 × 600 (LUN-124).
 - Historique des fiches de ménage : tâches cochées sur une période, annulées comprises, filtrables par pièce, et export CSV pour un contrôle (tableur en français, formules neutralisées) (LUN-71).
 - Comptes des employés : la direction crée le compte et transmet un lien d'invitation à usage unique, l'employé choisit son mot de passe ; départ d'un salarié avec fermeture immédiate de ses sessions ; changement de mot de passe qui ferme les autres sessions (LUN-55).
 - Documentation de l'API complétée (Swagger, `/api/docs`) : présentation de l'authentification et des conventions, chaque route décrite avec ses erreurs possibles et leurs messages, cookies déclarés comme schémas de sécurité, exemple pour chaque corps de requête ; schéma validé à chaque test (LUN-118).

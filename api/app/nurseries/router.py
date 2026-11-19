@@ -5,11 +5,12 @@ from typing import Annotated
 
 from fastapi import APIRouter, HTTPException, Query, status
 
+from app.attendance.policy import local_day
 from app.auth.dependencies import NowDep
 from app.auth.models import UserRole
 from app.nurseries.dependencies import ManagedNursery, NurseryRepositoryDep, OwnerUser, ReadableNursery, StaffUser
 from app.nurseries.models import Nursery, NurseryAccess
-from app.nurseries.schemas import EmployeeOut, NurseryCreate, NurseryOut, NurseryUpdate, StaffOut
+from app.nurseries.schemas import EmployeeOut, NurseryCreate, NurseryOut, NurserySummary, NurseryUpdate, StaffOut
 from app.openapi import error_responses
 
 router = APIRouter(prefix="/api/v2", tags=["crèches"])
@@ -41,6 +42,18 @@ async def create_nursery(body: NurseryCreate, user: OwnerUser, repo: NurseryRepo
 async def get_nursery(context: ReadableNursery) -> NurseryOut:
     """Une crèche : celles de l'entreprise pour la direction, celles accordées pour un employé."""
     return NurseryOut.model_validate(context.nursery)
+
+
+@router.get("/nurseries/{nursery_id}/summary")
+async def get_nursery_summary(context: ReadableNursery, repo: NurseryRepositoryDep, now: NowDep) -> NurserySummary:
+    """Résumé de la crèche : enfants accueillis, présents aujourd'hui à Paris et personnel actif.
+
+    « Accueillis » suit les statuts CAN_ATTEND (active et adaptation).
+    « Présents » compte les arrivées du jour sans départ ; une présence annulée
+    est retirée du pointage et ne compte plus. Le personnel comprend uniquement
+    les employés actifs ayant un accès à cette crèche.
+    """
+    return await repo.get_summary(context.nursery.id, local_day(now))
 
 
 @router.patch("/nurseries/{nursery_id}",

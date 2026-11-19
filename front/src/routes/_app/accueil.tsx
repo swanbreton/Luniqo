@@ -3,6 +3,7 @@ import { ClipboardList, KeyRound, Tablet } from 'lucide-react'
 
 import { $api } from '@/api/client'
 import { NurseryList } from '@/features/nurseries/nursery-list'
+import { NurserySummary } from '@/features/nurseries/nursery-summary'
 
 export const Route = createFileRoute('/_app/accueil')({
   component: HomePage,
@@ -29,6 +30,7 @@ function HomePage() {
             nurseries={nurseries.data}
             pending={nurseries.isPending}
             error={nurseries.error}
+            summary={(nursery) => <NurserySummary nurseryId={nursery.id} />}
             actions={(nursery) => (
               <div className="flex flex-wrap gap-x-5">
                 <Link
