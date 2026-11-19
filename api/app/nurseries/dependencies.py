@@ -14,19 +14,20 @@ from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
 from typing import Annotated
 
-from fastapi import Depends, HTTPException, status
+from fastapi import Depends, status
 
 from app.auth.dependencies import CurrentUser
 from app.auth.models import AppUser, UserRole
 from app.db import SessionDep
+from app.errors import ApiError, ErrorSpec
 from app.nurseries.access import Access, nursery_access
 from app.nurseries.models import Nursery
 from app.nurseries.repository import NurseryRepository, SqlNurseryRepository
 from app.openapi import raises
 
-ROLE_REFUSED = (status.HTTP_403_FORBIDDEN, "Action non autorisée pour ce rôle")
-NURSERY_NOT_FOUND = (status.HTTP_404_NOT_FOUND, "Crèche introuvable")
-MANAGE_REFUSED = (status.HTTP_403_FORBIDDEN, "Seule la direction peut gérer cette crèche")
+ROLE_REFUSED = ErrorSpec(status.HTTP_403_FORBIDDEN, "role_refused", "Action non autorisée pour ce rôle")
+NURSERY_NOT_FOUND = ErrorSpec(status.HTTP_404_NOT_FOUND, "nursery_not_found", "Crèche introuvable")
+MANAGE_REFUSED = ErrorSpec(status.HTTP_403_FORBIDDEN, "manager_required", "Seule la direction peut gérer cette crèche")
 
 
 async def get_nursery_repository(session: SessionDep) -> NurseryRepository:
@@ -40,7 +41,7 @@ def require_role(*roles: UserRole) -> Callable[[AppUser], Awaitable[AppUser]]:
     @raises(ROLE_REFUSED)
     async def dependency(user: CurrentUser) -> AppUser:
         if user.role not in roles:
-            raise HTTPException(*ROLE_REFUSED)
+            raise ApiError(ROLE_REFUSED)
         return user
 
     return dependency
@@ -66,13 +67,13 @@ async def readable_nursery(nursery_id: uuid.UUID, user: StaffUser, repo: Nursery
         access = nursery_access(user, nursery, granted=granted)
         if access >= Access.READ:
             return NurseryContext(nursery, user, access)
-    raise HTTPException(*NURSERY_NOT_FOUND)
+    raise ApiError(NURSERY_NOT_FOUND)
 
 
 @raises(MANAGE_REFUSED)
 async def managed_nursery(context: Annotated[NurseryContext, Depends(readable_nursery)]) -> NurseryContext:
     if context.access < Access.MANAGE:
-        raise HTTPException(*MANAGE_REFUSED)
+        raise ApiError(MANAGE_REFUSED)
     return context
 
 

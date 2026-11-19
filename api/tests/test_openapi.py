@@ -6,6 +6,7 @@ exemple les font échouer.
 """
 
 import dataclasses
+import re
 
 import pytest
 from fastapi.testclient import TestClient
@@ -13,6 +14,7 @@ from openapi_spec_validator import validate
 
 from app.config import get_settings
 from app.main import app, create_app
+from app.openapi import documented_codes, undocumented_errors
 
 # Routes ouvertes sans session : connexion (mot de passe ou passkey), déconnexion, invitations, sonde.
 PUBLIC = {
@@ -59,15 +61,23 @@ def test_seules_les_routes_publiques_sont_sans_securite(schema):
     assert unsecured == PUBLIC
 
 
-def test_chaque_erreur_documente_son_corps(schema):
+def test_chaque_erreur_documente_son_corps_et_ses_codes(schema):
     for name, operation in operations(schema):
         for code, response in operation["responses"].items():
-            if int(code) < 400:
+            if int(code) < 400 or name == "GET /api/health":  # la sonde garde son propre corps
                 continue
             media = response["content"]["application/json"]
-            assert "schema" in media, f"{name} {code}"
-            # Les 422 de la seule validation de FastAPI n'ont pas d'exemple : le message dépend du champ.
-            assert media.get("examples") or code == "422", f"{name} {code}"
+            assert media["schema"] == {"$ref": "#/components/schemas/Error"}, f"{name} {code}"
+            assert media["examples"], f"{name} {code}"
+            for example in media["examples"].values():
+                assert example["value"]["detail"], f"{name} {code}"
+                assert re.fullmatch(r"[a-z][a-z0-9_]*", example["value"]["code"]), f"{name} {code}"
+
+
+def test_toute_route_avec_entree_documente_la_422_de_validation(schema):
+    for name, operation in operations(schema):
+        if operation.get("parameters") or "requestBody" in operation:
+            assert "validation_error" in documented_codes(operation["responses"]["422"]), name
 
 
 def test_chaque_corps_de_requete_a_un_exemple(schema):
@@ -81,14 +91,12 @@ def test_chaque_corps_de_requete_a_un_exemple(schema):
 def test_erreurs_des_dependances_reportees_sur_la_route(schema):
     # PATCH d'une crèche : session, second facteur, rôle, accès à la crèche, origine.
     responses = schema["paths"]["/api/v2/nurseries/{nursery_id}"]["patch"]["responses"]
-    assert set(responses["401"]["content"]["application/json"]["examples"]) == {"Authentification requise"}
-    assert set(responses["403"]["content"]["application/json"]["examples"]) == {
-        "Second facteur requis", "Action non autorisée pour ce rôle",
-        "Seule la direction peut gérer cette crèche", "Origine de la requête refusée"}
-    assert "Crèche introuvable" in responses["404"]["content"]["application/json"]["examples"]
+    assert documented_codes(responses["401"]) == {"auth_required"}
+    assert documented_codes(responses["403"]) == {"mfa_required", "role_refused", "manager_required", "origin_refused"}
+    assert "nursery_not_found" in documented_codes(responses["404"])
     # Une lecture n'est pas soumise au contrôle de l'origine.
     get = schema["paths"]["/api/v2/nurseries/{nursery_id}"]["get"]["responses"]
-    assert "Origine de la requête refusée" not in get["403"]["content"]["application/json"]["examples"]
+    assert "origin_refused" not in documented_codes(get["403"])
 
 
 def test_securite_des_routes_de_tablette(schema):
@@ -104,14 +112,38 @@ def test_noms_des_cookies_selon_la_configuration(schema):
     assert schemes["tabletAction"]["name"] == f"{prefix}luniqo_tablet"
 
 
-def test_422_de_la_route_et_de_la_validation(schema):
+def test_422_au_corps_unique(schema):
+    # Validation de FastAPI et refus métier : un seul corps, `Error`, avec ses `fields`.
     response = schema["paths"]["/api/v2/nurseries/{nursery_id}"]["patch"]["responses"]["422"]
-    assert response["content"]["application/json"]["schema"] == {"anyOf": [
-        {"$ref": "#/components/schemas/Error"}, {"$ref": "#/components/schemas/HTTPValidationError"}]}
+    assert response["content"]["application/json"]["schema"] == {"$ref": "#/components/schemas/Error"}
+    assert documented_codes(response) == {"validation_error"}
+    assert "HTTPValidationError" not in schema["components"]["schemas"]
 
 
-def test_retry_after_documente_sur_la_connexion(schema):
-    assert "Retry-After" in schema["paths"]["/api/v2/auth/login"]["post"]["responses"]["429"]["headers"]
+def test_retry_after_documente_sur_toute_429(schema):
+    throttled = {name for name, operation in operations(schema) if "429" in operation["responses"]}
+    assert {"POST /api/v2/auth/login", "PUT /api/v2/auth/me/password", "PUT /api/v2/auth/me/pin",
+            "POST /api/v2/tablet/session", "POST /api/v2/auth/mfa/verify"} <= throttled
+    for name, operation in operations(schema):
+        if "429" in operation["responses"]:
+            assert "Retry-After" in operation["responses"]["429"].get("headers", {}), name
+
+
+def test_erreur_non_documentee_detectee(schema):
+    observed = {
+        ("GET", "/api/v2/nurseries/9b0e1c2d-0000-4000-8000-000000000001", 404, "nursery_not_found"),  # documentée
+        ("GET", "/api/v2/nurseries/9b0e1c2d-0000-4000-8000-000000000001", 409, "inventee"),  # non documentée
+        ("PATCH", "/api/v2/nurseries/9b0e1c2d-0000-4000-8000-000000000001", 403, "role_refused"),  # dépendance
+        ("GET", "/api/v2/inexistante", 404, "not_found"),  # route inconnue : ignorée
+        ("PUT", "/api/health", 405, "method_not_allowed"),  # méthode inconnue : ignorée
+    }
+    assert undocumented_errors(schema, observed) == {("GET", "/api/v2/nurseries/{nursery_id}", 409, "inventee")}
+
+
+def test_chemin_fixe_prefere_au_gabarit(schema):
+    # /tablet/session ne doit pas être pris pour un gabarit plus général.
+    observed = {("POST", "/api/v2/tablet/session", 423, "pin_locked")}
+    assert undocumented_errors(schema, observed) == set()
 
 
 def test_interface_desactivee_mais_schema_servi():

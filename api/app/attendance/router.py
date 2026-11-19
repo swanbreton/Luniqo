@@ -12,7 +12,7 @@ import uuid
 from datetime import date
 from typing import Annotated
 
-from fastapi import APIRouter, HTTPException, Query, Response, status
+from fastapi import APIRouter, Query, Response, status
 
 from app.attendance import policy, service
 from app.attendance.schemas import (
@@ -28,7 +28,18 @@ from app.attendance.schemas import (
 )
 from app.auth.dependencies import NowDep
 from app.db import SessionDep
-from app.exports import BAD_RANGE, FromQuery, ToQuery, csv_cell, csv_response, csv_responses, history_range, local_time
+from app.errors import ApiError, ErrorSpec
+from app.exports import (
+    BAD_RANGE,
+    FromQuery,
+    PeriodError,
+    ToQuery,
+    csv_cell,
+    csv_response,
+    csv_responses,
+    history_range,
+    local_time,
+)
 from app.nurseries.dependencies import ManagedNursery, ReadableNursery
 from app.openapi import error_responses
 from app.tablets.dependencies import CurrentActor
@@ -36,28 +47,38 @@ from app.tablets.dependencies import CurrentActor
 router = APIRouter(prefix="/api/v2", tags=["pointage"])
 
 _REFUSALS = {
-    "not_found": (status.HTTP_404_NOT_FOUND, "Enfant introuvable dans cette crèche"),
-    "not_expected": (status.HTTP_409_CONFLICT, "Enfant non attendu (suspendu, parti ou pas encore inscrit)"),
-    "already_present": (status.HTTP_409_CONFLICT, "Arrivée déjà pointée"),
-    "not_present": (status.HTTP_409_CONFLICT, "Aucune arrivée pointée pour cet enfant"),
-    "unknown_guardian": (status.HTTP_422_UNPROCESSABLE_CONTENT, "Cette personne n'est pas un responsable de l'enfant"),
-    "pickup_not_authorized": (status.HTTP_403_FORBIDDEN,
-                              "Cette personne n'est pas autorisée à venir chercher l'enfant : prévenir la direction"),
+    "not_found": ErrorSpec(status.HTTP_404_NOT_FOUND, "child_not_found", "Enfant introuvable dans cette crèche"),
+    "not_expected": ErrorSpec(status.HTTP_409_CONFLICT, "child_not_expected",
+                              "Enfant non attendu (suspendu, parti ou pas encore inscrit)"),
+    "already_present": ErrorSpec(status.HTTP_409_CONFLICT, "already_present", "Arrivée déjà pointée"),
+    "not_present": ErrorSpec(status.HTTP_409_CONFLICT, "not_present", "Aucune arrivée pointée pour cet enfant"),
+    "unknown_guardian": ErrorSpec(status.HTTP_422_UNPROCESSABLE_CONTENT, "unknown_guardian",
+                                  "Cette personne n'est pas un responsable de l'enfant"),
+    "pickup_not_authorized": ErrorSpec(status.HTTP_403_FORBIDDEN, "pickup_not_authorized",
+                                       "Cette personne n'est pas autorisée à venir chercher l'enfant : "
+                                       "prévenir la direction"),
     # Corrections (LUN-120)
-    "presence_not_found": (status.HTTP_404_NOT_FOUND, "Présence introuvable dans cette crèche"),
-    "no_change": (status.HTTP_422_UNPROCESSABLE_CONTENT, "La correction ne change rien"),
-    "arrival_required": (status.HTTP_422_UNPROCESSABLE_CONTENT, "L'heure d'arrivée ne peut pas être retirée"),
-    "pickup_without_departure": (status.HTTP_422_UNPROCESSABLE_CONTENT,
-                                 "Une personne venue chercher l'enfant suppose une heure de départ"),
-    "too_old": (status.HTTP_409_CONFLICT,
-                f"Présence de plus de {policy.CORRECTION_MAX_DAYS} jours : elle ne se corrige plus"),
-    "arrival_other_day": (status.HTTP_422_UNPROCESSABLE_CONTENT, "L'arrivée doit rester le jour de la présence"),
-    "departure_before_arrival": (status.HTTP_422_UNPROCESSABLE_CONTENT, "Le départ précède l'arrivée"),
-    "departure_other_day": (status.HTTP_422_UNPROCESSABLE_CONTENT, "Le départ doit être le jour de l'arrivée"),
-    "in_future": (status.HTTP_422_UNPROCESSABLE_CONTENT, "Une heure corrigée ne peut pas être dans le futur"),
-    "open_in_past": (status.HTTP_422_UNPROCESSABLE_CONTENT,
-                     "Une présence d'un jour passé doit avoir une heure de départ"),
-    "overlap": (status.HTTP_409_CONFLICT, "Cette présence chevauche une autre présence de l'enfant ce jour-là"),
+    "presence_not_found": ErrorSpec(status.HTTP_404_NOT_FOUND, "presence_not_found",
+                                    "Présence introuvable dans cette crèche"),
+    "no_change": ErrorSpec(status.HTTP_422_UNPROCESSABLE_CONTENT, "no_change", "La correction ne change rien"),
+    "arrival_required": ErrorSpec(status.HTTP_422_UNPROCESSABLE_CONTENT, "arrival_required",
+                                  "L'heure d'arrivée ne peut pas être retirée"),
+    "pickup_without_departure": ErrorSpec(status.HTTP_422_UNPROCESSABLE_CONTENT, "pickup_without_departure",
+                                          "Une personne venue chercher l'enfant suppose une heure de départ"),
+    "too_old": ErrorSpec(status.HTTP_409_CONFLICT, "correction_too_old",
+                         f"Présence de plus de {policy.CORRECTION_MAX_DAYS} jours : elle ne se corrige plus"),
+    "arrival_other_day": ErrorSpec(status.HTTP_422_UNPROCESSABLE_CONTENT, "arrival_other_day",
+                                   "L'arrivée doit rester le jour de la présence"),
+    "departure_before_arrival": ErrorSpec(status.HTTP_422_UNPROCESSABLE_CONTENT, "departure_before_arrival",
+                                          "Le départ précède l'arrivée"),
+    "departure_other_day": ErrorSpec(status.HTTP_422_UNPROCESSABLE_CONTENT, "departure_other_day",
+                                     "Le départ doit être le jour de l'arrivée"),
+    "in_future": ErrorSpec(status.HTTP_422_UNPROCESSABLE_CONTENT, "in_future",
+                           "Une heure corrigée ne peut pas être dans le futur"),
+    "open_in_past": ErrorSpec(status.HTTP_422_UNPROCESSABLE_CONTENT, "open_in_past",
+                              "Une présence d'un jour passé doit avoir une heure de départ"),
+    "overlap": ErrorSpec(status.HTTP_409_CONFLICT, "presence_overlap",
+                         "Cette présence chevauche une autre présence de l'enfant ce jour-là"),
 }
 
 
@@ -65,9 +86,8 @@ def _errors(*reasons: str) -> dict:
     return error_responses(*(_REFUSALS[reason] for reason in reasons))
 
 
-def _refused(refusal: service.AttendanceRefused) -> HTTPException:
-    code, message = _REFUSALS[refusal.reason]
-    return HTTPException(code, message)
+def _refused(refusal: service.AttendanceRefused) -> ApiError:
+    return ApiError(_REFUSALS[refusal.reason])
 
 
 # --- Tablette ------------------------------------------------------------------
@@ -134,8 +154,8 @@ async def present_children(context: ReadableNursery, db: SessionDep) -> list[Att
 async def _period(context, db, now, start: date | None, end: date | None) -> tuple[date, date, list[service.Presence]]:
     try:
         start, end = history_range(start, end, policy.local_day(now))
-    except ValueError as error:
-        raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, str(error)) from None
+    except PeriodError as error:
+        raise ApiError(error.spec) from None
     return start, end, await service.period_presences(db, context.nursery.id, start, end)
 
 
@@ -223,6 +243,6 @@ async def attendance_corrections(context: ManagedNursery, db: SessionDep, now: N
     """Journal des corrections des présences d'une période (jour de la présence), dans l'ordre où elles ont eu lieu."""
     try:
         start, end = history_range(start, end, policy.local_day(now))
-    except ValueError as error:
-        raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, str(error)) from None
+    except PeriodError as error:
+        raise ApiError(error.spec) from None
     return [CorrectionOut.of(entry) for entry in await service.corrections_between(db, context.nursery.id, start, end)]

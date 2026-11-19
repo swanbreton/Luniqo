@@ -2,14 +2,15 @@
 
 import uuid
 
-from fastapi import APIRouter, HTTPException, Response, status
+from fastapi import APIRouter, Response, status
 
 from app.auth.dependencies import ClientDep, CurrentUser, NowDep
 from app.auth.models import UserRole
 from app.config import get_settings
 from app.db import SessionDep
+from app.errors import TOO_MANY_ATTEMPTS, ApiError, ErrorSpec
 from app.nurseries.dependencies import ManagedNursery, OwnerUser
-from app.openapi import error_responses
+from app.openapi import error_responses, retry_after
 from app.tablets import policy, service
 from app.tablets.dependencies import CurrentActor, CurrentTablet, action_cookie_name, device_cookie_name
 from app.tablets.schemas import (
@@ -26,18 +27,21 @@ from app.tablets.schemas import (
 router = APIRouter(prefix="/api/v2", tags=["tablettes"])
 
 _PIN_ERRORS = {
-    "invalid": (status.HTTP_401_UNAUTHORIZED, "PIN incorrect"),
-    "locked": (status.HTTP_423_LOCKED, "PIN bloqué après 3 erreurs : demandez à la direction de le débloquer"),
-    "not_set": (status.HTTP_409_CONFLICT, "PIN non défini : le choisir depuis l'espace employé"),
-    "throttled": (status.HTTP_429_TOO_MANY_REQUESTS, "Trop d'erreurs de PIN sur cette tablette, réessayez plus tard"),
+    "invalid": ErrorSpec(status.HTTP_401_UNAUTHORIZED, "pin_invalid", "PIN incorrect"),
+    "locked": ErrorSpec(status.HTTP_423_LOCKED, "pin_locked",
+                        "PIN bloqué après 3 erreurs : demandez à la direction de le débloquer"),
+    "not_set": ErrorSpec(status.HTTP_409_CONFLICT, "pin_not_set",
+                         "PIN non défini : le choisir depuis l'espace employé"),
+    "throttled": ErrorSpec(status.HTTP_429_TOO_MANY_REQUESTS, "tablet_throttled",
+                           "Trop d'erreurs de PIN sur cette tablette, réessayez plus tard"),
 }
-_TABLET_NOT_FOUND = (status.HTTP_404_NOT_FOUND, "Tablette introuvable")
-_EMPLOYEE_NOT_FOUND = (status.HTTP_404_NOT_FOUND, "Employé introuvable")
-_PIN_FOR_EMPLOYEES = (status.HTTP_403_FORBIDDEN, "Le PIN de tablette est réservé aux employés")
-_WRONG_PASSWORD = (status.HTTP_403_FORBIDDEN, "Mot de passe incorrect")
-_TOO_MANY_ATTEMPTS = (status.HTTP_429_TOO_MANY_REQUESTS, "Trop de tentatives, réessayez plus tard")
+_TABLET_NOT_FOUND = ErrorSpec(status.HTTP_404_NOT_FOUND, "tablet_not_found", "Tablette introuvable")
+_EMPLOYEE_NOT_FOUND = ErrorSpec(status.HTTP_404_NOT_FOUND, "employee_not_found", "Employé introuvable")
+_PIN_FOR_EMPLOYEES = ErrorSpec(status.HTTP_403_FORBIDDEN, "pin_for_employees_only",
+                               "Le PIN de tablette est réservé aux employés")
+_WRONG_PASSWORD = ErrorSpec(status.HTTP_403_FORBIDDEN, "wrong_password", "Mot de passe incorrect")
 # Messages de policy.check_pin, levés tels quels.
-_WEAK_PIN = [(status.HTTP_422_UNPROCESSABLE_CONTENT, message) for message in (
+_WEAK_PIN = [ErrorSpec(status.HTTP_422_UNPROCESSABLE_CONTENT, "pin_policy", message) for message in (
     f"Le PIN doit contenir exactement {policy.PIN_LENGTH} chiffres.",
     "Ce PIN est trop prévisible (chiffres identiques).", "Ce PIN est trop prévisible (suite de chiffres).")]
 
@@ -79,25 +83,25 @@ async def revoke_tablet(tablet_id: uuid.UUID, context: ManagedNursery, db: Sessi
                         now: NowDep) -> None:
     """Révoque la tablette (perte, vol, remplacement) et ferme ses sessions d'action. Effet immédiat."""
     if not await service.revoke(db, context.nursery, tablet_id, context.user, client, now):
-        raise HTTPException(*_TABLET_NOT_FOUND)
+        raise ApiError(_TABLET_NOT_FOUND)
 
 
 # --- PIN : employé et direction -----------------------------------------------
 
 @router.put("/auth/me/pin", status_code=status.HTTP_204_NO_CONTENT, tags=["authentification"],
-            responses=error_responses(_PIN_FOR_EMPLOYEES, _WRONG_PASSWORD, *_WEAK_PIN, _TOO_MANY_ATTEMPTS))
+            responses=retry_after(error_responses(_PIN_FOR_EMPLOYEES, _WRONG_PASSWORD, *_WEAK_PIN, TOO_MANY_ATTEMPTS)))
 async def set_my_pin(body: PinIn, user: CurrentUser, db: SessionDep, client: ClientDep, now: NowDep) -> None:
     """L'employé choisit ou change son PIN de tablette, en confirmant son mot de passe. Débloque le PIN."""
     if user.role != UserRole.EMPLOYEE:
-        raise HTTPException(*_PIN_FOR_EMPLOYEES)
+        raise ApiError(_PIN_FOR_EMPLOYEES)
     try:
         await service.set_pin(db, user, body.password, body.pin, client, now)
-    except service.TooManyAttempts:
-        raise HTTPException(*_TOO_MANY_ATTEMPTS) from None
+    except service.TooManyAttempts as exc:
+        raise ApiError(TOO_MANY_ATTEMPTS, retry_after=exc.retry_after) from None
     except service.WrongPassword:
-        raise HTTPException(*_WRONG_PASSWORD) from None
+        raise ApiError(_WRONG_PASSWORD) from None
     except policy.PinPolicyError as error:
-        raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, str(error)) from None
+        raise ApiError(_WEAK_PIN[0], detail=str(error)) from None
 
 
 @router.post("/staff/{user_id}/pin/unlock", status_code=status.HTTP_204_NO_CONTENT, tags=["personnel"],
@@ -105,7 +109,7 @@ async def set_my_pin(body: PinIn, user: CurrentUser, db: SessionDep, client: Cli
 async def unlock_pin(user_id: uuid.UUID, owner: OwnerUser, db: SessionDep, client: ClientDep, now: NowDep) -> None:
     """La direction débloque le PIN d'un employé de son entreprise."""
     if not await service.unlock_pin(db, owner, user_id, client, now):
-        raise HTTPException(*_EMPLOYEE_NOT_FOUND)
+        raise ApiError(_EMPLOYEE_NOT_FOUND)
 
 
 # --- Tablette ------------------------------------------------------------------
@@ -118,15 +122,15 @@ async def tablet_info(tablet: CurrentTablet, db: SessionDep) -> TabletInfo:
                       nursery_name=tablet.nursery.name, staff=[TabletStaffMember.of(user) for user in members])
 
 
-@router.post("/tablet/session", status_code=status.HTTP_201_CREATED, responses=error_responses(*_PIN_ERRORS.values()))
+@router.post("/tablet/session", status_code=status.HTTP_201_CREATED,
+             responses=retry_after(error_responses(*_PIN_ERRORS.values())))
 async def open_tablet_session(body: TabletLoginIn, tablet: CurrentTablet, db: SessionDep, client: ClientDep,
                               now: NowDep, response: Response) -> TabletActorOut:
     """Ouvre une session d'action de 2 minutes par PIN, pour la crèche de la tablette."""
     try:
         user, token = await service.open_action_session(db, tablet, body.user_id, body.pin, client, now)
     except service.PinRefused as refused:
-        code, message = _PIN_ERRORS[refused.reason]
-        raise HTTPException(code, message) from None
+        raise ApiError(_PIN_ERRORS[refused.reason], retry_after=refused.retry_after) from None
     _set_cookie(response, action_cookie_name(), token, int(policy.ACTION_SESSION_LIFETIME.total_seconds()))
     return TabletActorOut(user_id=user.id, display_name=display_name(user), nursery_id=tablet.nursery.id,
                           nursery_name=tablet.nursery.name, expires_at=now + policy.ACTION_SESSION_LIFETIME)

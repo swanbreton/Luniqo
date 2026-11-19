@@ -15,28 +15,38 @@ from typing import Annotated, Any
 from fastapi import Query, Response, status
 
 from app.attendance.policy import NURSERY_TZ
+from app.errors import ErrorSpec
 from app.openapi import error_responses
 
 HISTORY_DEFAULT_DAYS = 7
 HISTORY_MAX_DAYS = 366
 
-_START_AFTER_END = "La date de début suit la date de fin"
-_TOO_LONG = f"Période limitée à {HISTORY_MAX_DAYS} jours par requête"
-BAD_RANGE = [(status.HTTP_422_UNPROCESSABLE_CONTENT, _START_AFTER_END),
-             (status.HTTP_422_UNPROCESSABLE_CONTENT, _TOO_LONG)]
+_START_AFTER_END = ErrorSpec(status.HTTP_422_UNPROCESSABLE_CONTENT, "period_inverted",
+                             "La date de début suit la date de fin")
+_TOO_LONG = ErrorSpec(status.HTTP_422_UNPROCESSABLE_CONTENT, "period_too_long",
+                      f"Période limitée à {HISTORY_MAX_DAYS} jours par requête")
+BAD_RANGE = [_START_AFTER_END, _TOO_LONG]
+
+
+class PeriodError(ValueError):
+    """Période refusée ; `spec` est l'erreur de l'API correspondante."""
+
+    def __init__(self, spec: ErrorSpec) -> None:
+        super().__init__(spec.message)
+        self.spec = spec
 
 FromQuery = Annotated[date | None, Query(alias="from", description="Premier jour (7 jours avant `to` par défaut)")]
 ToQuery = Annotated[date | None, Query(alias="to", description="Dernier jour (aujourd'hui à Paris par défaut)")]
 
 
 def history_range(start: date | None, end: date | None, today: date) -> tuple[date, date]:
-    """Période demandée, complétée par défaut (les 7 derniers jours), ou ValueError si elle n'a pas de sens."""
+    """Période demandée, complétée par défaut (les 7 derniers jours), ou PeriodError si elle n'a pas de sens."""
     end = end or today
     start = start or end - timedelta(days=HISTORY_DEFAULT_DAYS - 1)
     if start > end:
-        raise ValueError(_START_AFTER_END)
+        raise PeriodError(_START_AFTER_END)
     if (end - start).days + 1 > HISTORY_MAX_DAYS:
-        raise ValueError(_TOO_LONG)
+        raise PeriodError(_TOO_LONG)
     return start, end
 
 
@@ -69,7 +79,7 @@ def csv_response(header: list[str], rows: Iterable[list[str]], filename: str) ->
                     headers={"Content-Disposition": f'attachment; filename="{filename}"', "Cache-Control": "no-store"})
 
 
-def csv_responses(description: str, *errors: tuple[int, str]) -> dict[int | str, dict[str, Any]]:
+def csv_responses(description: str, *errors: ErrorSpec) -> dict[int | str, dict[str, Any]]:
     """Documentation OpenAPI d'une route qui renvoie un CSV."""
     return {200: {"content": {"text/csv": {"schema": {"type": "string"}}}, "description": description}} | (
         error_responses(*errors))

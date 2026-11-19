@@ -15,18 +15,19 @@ simultanées le 2026-10-08, contre 1 attendu).
 from datetime import UTC, datetime
 from typing import Annotated
 
-from fastapi import Depends, HTTPException, Request, status
+from fastapi import Depends, Request, status
 
 from app.auth.models import AppUser
 from app.auth.repository import AuthRepository, SqlAuthRepository
 from app.auth.service import Client, WebSession, authenticate
 from app.config import get_settings
 from app.db import SessionDep
+from app.errors import ApiError, ErrorSpec
 from app.openapi import raises
 
-AUTH_REQUIRED = (status.HTTP_401_UNAUTHORIZED, "Authentification requise")
+AUTH_REQUIRED = ErrorSpec(status.HTTP_401_UNAUTHORIZED, "auth_required", "Authentification requise")
 # 403 et non 401 : la session existe, il lui manque le second facteur.
-MFA_REQUIRED = (status.HTTP_403_FORBIDDEN, "Second facteur requis")
+MFA_REQUIRED = ErrorSpec(status.HTTP_403_FORBIDDEN, "mfa_required", "Second facteur requis")
 
 
 def cookie_name() -> str:
@@ -61,7 +62,7 @@ async def current_web_session(request: Request, repo: RepositoryDep, client: Cli
     token = request.cookies.get(cookie_name())
     web = await authenticate(repo, token, client, now) if token else None
     if web is None:
-        raise HTTPException(*AUTH_REQUIRED)
+        raise ApiError(AUTH_REQUIRED)
     return web
 
 
@@ -71,7 +72,7 @@ CurrentWebSession = Annotated[WebSession, Depends(current_web_session)]
 @raises(MFA_REQUIRED)
 async def current_user(web: CurrentWebSession) -> AppUser:
     if web.session.mfa_pending:
-        raise HTTPException(*MFA_REQUIRED)
+        raise ApiError(MFA_REQUIRED)
     return web.user
 
 

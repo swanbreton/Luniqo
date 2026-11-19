@@ -1,49 +1,63 @@
 /**
  * Erreurs de l'API, en une seule forme pour tout le front.
  *
- * L'API renvoie `{"detail": "message en français"}`, affichable tel quel, sauf
- * pour les erreurs de validation de FastAPI (422), où `detail` est une liste
- * d'erreurs par champ.
+ * L'API renvoie `{"detail", "code", "fields"?}` (docs/projet/ERREURS.md § 2) :
+ * `detail` s'affiche tel quel, `code` est stable et sert aux décisions,
+ * `fields` donne un message par champ pour une saisie refusée (422).
  */
 
 export class ApiError extends Error {
   readonly status: number
-  /** Erreurs de validation par champ (422 de FastAPI), clé = nom du champ. */
+  /** Erreurs par champ d'une saisie refusée (422), clé = nom du champ côté API. */
   readonly fields: Record<string, string>
   /** Secondes à attendre (en-tête Retry-After d'un 429). */
   readonly retryAfter: number | null
+  /** Code stable de l'API (`mfa_required`…) ; null sans corps lisible (panne, réponse inattendue). */
+  readonly code: string | null
 
-  constructor(status: number, message: string, fields: Record<string, string> = {}, retryAfter: number | null = null) {
+  constructor(
+    status: number,
+    message: string,
+    fields: Record<string, string> = {},
+    retryAfter: number | null = null,
+    code: string | null = null,
+  ) {
     super(message)
     this.name = 'ApiError'
     this.status = status
     this.fields = fields
     this.retryAfter = retryAfter
+    this.code = code
   }
 }
 
-type ValidationItem = { loc?: unknown[]; msg?: unknown }
+type ErrorBody = { detail?: unknown; code?: unknown; fields?: unknown }
 
 const UNEXPECTED = 'Une erreur inattendue est survenue. Réessayez dans un instant.'
 
 /** Construit l'erreur à partir de la réponse de l'API et de son corps déjà lu. */
 export function toApiError(status: number, body: unknown, retryAfterHeader: string | null): ApiError {
   const retryAfter = parseRetryAfter(retryAfterHeader)
-  const detail = typeof body === 'object' && body !== null ? (body as { detail?: unknown }).detail : undefined
+  const { detail, code, fields } = typeof body === 'object' && body !== null ? (body as ErrorBody) : {}
   if (typeof detail === 'string') {
-    return new ApiError(status, withDelay(detail, retryAfter), {}, retryAfter)
-  }
-  if (Array.isArray(detail)) {
-    const fields: Record<string, string> = {}
-    for (const item of detail as ValidationItem[]) {
-      const field = item.loc?.at(-1)
-      if (typeof field === 'string' && typeof item.msg === 'string') fields[field] = item.msg
-    }
-    return new ApiError(status, 'Certains champs sont invalides.', fields)
+    return new ApiError(
+      status,
+      withDelay(detail, retryAfter),
+      parseFields(fields),
+      retryAfter,
+      typeof code === 'string' ? code : null,
+    )
   }
   if (status >= 500)
     return new ApiError(status, 'Le service est momentanément indisponible. Réessayez dans un instant.')
   return new ApiError(status, UNEXPECTED)
+}
+
+function parseFields(fields: unknown): Record<string, string> {
+  if (typeof fields !== 'object' || fields === null) return {}
+  return Object.fromEntries(
+    Object.entries(fields).filter((entry): entry is [string, string] => typeof entry[1] === 'string'),
+  )
 }
 
 function parseRetryAfter(header: string | null): number | null {

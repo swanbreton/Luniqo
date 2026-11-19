@@ -121,19 +121,26 @@ Règle : `app/nurseries/access.py`. Appliquée par les dépendances `ReadableNur
 
 Le schéma de FastAPI est complété par `app/openapi.py` : présentation générale (cookies,
 contrôle de l'origine, conventions), description de chaque groupe de routes, cookies déclarés
-comme schémas de sécurité, corps d'erreur `Error` (`{"detail": "…"}`) avec un exemple par message.
+comme schémas de sécurité, corps d'erreur `Error` (`{"detail", "code", "fields"?}`) avec un exemple par code.
 
 Pour qu'une route reste documentée sans liste à tenir à la main :
 
-- une **dépendance** déclare ce qu'elle lève avec `@raises((401, "Authentification requise"))` ;
+- une erreur est un `ErrorSpec(statut, "code", "message")` (`app/errors.py`) et se lève par
+  `ApiError(spec)` ; les gestionnaires de `app/errors.py` donnent le même corps aux erreurs de
+  FastAPI (422 traduites en français, un message par champ dans `fields`) ;
+- une **dépendance** déclare ce qu'elle lève avec `@raises(AUTH_REQUIRED)` ;
   chaque route qui l'utilise documente ce 401, et la sécurité de la route est déduite des
   dépendances de session ou de tablette ;
 - une **route** déclare ses propres erreurs avec `responses=error_responses(...)`, à partir des
-  mêmes tuples `(code, message)` que ceux qu'elle lève (`_REFUSALS` d'un module, constantes) ;
+  mêmes `ErrorSpec` que ceux qu'elle lève (`_REFUSALS` d'un module, constantes) ; toute route
+  qui lit une entrée documente d'elle-même la 422 `validation_error` ;
 - chaque route a une docstring (sa description), chaque corps de requête un exemple
   (`json_schema_extra`), aux données fictives.
 
 `tests/test_openapi.py` vérifie tout cela et valide le schéma avec `openapi-spec-validator`.
+`tests/conftest.py` vérifie en plus que **toute erreur levée est documentée** : chaque erreur
+rendue pendant les tests (unitaires et d'intégration) doit figurer, avec son code, dans le
+schéma de sa route ; sinon la session de tests échoue en listant les manquantes.
 Contrat des erreurs, catalogue de toutes les erreurs levées et marche à suivre pour en
 ajouter une : [docs/projet/ERREURS.md](../docs/projet/ERREURS.md).
 Swagger UI et ReDoc chargent leurs scripts depuis le CDN jsDelivr, sur l'origine qui porte les

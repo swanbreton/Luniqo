@@ -6,8 +6,10 @@
   déclare : une route protégée documente son 401 sans qu'on y pense.
 - Les cookies d'authentification deviennent des schémas de sécurité, eux
   aussi déduits des dépendances de chaque route.
-- Toute erreur documentée a le corps des erreurs de FastAPI, `{"detail": "…"}`
-  (schéma `Error`), avec un exemple par message possible.
+- Toute erreur documentée a le corps unique des erreurs de l'API,
+  `{"detail", "code", "fields"?}` (schéma `Error`, app/errors.py), avec un
+  exemple par code possible. Toute route qui lit des paramètres ou un corps
+  documente la 422 `validation_error`.
 """
 
 import copy
@@ -17,11 +19,11 @@ from typing import Any
 
 from fastapi import FastAPI
 from fastapi.dependencies.models import Dependant
-from fastapi.openapi.utils import get_openapi, validation_error_definition, validation_error_response_definition
+from fastapi.openapi.utils import get_openapi
 from fastapi.routing import APIRoute, RouteContext, iter_route_contexts
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
-ErrorSpec = tuple[int, str]
+from app.errors import EMPTY_FIELD, VALIDATION_ERROR, ErrorSpec
 
 UNSAFE_METHODS = frozenset({"POST", "PUT", "PATCH", "DELETE"})
 
@@ -44,19 +46,22 @@ puis, si la réponse indique `mfa: required`, `POST /api/v2/auth/mfa/verify`.
 Le bouton « Authorize » est inutile : le cookie est déjà posé.
 
 La direction et l'éditeur doivent présenter un second facteur (TOTP ou code de
-secours) : tant que ce n'est pas fait, les routes répondent 403 « Second facteur
-requis », sauf `/auth/me`, la déconnexion et `/auth/mfa`.
+secours) : tant que ce n'est pas fait, les routes répondent 403 `mfa_required`
+(« Second facteur requis »), sauf `/auth/me`, la déconnexion et `/auth/mfa`.
 
 ## Protection contre les requêtes intersites
 
 Les requêtes `POST`, `PUT`, `PATCH` et `DELETE` doivent porter un en-tête
-`Origin` égal à l'origine de Luniqo, sinon : 403 « Origine de la requête refusée ».
+`Origin` égal à l'origine de Luniqo, sinon : 403 `origin_refused`.
 Les navigateurs l'envoient d'eux-mêmes ; avec `curl`, ajouter `-H 'Origin: http://localhost:8080'`.
 
 ## Conventions
 
-- Erreurs : `{"detail": "message en français"}`, affichable tel quel. Une erreur
-  de validation du corps ou des paramètres (422) suit le format de FastAPI.
+- Erreurs : `{"detail": "message en français", "code": "code_stable"}`. Le
+  `detail` s'affiche tel quel et peut être reformulé ; le `code` ne change jamais :
+  c'est sur lui qu'un client décide. Une saisie refusée (422 `validation_error`,
+  ou refus métier d'un champ) ajoute `fields`, un message par champ. Toute 429
+  porte l'en-tête `Retry-After` (secondes).
 - Un objet d'une autre crèche ou d'une autre entreprise répond **404**, comme un
   objet inexistant : l'API ne révèle pas qu'il existe.
 - Dates `AAAA-MM-JJ`, horodatages ISO 8601 en UTC. Le « jour » (pointage,
@@ -83,9 +88,17 @@ TAGS: list[dict[str, str]] = [
 
 
 class Error(BaseModel):
-    """Corps de toute erreur levée par l'API (hors validation, voir 422)."""
+    """Corps de toute erreur de l'API."""
 
-    detail: str = Field(description="Message en français, affichable tel quel", examples=["Crèche introuvable"])
+    model_config = ConfigDict(json_schema_extra={"examples": [
+        {"detail": "Crèche introuvable", "code": "nursery_not_found"},
+        {"detail": VALIDATION_ERROR.message, "code": VALIDATION_ERROR.code, "fields": {"name": EMPTY_FIELD}},
+    ]})
+
+    detail: str = Field(description="Message en français, affichable tel quel ; peut être reformulé")
+    code: str = Field(pattern=r"^[a-z][a-z0-9_]*$",
+                      description="Identifiant stable de l'erreur (snake_case) : ne change jamais une fois publié")
+    fields: dict[str, str] | None = Field(default=None, description="Saisie refusée : un message par champ")
 
 
 def summary(description: str) -> str:
@@ -105,14 +118,14 @@ def raises(*errors: ErrorSpec) -> Callable[[Callable[..., Any]], Callable[..., A
 
 
 def error_responses(*errors: ErrorSpec) -> dict[int | str, dict[str, Any]]:
-    """`responses` d'une route : un code par statut, un exemple par message."""
-    grouped: dict[int, list[str]] = {}
-    for code, message in errors:
-        if message not in grouped.setdefault(code, []):
-            grouped[code].append(message)
-    return {code: {"model": Error, "description": " ; ".join(messages),
-                   "content": {"application/json": {"examples": _examples(messages)}}}
-            for code, messages in sorted(grouped.items())}
+    """`responses` d'une route : une entrée par statut HTTP, un exemple par code d'erreur."""
+    grouped: dict[int, list[ErrorSpec]] = {}
+    for spec in errors:
+        if spec not in grouped.setdefault(spec.status, []):
+            grouped[spec.status].append(spec)
+    return {code: {"model": Error, "description": _description(specs),
+                   "content": {"application/json": {"examples": _examples(specs)}}}
+            for code, specs in sorted(grouped.items())}
 
 
 def retry_after(responses: dict[int | str, dict[str, Any]]) -> dict[int | str, dict[str, Any]]:
@@ -122,8 +135,53 @@ def retry_after(responses: dict[int | str, dict[str, Any]]) -> dict[int | str, d
     return responses
 
 
-def _examples(messages: Iterable[str]) -> dict[str, dict[str, Any]]:
-    return {message: {"value": {"detail": message}} for message in messages}
+def _examples(specs: Iterable[ErrorSpec]) -> dict[str, dict[str, Any]]:
+    """Exemples indexés par code ; un code à plusieurs messages (politique des mots de passe…) en a plusieurs."""
+    examples: dict[str, dict[str, Any]] = {}
+    for spec in specs:
+        key, rank = spec.code, 1
+        while key in examples:
+            rank += 1
+            key = f"{spec.code} ({rank})"
+        value: dict[str, Any] = {"detail": spec.message, "code": spec.code}
+        if spec == VALIDATION_ERROR:
+            value["fields"] = {"name": EMPTY_FIELD}
+        examples[key] = {"summary": spec.message, "value": value}
+    return examples
+
+
+def _description(specs: Iterable[ErrorSpec]) -> str:
+    return " ; ".join(f"`{spec.code}` : {spec.message}" for spec in specs)
+
+
+def documented_codes(response: dict[str, Any]) -> set[str]:
+    """Codes d'erreur documentés par une réponse du schéma."""
+    examples = response.get("content", {}).get("application/json", {}).get("examples", {})
+    return {example["value"]["code"] for example in examples.values()}
+
+
+def _template(path: str) -> re.Pattern[str]:
+    return re.compile(re.sub(r"\\\{[^}]+\\\}", "[^/]+", re.escape(path)))
+
+
+def undocumented_errors(schema: dict[str, Any],
+                        observed: Iterable[tuple[str, str, int, str]]) -> set[tuple[str, str, int, str]]:
+    """Erreurs rendues par l'API (méthode, chemin, statut, code) absentes du schéma de leur route.
+
+    Une requête qui ne correspond à aucune opération du schéma (route ou méthode
+    inconnue, application de test) est ignorée : c'est Starlette qui répond.
+    """
+    templates = sorted(schema["paths"], key=lambda path: (path.count("{"), -len(path)))
+    patterns = [(path, _template(path)) for path in templates]
+    missing = set()
+    for method, path, status, code in observed:
+        template = next((name for name, pattern in patterns if pattern.fullmatch(path)), None)
+        operation = schema["paths"].get(template, {}).get(method.lower()) if template else None
+        if operation is None:
+            continue
+        if code not in documented_codes(operation["responses"].get(str(status), {})):
+            missing.add((method, template, status, code))
+    return missing
 
 
 def api_routes(app: FastAPI) -> Iterator[RouteContext]:
@@ -135,6 +193,13 @@ def api_routes(app: FastAPI) -> Iterator[RouteContext]:
     for route in iter_route_contexts(app.routes):
         if isinstance(route.original_route, APIRoute):
             yield route
+
+
+def _reads_parameters(dependant: Dependant) -> bool:
+    """Vrai si la route ou l'une de ses dépendances lit un paramètre validé (chemin, requête, en-tête)."""
+    if dependant.path_params or dependant.query_params or dependant.header_params:
+        return True
+    return any(_reads_parameters(dependency) for dependency in dependant.dependencies)
 
 
 def dependency_calls(dependant: Dependant) -> Iterator[Callable[..., Any]]:
@@ -178,23 +243,23 @@ def _security(calls: set[Callable[..., Any]]) -> list[dict[str, list[str]]] | No
 
 def _merge(responses: dict[str, Any], errors: list[ErrorSpec]) -> None:
     for code, entry in error_responses(*errors).items():
-        existing = responses.setdefault(str(code), {"description": entry["description"]})
-        examples = existing.setdefault("content", {}).setdefault("application/json", {}).setdefault("examples", {})
-        for message, example in entry["content"]["application/json"]["examples"].items():
-            examples.setdefault(message, example)
-        existing["description"] = " ; ".join(examples)
+        existing = responses.get(str(code))
+        if existing is None or "examples" not in existing.get("content", {}).get("application/json", {}):
+            # Absente, ou réponse 422 par défaut de FastAPI (corps HTTPValidationError) : remplacée.
+            responses[str(code)] = copy.deepcopy(entry)
+            continue
+        examples = existing["content"]["application/json"]["examples"]
+        for key, example in entry["content"]["application/json"]["examples"].items():
+            if example["value"] not in (known["value"] for known in examples.values()):
+                examples[key if key not in examples else f"{key} ({len(examples) + 1})"] = example
+        existing["description"] = " ; ".join(f"`{example['value']['code']}` : {example['value']['detail']}"
+                                             for example in examples.values())
 
 
-def _error_schema(code: str, response: dict[str, Any], validates_input: bool, schemas: dict[str, Any]) -> None:
+def _error_schema(response: dict[str, Any]) -> None:
+    response.pop("model", None)
     media = response.setdefault("content", {}).setdefault("application/json", {})
-    error = {"$ref": "#/components/schemas/Error"}
-    if code == "422" and validates_input and media.get("schema", error) == error:
-        # La route lève ses propres 422 ({"detail": "…"}) en plus de ceux de la validation de FastAPI.
-        media["schema"] = {"anyOf": [error, {"$ref": "#/components/schemas/HTTPValidationError"}]}
-        schemas.setdefault("ValidationError", validation_error_definition)
-        schemas.setdefault("HTTPValidationError", validation_error_response_definition)
-    else:
-        media.setdefault("schema", error)
+    media["schema"] = {"$ref": "#/components/schemas/Error"}
 
 
 def complete_schema(app: FastAPI) -> dict[str, Any]:
@@ -214,7 +279,8 @@ def complete_schema(app: FastAPI) -> dict[str, Any]:
             continue
         calls = set(dependency_calls(route.dependant))
         derived = [error for call in calls for error in getattr(call, "__openapi_errors__", ())]
-        validates_input = bool(route.dependant.path_params or route.dependant.query_params or route.body_field)
+        if route.body_field or _reads_parameters(route.dependant):
+            derived.append(VALIDATION_ERROR)
         for method in route.methods:
             operation = schema["paths"][route.path_format][method.lower()]
             if route.summary is None:
@@ -224,9 +290,12 @@ def complete_schema(app: FastAPI) -> dict[str, Any]:
             errors = derived + ([ORIGIN_REFUSED] if method in UNSAFE_METHODS else [])
             _merge(operation["responses"], sorted(errors))
             for code, response in operation["responses"].items():
-                if code.isdigit() and int(code) >= 400:
-                    _error_schema(code, response, validates_input, schemas)
+                if code.isdigit() and int(code) >= 400 and route.path_format != "/api/health":
+                    _error_schema(response)
             operation["responses"] = dict(sorted(operation["responses"].items()))
+    # Corps de validation de FastAPI : remplacé partout par `Error`.
+    schemas.pop("HTTPValidationError", None)
+    schemas.pop("ValidationError", None)
     return schema
 
 

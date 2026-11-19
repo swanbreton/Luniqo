@@ -1,19 +1,19 @@
 """Routes de l'authentification : /api/v2/auth/*."""
 
-from fastapi import APIRouter, HTTPException, Request, Response, status
+from fastapi import APIRouter, Request, Response, status
 
 from app.auth import service
 from app.auth.dependencies import ClientDep, CurrentWebSession, NowDep, RepositoryDep, cookie_name
 from app.auth.models import AppUser, UserSession
 from app.auth.schemas import LoginIn, SessionOut, UserOut
 from app.config import get_settings
+from app.errors import TOO_MANY_ATTEMPTS, ApiError, ErrorSpec
 from app.mfa.policy import session_state
 from app.openapi import error_responses, retry_after
 
 router = APIRouter(prefix="/api/v2/auth", tags=["authentification"])
 
-INVALID_CREDENTIALS = (status.HTTP_401_UNAUTHORIZED, "Identifiants invalides")
-TOO_MANY_ATTEMPTS = (status.HTTP_429_TOO_MANY_REQUESTS, "Trop de tentatives, réessayez plus tard")
+INVALID_CREDENTIALS = ErrorSpec(status.HTTP_401_UNAUTHORIZED, "invalid_credentials", "Identifiants invalides")
 
 
 def no_store(response: Response) -> None:
@@ -38,10 +38,9 @@ async def login(body: LoginIn, request: Request, response: Response, repo: Repos
         result = await service.login(repo, body.email, body.password, client, now,
                                      previous_token=request.cookies.get(cookie_name()))
     except service.InvalidCredentials:
-        raise HTTPException(*INVALID_CREDENTIALS) from None
+        raise ApiError(INVALID_CREDENTIALS) from None
     except service.TooManyAttempts as exc:
-        raise HTTPException(*TOO_MANY_ATTEMPTS,
-                            headers={"Retry-After": str(exc.retry_after)}) from None
+        raise ApiError(TOO_MANY_ATTEMPTS, retry_after=exc.retry_after) from None
     # Pas de Max-Age : cookie de session du navigateur, effacé à sa fermeture.
     # Les expirations (30 min d'inactivité, 12 h au plus) sont tenues côté serveur.
     response.set_cookie(cookie_name(), result.token, httponly=True, secure=get_settings().cookie_secure,

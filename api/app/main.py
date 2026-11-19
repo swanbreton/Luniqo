@@ -13,7 +13,7 @@ from fastapi import FastAPI, Response, status
 from sqlalchemy import text
 from sqlalchemy.exc import SQLAlchemyError
 
-from app import __version__, openapi
+from app import __version__, errors, openapi
 from app.accounts.router import router as accounts_router
 from app.attendance.router import router as attendance_router
 from app.auth.router import router as auth_router
@@ -61,6 +61,7 @@ def create_app(settings: Settings) -> FastAPI:
         swagger_ui_parameters={"defaultModelsExpandDepth": 0, "displayRequestDuration": True},
     )
     application.add_middleware(OriginCheckMiddleware)
+    errors.install(application)
     for router in (auth_router, mfa_router, passkeys_router, nurseries_router, tablets_router, children_router,
                    attendance_router, family_router, cleaning_router, accounts_router):
         application.include_router(router)

@@ -146,15 +146,20 @@ async def test_depart_puis_reinscription(clients, world):
     _, (child,), _ = await make_family(owner, world["nord"])
     base = f"/api/v2/nurseries/{world['nord'].id}/children"
     url = f"{base}/{child['id']}"
-    assert (await owner.patch(url, json={"status": "departed"})).status_code == 422
-    assert (await owner.patch(url, json={"status": "departed", "exit_date": "2025-08-01"})).status_code == 422
+    response = await owner.patch(url, json={"status": "departed"})
+    assert response.status_code == 422
+    assert response.json()["code"] == "child_dates_incoherent"
+    assert response.json()["fields"] == {"exit_date": "Obligatoire pour un enfant parti"}
+    response = await owner.patch(url, json={"status": "departed", "exit_date": "2025-08-01"})
+    assert response.status_code == 422 and response.json()["fields"] == {"exit_date": "Ne peut pas précéder l'entrée"}
     response = await owner.patch(url, json={"status": "departed", "exit_date": "2026-07-03"})
     assert response.status_code == 200 and response.json()["exit_date"] == "2026-07-03"
     assert (await owner.get(base)).json() == []
     assert [c["id"] for c in (await owner.get(base, params={"status": "departed"})).json()] == [child["id"]]
     response = await owner.patch(url, json={"status": "active"})
     assert response.json()["status"] == "active" and response.json()["exit_date"] is None
-    assert (await owner.patch(url, json={"first_name": None})).status_code == 422
+    response = await owner.patch(url, json={"first_name": None})
+    assert response.status_code == 422 and response.json()["fields"] == {"first_name": "Ne peut pas être vide"}
 
 
 # --- Minimisation ----------------------------------------------------------------

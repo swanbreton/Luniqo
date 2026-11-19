@@ -8,7 +8,7 @@
 
 import uuid
 
-from fastapi import APIRouter, HTTPException, Response, status
+from fastapi import APIRouter, Response, status
 
 from app.accounts import service
 from app.accounts.schemas import (
@@ -25,35 +25,37 @@ from app.accounts.schemas import (
 from app.auth.dependencies import ClientDep, CurrentUser, CurrentWebSession, NowDep
 from app.auth.router import no_store
 from app.db import SessionDep
+from app.errors import TOO_MANY_ATTEMPTS, ApiError, ErrorSpec, required_field
 from app.nurseries.dependencies import OwnerUser
 from app.nurseries.schemas import StaffOut
-from app.openapi import error_responses
+from app.openapi import error_responses, retry_after
 
 router = APIRouter(prefix="/api/v2", tags=["personnel"])
 
 _REFUSALS = {
-    "email_taken": (status.HTTP_409_CONFLICT, "Cette adresse est déjà utilisée par un compte"),
-    "not_found": (status.HTTP_404_NOT_FOUND, "Employé introuvable"),
-    "already_active": (status.HTTP_409_CONFLICT, "Ce compte a déjà son mot de passe, ou il est désactivé"),
-    "invalid": (status.HTTP_404_NOT_FOUND, "Invitation inconnue, expirée ou déjà utilisée"),
-    "wrong_password": (status.HTTP_403_FORBIDDEN, "Mot de passe actuel incorrect"),
-    "too_many_attempts": (status.HTTP_429_TOO_MANY_REQUESTS, "Trop de tentatives, réessayez plus tard"),
+    "email_taken": ErrorSpec(status.HTTP_409_CONFLICT, "email_taken", "Cette adresse est déjà utilisée par un compte"),
+    "not_found": ErrorSpec(status.HTTP_404_NOT_FOUND, "employee_not_found", "Employé introuvable"),
+    "already_active": ErrorSpec(status.HTTP_409_CONFLICT, "account_already_active",
+                                "Ce compte a déjà son mot de passe, ou il est désactivé"),
+    "invalid": ErrorSpec(status.HTTP_404_NOT_FOUND, "invitation_invalid",
+                         "Invitation inconnue, expirée ou déjà utilisée"),
+    "wrong_password": ErrorSpec(status.HTTP_403_FORBIDDEN, "wrong_password", "Mot de passe actuel incorrect"),
+    "too_many_attempts": TOO_MANY_ATTEMPTS,
 }
 
 
-_WEAK_PASSWORD = (status.HTTP_422_UNPROCESSABLE_CONTENT, "Ce mot de passe est trop courant.")
-_EMPTY_FIELD = (status.HTTP_422_UNPROCESSABLE_CONTENT, "Le champ first_name ne peut pas être vide")
+_WEAK_PASSWORD = ErrorSpec(status.HTTP_422_UNPROCESSABLE_CONTENT, "password_policy",
+                           "Ce mot de passe est trop courant.")
 
 
 def _errors(*reasons: str, weak_password: bool = False) -> dict:
     return error_responses(*(_REFUSALS[reason] for reason in reasons), *([_WEAK_PASSWORD] if weak_password else []))
 
 
-def _refused(refusal: service.AccountRefused) -> HTTPException:
+def _refused(refusal: service.AccountRefused) -> ApiError:
     if refusal.reason == "weak_password":
-        return HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, refusal.detail)
-    code, message = _REFUSALS[refusal.reason]
-    return HTTPException(code, message)
+        return ApiError(_WEAK_PASSWORD, detail=refusal.detail)
+    return ApiError(_REFUSALS[refusal.reason], retry_after=refusal.retry_after)
 
 
 def _invitation_out(employee, invitation, token: str) -> StaffInvitationOut:
@@ -92,14 +94,14 @@ async def reinvite_employee(user_id: uuid.UUID, owner: OwnerUser, db: SessionDep
     return _invitation_out(employee, invitation, token)
 
 
-@router.patch("/staff/{user_id}", responses=_errors("not_found") | error_responses(_EMPTY_FIELD))
+@router.patch("/staff/{user_id}", responses=_errors("not_found"))
 async def update_employee(user_id: uuid.UUID, body: EmployeeUpdate, owner: OwnerUser, db: SessionDep,
                           client: ClientDep, now: NowDep) -> StaffOut:
     """Corriger le nom, ou désactiver le compte (départ) : ses sessions web et de tablette tombent aussitôt."""
     changes = body.model_dump(exclude_unset=True)
     for field in ("first_name", "last_name", "is_active"):
         if field in changes and changes[field] is None:
-            raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, f"Le champ {field} ne peut pas être vide")
+            raise required_field(field)
     try:
         employee = await service.employee_of(db, owner, user_id)
         for field in ("first_name", "last_name"):
@@ -140,7 +142,7 @@ async def accept_invitation(body: AcceptIn, db: SessionDep, client: ClientDep, n
 # --- Mot de passe ----------------------------------------------------------------------
 
 @router.put("/auth/me/password", tags=["authentification"],
-            responses=_errors("wrong_password", "too_many_attempts", weak_password=True))
+            responses=retry_after(_errors("wrong_password", "too_many_attempts", weak_password=True)))
 async def change_password(body: PasswordChangeIn, user: CurrentUser, web: CurrentWebSession, db: SessionDep,
                           client: ClientDep, now: NowDep) -> PasswordChangedOut:
     """Change son mot de passe (l'actuel est exigé) ; les autres sessions du compte, tablette comprise, sont fermées."""

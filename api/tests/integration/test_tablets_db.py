@@ -209,7 +209,9 @@ async def test_tablette_bloquee_apres_10_echecs_tous_employes_confondus(clients,
     for user in [world["lea"], world["hugo"], *extra]:
         for _ in range(2):
             assert (await pin_login(tablet, user, "1111")).status_code == 401
-    assert (await pin_login(tablet, world["lea"])).status_code == 429
+    response = await pin_login(tablet, world["lea"])
+    assert response.status_code == 429 and response.json()["code"] == "tablet_throttled"
+    assert 0 < int(response.headers["retry-after"]) <= 15 * 60
 
 
 async def test_pin_non_defini(clients, world, db):
@@ -255,7 +257,8 @@ async def test_confirmations_par_mot_de_passe_limitees(http, world):
         response = await http.put("/api/v2/auth/me/pin", json={"pin": "9137", "password": "mauvaise phrase"})
         assert response.status_code == 403
     response = await http.put("/api/v2/auth/me/pin", json={"pin": "9137", "password": PASSWORD})
-    assert response.status_code == 429
+    assert response.status_code == 429 and response.json()["code"] == "too_many_attempts"
+    assert 0 < int(response.headers["retry-after"]) <= 15 * 60
 
 
 async def test_changer_de_pin_ferme_les_sessions_de_tablette(clients, world, db):

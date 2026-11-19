@@ -5,8 +5,11 @@ ajoute une. Rédigé le 2026-11-17 (LUN-129), pour la feature imposée par le TD
 « Road to MVP » (cours « Coordination Front & Back ») : « les cas d'erreurs
 doivent être majoritairement gérés pour aider l'UX et également le dev ».
 
-**Ce document décrit l'existant tel qu'il est** (section 1, `[RÉEL]`, lu dans
-le code de `develop` le 2026-11-17), puis **la cible** (sections 2 à 6). Le code
+**Ce document décrit l'existant tel qu'il était** (section 1, `[RÉEL]`, lu dans
+le code de `develop` le 2026-11-17), puis **la cible** (sections 2 à 6). Depuis
+LUN-137 (2026-11-19), le contrat de la section 2 est en place côté API : corps
+`{"detail", "code", "fields"?}`, 422 traduites, `Retry-After` sur toute 429,
+test « erreur levée = erreur documentée ». Le code
 de la cible viendra dans les sprints suivants, par les stories de la section 7.
 Chaque écart entre l'existant et la cible porte un numéro (E1 à E8) repris par
 ces stories.
@@ -112,12 +115,12 @@ le statut ; le texte ne sert qu'à l'affichage (section 2).
 
 | | Écart | Repris par |
 |---|---|---|
-| E1 | Pas de code d'erreur : le front compare des textes | Story A |
+| E1 | Pas de code d'erreur : le front compare des textes | Story A : API faite (LUN-137), front à venir (LUN-138) |
 | E2 | Ni gestionnaire des 500, ni journal, ni identifiant de requête | Story B |
 | E3 | La passerelle renvoie du HTML sur `/api/` en cas de panne | Story B |
-| E4 | Deux formes de 422, validation en anglais, champs jamais affichés | Story A |
+| E4 | Deux formes de 422, validation en anglais, champs jamais affichés | Story A : API faite (LUN-137), affichage à venir (LUN-138) |
 | E5 | Peu d'actions proposées : réessayer, attendre, hors ligne | Story C |
-| E6 | `Retry-After` absent de certaines 429 | Story A |
+| E6 | `Retry-After` absent de certaines 429 | Story A : fait (LUN-137) |
 | E7 | Pas de référence à donner au support pour une erreur serveur | Stories B, C |
 | E8 | 5xx, réseau et 422 avec champs non testés ; réponses MSW non partagées | Story D |
 
@@ -181,13 +184,13 @@ plus tard : `detail` a déjà le sens que lui donne la RFC, `code` deviendrait
 
 ### Catalogue des erreurs
 
-Toutes les erreurs que l'API lève aujourd'hui, avec le code proposé. Les
+Toutes les erreurs que l'API lève, avec leur code, en place depuis LUN-137 (2026-11-19). Les
 messages sont ceux du code de `develop` au 2026-11-17. Les erreurs déclenchées
 par une dépendance s'appliquent à toutes les routes qui l'utilisent.
 
 **Transverses** (dépendances, middleware, passerelle)
 
-| Statut | Message | Code proposé | Où |
+| Statut | Message | Code | Où |
 |---|---|---|---|
 | 401 | Authentification requise | `auth_required` | `auth/dependencies.py`, toute route connectée |
 | 403 | Second facteur requis | `mfa_required` | `auth/dependencies.py`, direction et éditeur |
@@ -197,20 +200,21 @@ par une dépendance s'appliquent à toutes les routes qui l'utilisent.
 | 404 | Crèche introuvable | `nursery_not_found` | `nurseries/dependencies.py` |
 | 401 | Tablette non enrôlée, expirée ou révoquée | `tablet_required` | `tablets/dependencies.py` |
 | 401 | Session de tablette absente ou expirée : saisir le PIN | `pin_session_required` | `tablets/dependencies.py` |
-| 422 | *(validation de FastAPI, aujourd'hui en anglais)* | `validation_error` | toute route avec un corps ou des paramètres |
+| 422 | Certains champs sont invalides. (validation de FastAPI traduite, un message par champ dans `fields`) | `validation_error` | toute route avec un corps ou des paramètres, ceux de ses dépendances compris |
+| 404, 405 | Adresse inconnue · Méthode non autorisée pour cette adresse | `not_found`, `method_not_allowed` | Starlette (route ou méthode inconnue) |
 | 429 | Trop de tentatives, réessayez plus tard | `too_many_attempts` | connexion, second facteur, passkeys, comptes, PIN |
-| 500 | *(aucun aujourd'hui : texte brut de Starlette)* | `internal_error` | gestionnaire à créer (section 3) |
-| 502, 503, 504 | *(page HTML de nginx aujourd'hui)* | `service_unavailable` | passerelle, sous `/api/` (section 3) |
+| 500 | *(texte brut de Starlette jusqu'à LUN-134)* | `internal_error` | gestionnaire à créer (section 3, LUN-134) |
+| 502, 503, 504 | *(page HTML de nginx jusqu'à LUN-134)* | `service_unavailable` | passerelle, sous `/api/` (section 3, LUN-134) |
 
 **Connexion** (`auth/router.py`)
 
-| Statut | Message | Code proposé |
+| Statut | Message | Code |
 |---|---|---|
 | 401 | Identifiants invalides | `invalid_credentials` |
 
 **Second facteur** (`mfa/router.py`)
 
-| Statut | Message | Code proposé |
+| Statut | Message | Code |
 |---|---|---|
 | 401 | Code invalide | `invalid_code` |
 | 403 | Présentez d'abord votre second facteur | `mfa_pending` |
@@ -224,7 +228,7 @@ par une dépendance s'appliquent à toutes les routes qui l'utilisent.
 
 **Passkeys** (`passkeys/router.py`)
 
-| Statut | Message | Code proposé |
+| Statut | Message | Code |
 |---|---|---|
 | 400, 401 | Passkey refusée | `passkey_rejected` |
 | 403 | Présentez d'abord votre second facteur | `mfa_pending` |
@@ -241,27 +245,27 @@ par une dépendance s'appliquent à toutes les routes qui l'utilisent.
 
 **Comptes des employés** (`accounts/router.py`)
 
-| Statut | Message | Code proposé |
+| Statut | Message | Code |
 |---|---|---|
 | 403 | Mot de passe actuel incorrect | `wrong_password` |
 | 404 | Employé introuvable | `employee_not_found` |
 | 404 | Invitation inconnue, expirée ou déjà utilisée | `invitation_invalid` |
 | 409 | Cette adresse est déjà utilisée par un compte | `email_taken` |
 | 409 | Ce compte a déjà son mot de passe, ou il est désactivé | `account_already_active` |
-| 422 | Le champ first_name ne peut pas être vide | `validation_error` (champ `first_name`) |
+| 422 | Certains champs sont invalides. (`fields` : « Ne peut pas être vide » sous le champ envoyé à `null`) | `validation_error` |
 | 422 | Politique des mots de passe (`auth/passwords.py`) : Le mot de passe doit contenir au moins *N* caractères. · Le mot de passe doit contenir au plus *N* caractères. · Ce mot de passe est trop prévisible (répétition ou suite de touches). · Ce mot de passe est trop courant. · Le mot de passe ne doit pas reprendre l'adresse e-mail. | `password_policy` |
-| 429 | Trop de tentatives, réessayez plus tard (**sans `Retry-After`**) | `too_many_attempts` |
+| 429 | Trop de tentatives, réessayez plus tard | `too_many_attempts` |
 
 **Crèches et personnel** (`nurseries/router.py`)
 
-| Statut | Message | Code proposé |
+| Statut | Message | Code |
 |---|---|---|
 | 404 | Employé introuvable | `employee_not_found` |
-| 422 | Le champ name ne peut pas être vide | `validation_error` (champ `name`) |
+| 422 | Certains champs sont invalides. (`fields` : « Ne peut pas être vide » sous le champ envoyé à `null`) | `validation_error` |
 
 **Tablettes et PIN** (`tablets/router.py`)
 
-| Statut | Message | Code proposé |
+| Statut | Message | Code |
 |---|---|---|
 | 401 | PIN incorrect | `pin_invalid` |
 | 403 | Le PIN de tablette est réservé aux employés | `pin_for_employees_only` |
@@ -271,23 +275,23 @@ par une dépendance s'appliquent à toutes les routes qui l'utilisent.
 | 409 | PIN non défini : le choisir depuis l'espace employé | `pin_not_set` |
 | 422 | Le PIN doit contenir exactement 4 chiffres. · Ce PIN est trop prévisible (chiffres identiques). · Ce PIN est trop prévisible (suite de chiffres). | `pin_policy` |
 | 423 | PIN bloqué après 3 erreurs : demandez à la direction de le débloquer | `pin_locked` |
-| 429 | Trop d'erreurs de PIN sur cette tablette, réessayez plus tard (**sans `Retry-After`**) | `tablet_throttled` |
-| 429 | Trop de tentatives, réessayez plus tard (**sans `Retry-After`**) | `too_many_attempts` |
+| 429 | Trop d'erreurs de PIN sur cette tablette, réessayez plus tard | `tablet_throttled` |
+| 429 | Trop de tentatives, réessayez plus tard | `too_many_attempts` |
 
 **Familles et enfants, côté crèche** (`children/router.py`)
 
-| Statut | Message | Code proposé |
+| Statut | Message | Code |
 |---|---|---|
 | 404 | Famille introuvable | `family_not_found` |
 | 404 | Enfant introuvable | `child_not_found` |
 | 404 | Responsable introuvable | `guardian_not_found` |
-| 422 | Le champ first_name ne peut pas être vide | `validation_error` (champ `first_name`) |
+| 422 | Certains champs sont invalides. (`fields` : « Ne peut pas être vide » sous le champ envoyé à `null`) | `validation_error` |
 | 422 | Le responsable n'appartient pas à la famille | `guardian_other_family` |
-| 422 | Un enfant parti a une date de sortie, et seulement lui (seul message déclaré dans Swagger). À l'exécution, les règles de dates sont jointes par « ; » dans un seul message : la date d'entrée ne peut pas précéder la naissance · la date de sortie ne peut pas précéder l'entrée · un enfant parti a une date de sortie, et seulement lui | `child_dates_incoherent`, un message par champ dans `fields` |
+| 422 | Les dates de l'enfant ne sont pas cohérentes (`fields` : `enrollment_date` « Ne peut pas précéder la naissance », `exit_date` « Ne peut pas précéder l'entrée », « Obligatoire pour un enfant parti » ou « Réservée à un enfant parti ») | `child_dates_incoherent` |
 
 **Portail des familles** (`family/router.py`)
 
-| Statut | Message | Code proposé |
+| Statut | Message | Code |
 |---|---|---|
 | 403 | Un compte existe déjà avec cette adresse : saisir son mot de passe | `account_exists_password_required` |
 | 404 | Invitation inconnue, expirée ou déjà utilisée | `invitation_invalid` |
@@ -299,7 +303,7 @@ par une dépendance s'appliquent à toutes les routes qui l'utilisent.
 
 **Pointage et corrections** (`attendance/router.py`, `exports.py`)
 
-| Statut | Message | Code proposé |
+| Statut | Message | Code |
 |---|---|---|
 | 403 | Cette personne n'est pas autorisée à venir chercher l'enfant : prévenir la direction | `pickup_not_authorized` |
 | 404 | Enfant introuvable dans cette crèche | `child_not_found` |
@@ -323,7 +327,7 @@ par une dépendance s'appliquent à toutes les routes qui l'utilisent.
 
 **Fiche de ménage** (`cleaning/router.py`)
 
-| Statut | Message | Code proposé |
+| Statut | Message | Code |
 |---|---|---|
 | 404 | Tâche introuvable | `task_not_found` |
 | 404 | Pièce introuvable | `room_not_found` |
@@ -334,7 +338,7 @@ par une dépendance s'appliquent à toutes les routes qui l'utilisent.
 | 409 | Cette tâche n'est pas prévue aujourd'hui | `task_not_planned` |
 | 409 | Tâche déjà cochée aujourd'hui | `task_already_done` |
 | 409 | Cette tâche n'est pas cochée aujourd'hui | `task_not_done` |
-| 422 | Le champ name ne peut pas être vide | `validation_error` (champ `name`) |
+| 422 | Certains champs sont invalides. (`fields` : « Ne peut pas être vide » sous le champ envoyé à `null`) | `validation_error` |
 | 422 | Tâche désactivée dans le catalogue | `task_inactive` |
 | 422 | La date de début suit la date de fin · Période limitée à 366 jours par requête | `period_inverted`, `period_too_long` |
 
@@ -420,8 +424,10 @@ facilement.
 - **Chaque catégorie a au moins un test d'intégration** côté front, dont les
   trois qui manquent aujourd'hui : 5xx, coupure réseau, 422 avec champs.
 - **Toute route déclare ses erreurs**, comme aujourd'hui (`@raises`,
-  `error_responses`), **avec leur code**. Un test de l'API vérifie que chaque
-  code levé par un module figure dans le schéma Swagger de ses routes.
+  `error_responses`), **avec leur code**. Le test « levé = documenté »
+  (`api/tests/conftest.py`) observe chaque erreur rendue pendant les tests,
+  unitaires et d'intégration, et échoue si son couple (statut, code) manque au
+  schéma Swagger de sa route.
 - **Lire une erreur en local** : la référence affichée à l'écran se retrouve
   dans `docker compose logs api` ; Swagger (`/api/docs`) donne, pour chaque
   route, la liste exacte de ses erreurs avec un exemple.
@@ -433,9 +439,11 @@ facilement.
 - [ ] **Service** : le refus est une exception métier avec une raison
   (`raise AttendanceRefused("overlap")`), pas une `HTTPException` levée au
   milieu de la logique.
-- [ ] **Routeur** : une entrée dans `_REFUSALS` donne le statut, le message et
-  le **code** (section 2 : `snake_case`, préfixé du domaine si besoin, jamais
-  réutilisé pour un autre sens).
+- [ ] **Routeur** : une entrée dans `_REFUSALS` est un
+  `ErrorSpec(statut, "code", "message")` (`app/errors.py`) ; le code suit la
+  section 2 (`snake_case`, préfixé du domaine si besoin, jamais réutilisé pour un
+  autre sens) ; l'erreur se lève par `ApiError(spec)`, avec `fields=` ou
+  `retry_after=` si besoin.
 - [ ] **Swagger** : l'erreur est déclarée sur la route (`error_responses`) ou sur
   la dépendance (`@raises`) ; une 429 déclare `Retry-After`.
 - [ ] **Test de l'API** : un test provoque l'erreur et vérifie statut, code et

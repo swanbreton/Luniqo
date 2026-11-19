@@ -14,7 +14,7 @@ import uuid
 from datetime import date, datetime
 from typing import Annotated
 
-from fastapi import APIRouter, HTTPException, Query, Response, status
+from fastapi import APIRouter, Query, Response, status
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -44,7 +44,18 @@ from app.cleaning.schemas import (
     short_name,
 )
 from app.db import SessionDep
-from app.exports import BAD_RANGE, FromQuery, ToQuery, csv_cell, csv_response, csv_responses, history_range, local_time
+from app.errors import ApiError, ErrorSpec, required_field
+from app.exports import (
+    BAD_RANGE,
+    FromQuery,
+    PeriodError,
+    ToQuery,
+    csv_cell,
+    csv_response,
+    csv_responses,
+    history_range,
+    local_time,
+)
 from app.nurseries.dependencies import ManagedNursery, OwnerUser, ReadableNursery
 from app.openapi import error_responses
 from app.tablets.dependencies import CurrentActor
@@ -54,16 +65,18 @@ router = APIRouter(prefix="/api/v2", tags=["ménage"])
 
 # Contrainte d'unicité → message du 409. Toute autre violation reste une erreur 500 : elle signalerait un défaut.
 _DUPLICATES = {
-    "uq_cleaning_task_enterprise_name": "Une tâche du catalogue porte déjà ce nom",
-    "uq_room_nursery_name": "Une pièce de cette crèche porte déjà ce nom",
-    "uq_room_task_room_task": "Cette tâche vient d'être ajoutée à la pièce : recharger",
+    "uq_cleaning_task_enterprise_name": ErrorSpec(status.HTTP_409_CONFLICT, "task_name_taken",
+                                                  "Une tâche du catalogue porte déjà ce nom"),
+    "uq_room_nursery_name": ErrorSpec(status.HTTP_409_CONFLICT, "room_name_taken",
+                                      "Une pièce de cette crèche porte déjà ce nom"),
+    "uq_room_task_room_task": ErrorSpec(status.HTTP_409_CONFLICT, "room_task_taken",
+                                        "Cette tâche vient d'être ajoutée à la pièce : recharger"),
 }
-_TASK = (status.HTTP_404_NOT_FOUND, "Tâche introuvable")
-_ROOM = (status.HTTP_404_NOT_FOUND, "Pièce introuvable")
-_TASK_TAKEN = (status.HTTP_409_CONFLICT, _DUPLICATES["uq_cleaning_task_enterprise_name"])
-_ROOM_TAKEN = (status.HTTP_409_CONFLICT, _DUPLICATES["uq_room_nursery_name"])
-_EMPTY_FIELD = (status.HTTP_422_UNPROCESSABLE_CONTENT, "Le champ name ne peut pas être vide")
-_INACTIVE_TASK = (status.HTTP_422_UNPROCESSABLE_CONTENT, "Tâche désactivée dans le catalogue")
+_TASK = ErrorSpec(status.HTTP_404_NOT_FOUND, "task_not_found", "Tâche introuvable")
+_ROOM = ErrorSpec(status.HTTP_404_NOT_FOUND, "room_not_found", "Pièce introuvable")
+_TASK_TAKEN = _DUPLICATES["uq_cleaning_task_enterprise_name"]
+_ROOM_TAKEN = _DUPLICATES["uq_room_nursery_name"]
+_INACTIVE_TASK = ErrorSpec(status.HTTP_422_UNPROCESSABLE_CONTENT, "task_inactive", "Tâche désactivée dans le catalogue")
 
 
 async def _commit(db: AsyncSession) -> None:
@@ -71,16 +84,16 @@ async def _commit(db: AsyncSession) -> None:
         await db.commit()
     except IntegrityError as error:
         await db.rollback()
-        for constraint, message in _DUPLICATES.items():
+        for constraint, spec in _DUPLICATES.items():
             if constraint in str(error.orig):
-                raise HTTPException(status.HTTP_409_CONFLICT, message) from None
+                raise ApiError(spec) from None
         raise
 
 
 def _apply(target, changes: dict, required: tuple[str, ...]) -> None:
     for field in required:
         if field in changes and changes[field] is None:
-            raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, f"Le champ {field} ne peut pas être vide")
+            raise required_field(field)
     for field, value in changes.items():
         setattr(target, field, value)
 
@@ -98,7 +111,7 @@ async def _task_of(db: AsyncSession, enterprise_id: uuid.UUID, task_id: uuid.UUI
     task = await db.scalar(select(CleaningTask).where(CleaningTask.id == task_id,
                                                       CleaningTask.enterprise_id == enterprise_id))
     if task is None:
-        raise HTTPException(*_TASK)
+        raise ApiError(_TASK)
     return task
 
 
@@ -121,7 +134,7 @@ async def create_task(body: TaskCreate, user: OwnerUser, db: SessionDep) -> Task
     return TaskOut.model_validate(task)
 
 
-@router.patch("/cleaning-tasks/{task_id}", responses=error_responses(_TASK, _TASK_TAKEN, _EMPTY_FIELD))
+@router.patch("/cleaning-tasks/{task_id}", responses=error_responses(_TASK, _TASK_TAKEN))
 async def update_task(task_id: uuid.UUID, body: TaskUpdate, user: OwnerUser, db: SessionDep) -> TaskOut:
     """Renommer, préciser la consigne, désactiver : la tâche disparaît alors des fiches de toutes les crèches."""
     task = await _task_of(db, user.enterprise_id, task_id)
@@ -135,7 +148,7 @@ async def update_task(task_id: uuid.UUID, body: TaskUpdate, user: OwnerUser, db:
 async def _room_in(db: AsyncSession, nursery_id: uuid.UUID, room_id: uuid.UUID) -> Room:
     room = await db.scalar(select(Room).where(Room.id == room_id, Room.nursery_id == nursery_id))
     if room is None:
-        raise HTTPException(*_ROOM)
+        raise ApiError(_ROOM)
     return room
 
 
@@ -168,7 +181,7 @@ async def get_room(room_id: uuid.UUID, context: ReadableNursery, db: SessionDep)
     return RoomDetail(**RoomOut.model_validate(room).model_dump(), tasks=tasks)
 
 
-@router.patch("/nurseries/{nursery_id}/rooms/{room_id}", responses=error_responses(_ROOM, _ROOM_TAKEN, _EMPTY_FIELD))
+@router.patch("/nurseries/{nursery_id}/rooms/{room_id}", responses=error_responses(_ROOM, _ROOM_TAKEN))
 async def update_room(room_id: uuid.UUID, body: RoomUpdate, context: ManagedNursery, db: SessionDep) -> RoomOut:
     """Renommer, réordonner ou désactiver la pièce : désactivée, elle disparaît de la fiche du jour."""
     room = await _room_in(db, context.nursery.id, room_id)
@@ -179,14 +192,14 @@ async def update_room(room_id: uuid.UUID, body: RoomUpdate, context: ManagedNurs
 
 @router.put("/nurseries/{nursery_id}/rooms/{room_id}/tasks/{task_id}",
             responses=error_responses(_ROOM, _TASK, _INACTIVE_TASK,
-                                      (status.HTTP_409_CONFLICT, _DUPLICATES["uq_room_task_room_task"])))
+                                      _DUPLICATES["uq_room_task_room_task"]))
 async def set_room_task(room_id: uuid.UUID, task_id: uuid.UUID, body: RoomTaskIn, context: ManagedNursery,
                         db: SessionDep) -> RoomTaskOut:
     """Prévoit une tâche du catalogue dans la pièce, ou remplace sa fréquence. `is_active: false` la retire."""
     room = await _room_in(db, context.nursery.id, room_id)
     task = await _task_of(db, context.nursery.enterprise_id, task_id)
     if body.is_active and not task.is_active:
-        raise HTTPException(*_INACTIVE_TASK)
+        raise ApiError(_INACTIVE_TASK)
     room_task = await db.scalar(select(RoomTask).where(RoomTask.room_id == room.id, RoomTask.task_id == task.id))
     if room_task is None:
         room_task = RoomTask(id=uuid.uuid4(), room_id=room.id, task_id=task.id, nursery_id=room.nursery_id,
@@ -218,8 +231,8 @@ async def _history(context, db: AsyncSession, now: datetime, start: date | None,
                    room_id: uuid.UUID | None) -> tuple[date, date, list[service.Record]]:
     try:
         start, end = history_range(start, end, local_day(now))
-    except ValueError as error:
-        raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, str(error)) from None
+    except PeriodError as error:
+        raise ApiError(error.spec) from None
     if room_id is not None:
         await _room_in(db, context.nursery.id, room_id)
     return start, end, await service.history(db, context.nursery.id, start, end, room_id)
@@ -261,10 +274,10 @@ async def cleaning_history_csv(context: ReadableNursery, db: SessionDep, now: No
 # --- Tablette ---------------------------------------------------------------------
 
 _REFUSALS = {
-    "not_found": (status.HTTP_404_NOT_FOUND, "Tâche introuvable dans cette crèche"),
-    "not_planned": (status.HTTP_409_CONFLICT, "Cette tâche n'est pas prévue aujourd'hui"),
-    "already_done": (status.HTTP_409_CONFLICT, "Tâche déjà cochée aujourd'hui"),
-    "not_done": (status.HTTP_409_CONFLICT, "Cette tâche n'est pas cochée aujourd'hui"),
+    "not_found": ErrorSpec(status.HTTP_404_NOT_FOUND, "room_task_not_found", "Tâche introuvable dans cette crèche"),
+    "not_planned": ErrorSpec(status.HTTP_409_CONFLICT, "task_not_planned", "Cette tâche n'est pas prévue aujourd'hui"),
+    "already_done": ErrorSpec(status.HTTP_409_CONFLICT, "task_already_done", "Tâche déjà cochée aujourd'hui"),
+    "not_done": ErrorSpec(status.HTTP_409_CONFLICT, "task_not_done", "Cette tâche n'est pas cochée aujourd'hui"),
 }
 
 
@@ -272,9 +285,8 @@ def _errors(*reasons: str) -> dict:
     return error_responses(*(_REFUSALS[reason] for reason in reasons))
 
 
-def _refused(refusal: service.CheckRefused) -> HTTPException:
-    code, message = _REFUSALS[refusal.reason]
-    return HTTPException(code, message)
+def _refused(refusal: service.CheckRefused) -> ApiError:
+    return ApiError(_REFUSALS[refusal.reason])
 
 
 @router.get("/tablet/cleaning")

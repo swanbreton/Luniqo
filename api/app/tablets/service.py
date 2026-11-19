@@ -9,12 +9,12 @@ import uuid
 from dataclasses import dataclass
 from datetime import datetime
 
-from sqlalchemy import delete, func, select
+from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth import passwords
 from app.auth.models import AppUser, AuthEvent, AuthEventType, SessionKind, UserRole, UserSession
-from app.auth.policy import FAILURE_WINDOW, needs_touch
+from app.auth.policy import FAILURE_WINDOW, needs_touch, window_retry_after
 from app.auth.service import Client
 from app.auth.tokens import new_token, token_digest
 from app.nurseries.models import Nursery, NurseryAccess
@@ -23,11 +23,12 @@ from app.tablets.models import TabletDevice
 
 
 class PinRefused(Exception):
-    """Ouverture de session par PIN refusée. `reason` : invalid, locked, not_set ou throttled."""
+    """Ouverture de session par PIN refusée. `reason` : invalid, locked, not_set ou throttled (avec `retry_after`)."""
 
-    def __init__(self, reason: str) -> None:
+    def __init__(self, reason: str, retry_after: int | None = None) -> None:
         super().__init__(reason)
         self.reason = reason
+        self.retry_after = retry_after
 
 
 class WrongPassword(Exception):
@@ -35,7 +36,9 @@ class WrongPassword(Exception):
 
 
 class TooManyAttempts(Exception):
-    pass
+    def __init__(self, retry_after: int) -> None:
+        super().__init__(f"réessayer dans {retry_after} s")
+        self.retry_after = retry_after
 
 
 @dataclass(frozen=True)
@@ -129,13 +132,14 @@ async def staff(db: AsyncSession, tablet: TabletContext) -> list[AppUser]:
 async def open_action_session(db: AsyncSession, tablet: TabletContext, user_id: uuid.UUID, pin: str, client: Client,
                               now: datetime) -> tuple[AppUser, str]:
     device = tablet.device
-    recent_failures = await db.scalar(select(func.count()).select_from(AuthEvent).where(
+    recent_failures = list(await db.scalars(select(AuthEvent.occurred_at).where(
         AuthEvent.tablet_id == device.id, AuthEvent.event == AuthEventType.PIN_FAILED.value,
-        AuthEvent.occurred_at >= now - policy.DEVICE_FAILURE_WINDOW))
-    if policy.device_throttled(recent_failures):
+        AuthEvent.occurred_at >= now - policy.DEVICE_FAILURE_WINDOW).order_by(AuthEvent.occurred_at)))
+    if policy.device_throttled(len(recent_failures)):
         _event(db, AuthEventType.PIN_THROTTLED, client, now, user_id=user_id, tablet_id=device.id)
         await db.commit()
-        raise PinRefused("throttled")
+        raise PinRefused("throttled", retry_after=window_retry_after(
+            recent_failures, policy.DEVICE_MAX_FAILURES, policy.DEVICE_FAILURE_WINDOW, now))
 
     user = await db.scalar(_granted_employee(tablet.nursery).where(AppUser.id == user_id))
     if user is None:
@@ -201,11 +205,11 @@ PIN_SET_MAX_REFUSALS = 5
 
 async def set_pin(db: AsyncSession, user: AppUser, password: str, pin: str, client: Client, now: datetime) -> None:
     """L'employé choisit son PIN, depuis sa session web, en confirmant son mot de passe."""
-    refusals = await db.scalar(select(func.count()).select_from(AuthEvent).where(
+    refusals = list(await db.scalars(select(AuthEvent.occurred_at).where(
         AuthEvent.user_id == user.id, AuthEvent.event == AuthEventType.PIN_SET_REFUSED.value,
-        AuthEvent.occurred_at >= now - FAILURE_WINDOW))
-    if refusals >= PIN_SET_MAX_REFUSALS:
-        raise TooManyAttempts
+        AuthEvent.occurred_at >= now - FAILURE_WINDOW).order_by(AuthEvent.occurred_at)))
+    if wait := window_retry_after(refusals, PIN_SET_MAX_REFUSALS, FAILURE_WINDOW, now):
+        raise TooManyAttempts(wait)
     valid, _ = await passwords.verify_password(user.password_hash, password)
     if not valid:
         _event(db, AuthEventType.PIN_SET_REFUSED, client, now, user_id=user.id, detail="bad_password")

@@ -9,10 +9,11 @@ répond 404, comme un identifiant inexistant.
 import uuid
 from typing import Annotated
 
-from fastapi import APIRouter, HTTPException, Query, status
+from fastapi import APIRouter, Query, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.children import policy
 from app.children.models import Child, ChildGuardian, ChildStatus, Family, Guardian
 from app.children.schemas import (
     ChildCreate,
@@ -30,17 +31,20 @@ from app.children.schemas import (
     LinkIn,
 )
 from app.db import SessionDep
+from app.errors import ApiError, ErrorSpec, required_field
 from app.nurseries.dependencies import ManagedNursery, ReadableNursery
 from app.openapi import error_responses
 
 router = APIRouter(prefix="/api/v2/nurseries/{nursery_id}", tags=["enfants et familles"])
 
-_FAMILY = (status.HTTP_404_NOT_FOUND, "Famille introuvable")
-_CHILD = (status.HTTP_404_NOT_FOUND, "Enfant introuvable")
-_GUARDIAN = (status.HTTP_404_NOT_FOUND, "Responsable introuvable")
-_EMPTY_FIELD = (status.HTTP_422_UNPROCESSABLE_CONTENT, "Le champ first_name ne peut pas être vide")
-_OTHER_FAMILY = (status.HTTP_422_UNPROCESSABLE_CONTENT, "Le responsable n'appartient pas à la famille")
-_INCOHERENT_DATES = (status.HTTP_422_UNPROCESSABLE_CONTENT, "Un enfant parti a une date de sortie, et seulement lui")
+_FAMILY = ErrorSpec(status.HTTP_404_NOT_FOUND, "family_not_found", "Famille introuvable")
+_CHILD = ErrorSpec(status.HTTP_404_NOT_FOUND, "child_not_found", "Enfant introuvable")
+_GUARDIAN = ErrorSpec(status.HTTP_404_NOT_FOUND, "guardian_not_found", "Responsable introuvable")
+_OTHER_FAMILY = ErrorSpec(status.HTTP_422_UNPROCESSABLE_CONTENT, "guardian_other_family",
+                          "Le responsable n'appartient pas à la famille")
+# Un message par champ fautif dans `fields` (children/policy.py).
+_INCOHERENT_DATES = ErrorSpec(status.HTTP_422_UNPROCESSABLE_CONTENT, "child_dates_incoherent",
+                              "Les dates de l'enfant ne sont pas cohérentes")
 
 
 def guardian_out(guardian: Guardian) -> GuardianOut:
@@ -49,17 +53,17 @@ def guardian_out(guardian: Guardian) -> GuardianOut:
                        has_account=guardian.user_id is not None, is_active=guardian.is_active)
 
 
-async def _get(db: AsyncSession, model, nursery_id: uuid.UUID, object_id: uuid.UUID, label: str):
+async def _get(db: AsyncSession, model, nursery_id: uuid.UUID, object_id: uuid.UUID, missing: ErrorSpec):
     found = await db.scalar(select(model).where(model.id == object_id, model.nursery_id == nursery_id))
     if found is None:
-        raise HTTPException(status.HTTP_404_NOT_FOUND, f"{label} introuvable")
+        raise ApiError(missing)
     return found
 
 
 def _apply(target, changes: dict, required: tuple[str, ...]) -> None:
     for field in required:
         if field in changes and changes[field] is None:
-            raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, f"Le champ {field} ne peut pas être vide")
+            raise required_field(field)
     for field, value in changes.items():
         setattr(target, field, value)
 
@@ -85,7 +89,7 @@ async def create_family(body: FamilyCreate, context: ManagedNursery, db: Session
 @router.get("/families/{family_id}", responses=error_responses(_FAMILY))
 async def get_family(family_id: uuid.UUID, context: ReadableNursery, db: SessionDep) -> FamilyDetail:
     """La famille, ses enfants et ses responsables."""
-    family = await _get(db, Family, context.nursery.id, family_id, "Famille")
+    family = await _get(db, Family, context.nursery.id, family_id, _FAMILY)
     children = await db.scalars(select(Child).where(Child.family_id == family.id).order_by(Child.first_name))
     guardians = await db.scalars(select(Guardian).where(Guardian.family_id == family.id).order_by(Guardian.last_name))
     return FamilyDetail(**FamilyOut.model_validate(family).model_dump(),
@@ -93,11 +97,11 @@ async def get_family(family_id: uuid.UUID, context: ReadableNursery, db: Session
                         guardians=[guardian_out(guardian) for guardian in guardians])
 
 
-@router.patch("/families/{family_id}", responses=error_responses(_FAMILY, _EMPTY_FIELD))
+@router.patch("/families/{family_id}", responses=error_responses(_FAMILY))
 async def update_family(family_id: uuid.UUID, body: FamilyUpdate, context: ManagedNursery,
                         db: SessionDep) -> FamilyOut:
     """Modifie la famille ; seuls les champs envoyés changent."""
-    family = await _get(db, Family, context.nursery.id, family_id, "Famille")
+    family = await _get(db, Family, context.nursery.id, family_id, _FAMILY)
     _apply(family, body.model_dump(exclude_unset=True), ("label", "is_active"))
     await db.commit()
     return FamilyOut.model_validate(family)
@@ -121,7 +125,7 @@ async def list_children(context: ReadableNursery, db: SessionDep,
 @router.post("/families/{family_id}/children", status_code=status.HTTP_201_CREATED, responses=error_responses(_FAMILY))
 async def create_child(family_id: uuid.UUID, body: ChildCreate, context: ManagedNursery, db: SessionDep) -> ChildOut:
     """Inscrit un enfant dans la famille (statut `adaptation` par défaut)."""
-    family = await _get(db, Family, context.nursery.id, family_id, "Famille")
+    family = await _get(db, Family, context.nursery.id, family_id, _FAMILY)
     child = Child(id=uuid.uuid4(), family_id=family.id, nursery_id=family.nursery_id, exit_date=None,
                   **body.model_dump())
     db.add(child)
@@ -143,31 +147,24 @@ async def _child_detail(db: AsyncSession, child: Child) -> ChildDetail:
 @router.get("/children/{child_id}", responses=error_responses(_CHILD))
 async def get_child(child_id: uuid.UUID, context: ReadableNursery, db: SessionDep) -> ChildDetail:
     """Fiche de l'enfant et ses responsables, avec leurs autorisations."""
-    return await _child_detail(db, await _get(db, Child, context.nursery.id, child_id, "Enfant"))
+    return await _child_detail(db, await _get(db, Child, context.nursery.id, child_id, _CHILD))
 
 
-@router.patch("/children/{child_id}", responses=error_responses(_CHILD, _EMPTY_FIELD, _INCOHERENT_DATES))
+@router.patch("/children/{child_id}", responses=error_responses(_CHILD, _INCOHERENT_DATES))
 async def update_child(child_id: uuid.UUID, body: ChildUpdate, context: ManagedNursery, db: SessionDep) -> ChildOut:
     """Modifie l'enfant. Le départ se déclare avec `status: departed` et `exit_date` ; un retour efface la sortie."""
-    child = await _get(db, Child, context.nursery.id, child_id, "Enfant")
+    child = await _get(db, Child, context.nursery.id, child_id, _CHILD)
     changes = body.model_dump(exclude_unset=True)
     if changes.get("status") not in (None, ChildStatus.DEPARTED) and "exit_date" not in changes:
         # Retour d'un enfant parti (réinscription) : la date de sortie est effacée.
         changes["exit_date"] = None
     for field in ("first_name", "last_name", "birth_date", "enrollment_date", "status"):
         if field in changes and changes[field] is None:
-            raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, f"Le champ {field} ne peut pas être vide")
+            raise required_field(field)
     merged = {field: changes.get(field, getattr(child, field))
               for field in ("birth_date", "enrollment_date", "exit_date", "status")}
-    errors = []
-    if merged["enrollment_date"] < merged["birth_date"]:
-        errors.append("la date d'entrée ne peut pas précéder la naissance")
-    if merged["exit_date"] is not None and merged["exit_date"] < merged["enrollment_date"]:
-        errors.append("la date de sortie ne peut pas précéder l'entrée")
-    if (merged["status"] == ChildStatus.DEPARTED) != (merged["exit_date"] is not None):
-        errors.append("un enfant parti a une date de sortie, et seulement lui")
-    if errors:
-        raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, " ; ".join(errors).capitalize())
+    if errors := policy.date_errors(**merged):
+        raise ApiError(_INCOHERENT_DATES, fields=errors)
     for field, value in changes.items():
         setattr(child, field, value)
     await db.commit()
@@ -180,7 +177,7 @@ async def update_child(child_id: uuid.UUID, body: ChildUpdate, context: ManagedN
 async def create_guardian(family_id: uuid.UUID, body: GuardianCreate, context: ManagedNursery,
                           db: SessionDep) -> GuardianOut:
     """Ajoute un responsable à la famille. Le relier à chaque enfant : `PUT /children/{id}/guardians/{id}`."""
-    family = await _get(db, Family, context.nursery.id, family_id, "Famille")
+    family = await _get(db, Family, context.nursery.id, family_id, _FAMILY)
     guardian = Guardian(id=uuid.uuid4(), family_id=family.id, nursery_id=family.nursery_id, user_id=None,
                         is_active=True, **body.model_dump())
     db.add(guardian)
@@ -188,11 +185,11 @@ async def create_guardian(family_id: uuid.UUID, body: GuardianCreate, context: M
     return guardian_out(guardian)
 
 
-@router.patch("/guardians/{guardian_id}", responses=error_responses(_GUARDIAN, _EMPTY_FIELD))
+@router.patch("/guardians/{guardian_id}", responses=error_responses(_GUARDIAN))
 async def update_guardian(guardian_id: uuid.UUID, body: GuardianUpdate, context: ManagedNursery,
                           db: SessionDep) -> GuardianOut:
     """Modifie le responsable ; seuls les champs envoyés changent."""
-    guardian = await _get(db, Guardian, context.nursery.id, guardian_id, "Responsable")
+    guardian = await _get(db, Guardian, context.nursery.id, guardian_id, _GUARDIAN)
     _apply(guardian, body.model_dump(exclude_unset=True), ("first_name", "last_name", "is_active"))
     await db.commit()
     return guardian_out(guardian)
@@ -203,10 +200,10 @@ async def update_guardian(guardian_id: uuid.UUID, body: GuardianUpdate, context:
 async def link_guardian(child_id: uuid.UUID, guardian_id: uuid.UUID, body: LinkIn, context: ManagedNursery,
                         db: SessionDep) -> None:
     """Relie un responsable à un enfant **de la même famille**, ou met à jour ses autorisations."""
-    child = await _get(db, Child, context.nursery.id, child_id, "Enfant")
-    guardian = await _get(db, Guardian, context.nursery.id, guardian_id, "Responsable")
+    child = await _get(db, Child, context.nursery.id, child_id, _CHILD)
+    guardian = await _get(db, Guardian, context.nursery.id, guardian_id, _GUARDIAN)
     if guardian.family_id != child.family_id:
-        raise HTTPException(*_OTHER_FAMILY)
+        raise ApiError(_OTHER_FAMILY)
     link = await db.get(ChildGuardian, (child.id, guardian.id))
     if link is None:
         link = ChildGuardian(child_id=child.id, guardian_id=guardian.id, family_id=child.family_id)
@@ -221,7 +218,7 @@ async def link_guardian(child_id: uuid.UUID, guardian_id: uuid.UUID, body: LinkI
 async def unlink_guardian(child_id: uuid.UUID, guardian_id: uuid.UUID, context: ManagedNursery,
                           db: SessionDep) -> None:
     """Retire le lien entre le responsable et l'enfant. Sans effet s'il n'existait pas."""
-    child = await _get(db, Child, context.nursery.id, child_id, "Enfant")
+    child = await _get(db, Child, context.nursery.id, child_id, _CHILD)
     link = await db.get(ChildGuardian, (child.id, guardian_id))
     if link is not None:
         await db.delete(link)

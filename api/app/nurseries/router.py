@@ -3,11 +3,12 @@
 import uuid
 from typing import Annotated
 
-from fastapi import APIRouter, HTTPException, Query, status
+from fastapi import APIRouter, Query, status
 
 from app.attendance.policy import local_day
 from app.auth.dependencies import NowDep
 from app.auth.models import UserRole
+from app.errors import ApiError, ErrorSpec, required_field
 from app.nurseries.dependencies import ManagedNursery, NurseryRepositoryDep, OwnerUser, ReadableNursery, StaffUser
 from app.nurseries.models import Nursery, NurseryAccess
 from app.nurseries.schemas import EmployeeOut, NurseryCreate, NurseryOut, NurserySummary, NurseryUpdate, StaffOut
@@ -15,7 +16,7 @@ from app.openapi import error_responses
 
 router = APIRouter(prefix="/api/v2", tags=["crèches"])
 
-_EMPLOYEE_NOT_FOUND = (status.HTTP_404_NOT_FOUND, "Employé introuvable")
+_EMPLOYEE_NOT_FOUND = ErrorSpec(status.HTTP_404_NOT_FOUND, "employee_not_found", "Employé introuvable")
 
 
 @router.get("/nurseries")
@@ -56,14 +57,13 @@ async def get_nursery_summary(context: ReadableNursery, repo: NurseryRepositoryD
     return await repo.get_summary(context.nursery.id, local_day(now))
 
 
-@router.patch("/nurseries/{nursery_id}",
-              responses=error_responses((status.HTTP_422_UNPROCESSABLE_CONTENT, "Le champ name ne peut pas être vide")))
+@router.patch("/nurseries/{nursery_id}")
 async def update_nursery(body: NurseryUpdate, context: ManagedNursery, repo: NurseryRepositoryDep) -> NurseryOut:
     """Modifie la crèche ; seuls les champs envoyés changent. `is_active: false` la ferme (tablettes comprises)."""
     changes = body.model_dump(exclude_unset=True)
     for required in ("name", "city", "capacity", "is_active"):
         if required in changes and changes[required] is None:
-            raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, f"Le champ {required} ne peut pas être vide")
+            raise required_field(required)
     for field, value in changes.items():
         setattr(context.nursery, field, value)
     await repo.commit()
@@ -82,7 +82,7 @@ async def grant_access(user_id: uuid.UUID, context: ManagedNursery, repo: Nurser
     """Donne à un employé de l'entreprise l'accès à cette crèche. Sans effet s'il l'a déjà."""
     employee = await repo.get_employee(user_id, context.nursery.enterprise_id)
     if employee is None:
-        raise HTTPException(*_EMPLOYEE_NOT_FOUND)
+        raise ApiError(_EMPLOYEE_NOT_FOUND)
     if not await repo.is_granted(employee.id, context.nursery.id):
         repo.grant(NurseryAccess(user_id=employee.id, nursery_id=context.nursery.id,
                                  enterprise_id=context.nursery.enterprise_id, granted_at=now,
