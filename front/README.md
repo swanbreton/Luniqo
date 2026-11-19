@@ -101,6 +101,9 @@ route.
   `useServerFieldErrors(form, fieldErrors, FIELDS)` (`lib/server-field-errors.ts`)
   avec la correspondance explicite champ de l'API → champ du formulaire
   (`arrived_at` → `arrival`) ; chaque formulaire a sa story `ErreursParChamp`.
+  Une erreur serveur (5xx) porte sa référence (`requestId` : `request_id` du
+  corps, sinon en-tête `X-Request-ID`) ; `errorMessage()` l'ajoute au message
+  (« Référence : … »), à transmettre au support. Jamais pour un refus (4xx).
   Stratégie, traitement par catégorie et cible :
   [docs/projet/ERREURS.md](../docs/projet/ERREURS.md).
 - **Erreurs dans les tests et les stories** : jamais de corps d'erreur écrit à la
