@@ -5,13 +5,17 @@
   sur le texte. Une fois publié, un code ne change plus de sens.
 - `fields` : pour une saisie refusée (422), un message par champ.
 
+- `request_id` : pour une erreur serveur (5xx), la référence de la requête,
+  à donner au support (app/requests.py).
+
 Une erreur se déclare par un `ErrorSpec` (statut, code, message), se lève par
 `ApiError(spec)` et se documente par `error_responses(spec)` ou `raises(spec)`
 (app/openapi.py). Les gestionnaires ci-dessous donnent la même forme aux
-erreurs de FastAPI : validation des entrées (traduite en français) et routes
-inconnues.
+erreurs de FastAPI : validation des entrées (traduite en français), routes
+inconnues et exceptions imprévues (500, sans rien d'interne dans la réponse).
 """
 
+import logging
 from collections.abc import Callable, Sequence
 from typing import Any, NamedTuple
 
@@ -19,6 +23,8 @@ from fastapi import FastAPI, Request, status
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from starlette.exceptions import HTTPException as StarletteHTTPException
+
+from app.requests import HEADER, request_id_var
 
 
 class ErrorSpec(NamedTuple):
@@ -35,6 +41,13 @@ EMPTY_FIELD = "Ne peut pas être vide"
 # Limitation des essais, commune à la connexion, au second facteur, aux passkeys, aux comptes et au PIN.
 TOO_MANY_ATTEMPTS = ErrorSpec(status.HTTP_429_TOO_MANY_REQUESTS, "too_many_attempts",
                               "Trop de tentatives, réessayez plus tard")
+
+# Exception imprévue : message générique ; la classe et la pile ne vont qu'au journal.
+INTERNAL_ERROR = ErrorSpec(status.HTTP_500_INTERNAL_SERVER_ERROR, "internal_error",
+                           "Une erreur est survenue de notre côté. Réessayez dans un instant ; "
+                           "si elle revient, donnez la référence à la crèche.")
+
+logger = logging.getLogger("luniqo.errors")
 
 # Erreurs que Starlette lève seul (route ou méthode inconnue) : leur code se déduit du statut.
 _STATUS_ERRORS = {
@@ -67,10 +80,19 @@ def required_field(field: str) -> ApiError:
 observers: list[Callable[[str, str, int, str], None]] = []
 
 
+def request_id_of(request: Request) -> str | None:
+    """Référence de la requête, posée par RequestIdMiddleware (encore lisible après sa sortie)."""
+    return getattr(request.state, "request_id", None) or request_id_var.get()
+
+
 def _respond(request: Request, status_code: int, body: dict[str, Any],
              headers: dict[str, str] | None = None) -> JSONResponse:
     for observer in observers:
         observer(request.method, request.url.path, status_code, body["code"])
+    if status_code >= status.HTTP_500_INTERNAL_SERVER_ERROR and (request_id := request_id_of(request)):
+        # Erreur serveur : la référence est dans le corps, pour être affichée, et dans l'en-tête.
+        body = body | {"request_id": request_id}
+        headers = (headers or {}) | {HEADER: request_id}
     return JSONResponse(body, status_code=status_code, headers=headers)
 
 
@@ -100,9 +122,20 @@ async def _validation_error(request: Request, exc: Exception) -> JSONResponse:
     return _respond(request, VALIDATION_ERROR.status, body(detail, VALIDATION_ERROR.code, fields))
 
 
+async def _internal_error(request: Request, exc: Exception) -> JSONResponse:
+    """Exception imprévue : la pile part au journal avec la référence, la réponse n'en montre rien.
+
+    Starlette appelle ce gestionnaire depuis ServerErrorMiddleware, à l'extérieur des
+    middlewares de l'application : l'en-tête X-Request-ID est donc posé par `_respond`.
+    """
+    logger.error("Erreur imprévue", exc_info=exc, extra={"request_id": request_id_of(request)})
+    return _respond(request, INTERNAL_ERROR.status, body(INTERNAL_ERROR.message, INTERNAL_ERROR.code))
+
+
 def install(app: FastAPI) -> None:
     app.add_exception_handler(StarletteHTTPException, _http_error)
     app.add_exception_handler(RequestValidationError, _validation_error)
+    app.add_exception_handler(Exception, _internal_error)
 
 
 # --- Traduction des erreurs de validation de Pydantic -----------------------------------------
