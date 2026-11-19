@@ -12,17 +12,23 @@ alimentent la [story map](STORY-MAP.md).
 > porte des **hypothèses à vérifier** auprès de vrais utilisateurs.
 
 Rédigé le 2026-10-09 (LUN-60, bonus du cours « Coordination Front & Back »).
+Complété le 2026-11-17 (LUN-126, TD « Road to MVP ») : fiches illustrées par
+Pauline, et les deux personas imposés par le TD, Alex et Margeritte.
 
-| | Persona | Rôle dans Luniqo | Appareil principal | Fréquence |
-|---|---|---|---|---|
-| 1 | [Hélène, directrice de micro-crèche](#1-hélène-garnier-directrice-dune-micro-crèche) | Direction (`owner`) | ordinateur de bureau, téléphone | chaque jour |
-| 2 | [Yasmine, auxiliaire de puériculture](#2-yasmine-benali-auxiliaire-de-puériculture) | Employée (`employee`) | tablette de la crèche | plusieurs dizaines de fois par jour |
-| 3 | [Marc, parent de deux enfants](#3-marc-lefort-parent-de-deux-enfants) | Famille (`guardian`) | téléphone | une ou deux fois par jour |
-| 4 | [Nadia, gestionnaire d'un groupe de crèches](#4-nadia-fontaine-gestionnaire-dun-groupe-de-crèches) | Direction (`owner`) de plusieurs crèches | ordinateur portable | chaque jour |
+| | Persona | Origine | Rôle dans Luniqo | Appareil principal | Fréquence |
+|---|---|---|---|---|---|
+| 1 | [Hélène, directrice de micro-crèche](#1-hélène-garnier-directrice-dune-micro-crèche) | personnalisé | Direction (`owner`) | ordinateur de bureau, téléphone | chaque jour |
+| 2 | [Yasmine, auxiliaire de puériculture](#2-yasmine-benali-auxiliaire-de-puériculture) | personnalisé | Employée (`employee`) | tablette de la crèche | plusieurs dizaines de fois par jour |
+| 3 | [Marc, parent de deux enfants](#3-marc-lefort-parent-de-deux-enfants) | personnalisé | Famille (`guardian`) | téléphone | une ou deux fois par jour |
+| 4 | [Nadia, gestionnaire d'un groupe de crèches](#4-nadia-fontaine-gestionnaire-dun-groupe-de-crèches) | personnalisé | Direction (`owner`) de plusieurs crèches | ordinateur portable | chaque jour |
+| 5 | [Alex, référent numérique d'un groupe de crèches](#5-alex-référent-numérique-dun-groupe-de-crèches) 🕹️ | **imposé par le TD** (stats et gamification) | Direction (`owner`) aux côtés de Nadia | ordinateur et mobile | plusieurs fois par semaine |
+| 6 | [Margeritte, grand-mère avec délégation d'autorité parentale](#6-margeritte-grand-mère-avec-délégation-dautorité-parentale) 🖥️ | **imposé par le TD** (écran 800×600) | Famille (`guardian`) | vieil ordinateur de bureau, écran 800×600 | quelques fois par semaine |
 
 ---
 
 ## 1. Hélène Garnier, directrice d'une micro-crèche
+
+![Fiche persona d'Hélène Garnier, 46 ans, directrice d'une micro-crèche](personas/helene-garnier.webp)
 
 > « Le soir, je recopie et je range des fiches. Ce n'est pas pour ça que j'ai ouvert une crèche. »
 
@@ -65,6 +71,8 @@ premier usage ; multiplier les écrans de configuration.
 
 ## 2. Yasmine Benali, auxiliaire de puériculture
 
+![Fiche persona de Yasmine Benali, 29 ans, auxiliaire de puériculture](personas/yasmine-benali.webp)
+
 > « Quand j'ai un bébé dans les bras, je n'ai pas le temps de chercher un bouton. »
 
 | | |
@@ -104,6 +112,8 @@ commentaires libres pendant le pointage ; afficher des données d'autres crèche
 
 ## 3. Marc Lefort, parent de deux enfants
 
+![Fiche persona de Marc Lefort, 35 ans, horaires décalés, père de deux enfants](personas/marc-lefort.webp)
+
 > « Je veux juste savoir que ma fille est bien arrivée et qui est passé la chercher. »
 
 | | |
@@ -132,10 +142,14 @@ l'enfant ; envoyer des données d'enfants par e-mail.
 **Hypothèses à vérifier**
 - Une notification à l'arrivée et au départ serait plus utile que la consultation.
 - La grand-mère autorisée à venir chercher les enfants n'a pas besoin de compte.
+  Contredite par [Margeritte](#6-margeritte-grand-mère-avec-délégation-dautorité-parentale)
+  quand la grand-mère a une délégation d'autorité parentale.
 
 ---
 
 ## 4. Nadia Fontaine, gestionnaire d'un groupe de crèches
+
+![Fiche persona de Nadia Fontaine, 52 ans, dirigeante d'une entreprise de 4 crèches](personas/nadia-fontaine.webp)
 
 > « J'ai quatre crèches, je veux une seule vue, et chacun ne doit voir que la sienne. »
 
@@ -158,7 +172,112 @@ l'enfant ; envoyer des données d'enfants par e-mail.
 
 **Ce que Luniqo doit faire pour elle** : plusieurs crèches par entreprise, accès
 du personnel par crèche, second facteur obligatoire pour la direction (« Crèches
-et personnel », « Authentification »), tableau de bord et statistiques plus tard.
+et personnel », « Authentification »), état de chaque crèche depuis l'accueil
+(LUN-124), tableau de bord et statistiques plus tard.
 
 **Hypothèses à vérifier**
 - Les responsables de chaque crèche ont besoin d'un rôle intermédiaire entre direction et employé (non prévu aujourd'hui).
+
+---
+
+## 5. Alex, référent numérique d'un groupe de crèches
+
+![Fiche persona imposée d'Alex, 27 ans, informaticien, à l'aise avec la technique](personas/alex.png)
+
+> **Imposé par le TD « Road to MVP »** : un besoin de statistiques et de
+> gamification. La fiche du TD décrit un informaticien de 27 ans, à New York,
+> très à l'aise avec la technique, sur ordinateur et mobile, qui garde des
+> fichiers importants dans un endroit sécurisé et veut « un site avec des succès
+> et de la gamification ». Pour Luniqo, il devient le référent numérique du
+> groupe de Nadia ; l'âge, le métier et l'aisance numérique sont ceux de la fiche.
+
+> « Si l'équipe voit sa progression, elle remplit les fiches. Si c'est une corvée, elle oublie. »
+
+| | |
+|---|---|
+| Âge | 27 ans |
+| Poste | Informaticien, référent numérique du groupe de 4 crèches de Nadia : il installe les outils, forme les équipes et répond aux questions |
+| Appareils | Ordinateur au bureau, téléphone en déplacement entre les crèches |
+| Aisance numérique | Élevée ; actif, organisé, prêt à essayer de nouvelles fonctions |
+
+**Sa semaine.** Il passe d'une crèche à l'autre pour mettre en route les outils :
+activer la double authentification de la direction, enrôler les tablettes,
+faire remplir la première fiche de ménage. Il veut savoir où en est chaque
+crèche sans téléphoner à chaque responsable, et donner envie aux équipes
+d'utiliser l'outil au quotidien.
+
+**Ce qu'il veut**
+- Suivre la mise en route de chaque crèche par étapes visibles, avec des succès débloqués.
+- Des statistiques entre crèches : occupation, régularité du ménage, classement.
+- Des données bien protégées : voir les sessions actives et l'historique des connexions de son compte.
+- Encourager les équipes par des séries et des badges de régularité.
+
+**Ce qui le freine**
+- Un outil qui ne montre pas ce qui reste à faire.
+- Des fonctions cachées derrière une configuration qu'il doit expliquer à chaque crèche.
+- L'absence de trace de qui s'est connecté et d'où.
+
+**Ce que Luniqo doit faire pour lui** : succès de mise en route d'une crèche
+(LUN-128, US de l'équipe : succès côté API LUN-130, page de mise en route
+LUN-131), sessions actives et historique des connexions (à créer), séries et
+badges de régularité du ménage (à créer), statistiques multi-crèches avec
+classement (à créer, « plus tard »).
+
+**Ce qu'il ne faut pas faire** : transformer le pointage ou le ménage en
+compétition entre salariées nommément ; afficher des données d'enfants dans les
+statistiques ; récompenser la quantité au détriment de l'exactitude (cocher pour
+cocher).
+
+**Hypothèses à vérifier**
+- Des succès de mise en route raccourcissent l'installation d'une nouvelle crèche.
+- Les équipes acceptent des badges collectifs (par crèche) mais pas individuels.
+
+---
+
+## 6. Margeritte, grand-mère avec délégation d'autorité parentale
+
+![Fiche persona imposée de Margeritte, 68 ans, pharmacienne, peu à l'aise avec la technique](personas/margeritte.png)
+
+> **Imposé par le TD « Road to MVP »** : un besoin d'écran cathodique en
+> 800×600. La fiche du TD décrit une pharmacienne de 68 ans, à Budapest, peu à
+> l'aise avec la technique, qui n'utilise qu'un ordinateur de bureau avec un
+> écran 800×600 (« vieille télé »), sans version mobile. Pour Luniqo, elle
+> devient une grand-mère qui a une délégation d'autorité parentale et récupère
+> ses petits-enfants ; l'âge, le métier et l'équipement sont ceux de la fiche.
+
+> « Je veux juste vérifier l'heure de sortie des petits, sans chercher où cliquer. »
+
+| | |
+|---|---|
+| Âge | 68 ans |
+| Situation | Pharmacienne ; ses petits-enfants sont accueillis en crèche, elle a une délégation d'autorité parentale de leurs parents |
+| Équipement | Un ordinateur de bureau ancien, écran 800×600 ; pas de smartphone pour ce genre d'usage |
+| Aisance numérique | Faible ; prudente, organisée, préfère imprimer |
+
+**Sa semaine.** Elle récupère les enfants deux soirs par semaine quand leurs
+parents travaillent tard. Le soir, elle consulte le portail depuis son
+ordinateur pour vérifier les heures d'arrivée et de départ, et garde une trace
+papier des jours où elle s'en est occupée.
+
+**Ce qu'elle veut**
+- Un portail lisible sur un écran 800×600 : pas de défilement horizontal, gros caractères, contrastes forts.
+- Voir la présence du jour et l'historique de chaque enfant, sans menus cachés.
+- Imprimer un relevé de présence en PDF très contrasté.
+- Un compte à elle, puisque la délégation lui donne le droit de consulter.
+
+**Ce qui la freine**
+- Les sites pensés pour le téléphone, qui débordent ou cachent les menus sur un petit écran de bureau.
+- Les icônes sans texte et les actions au survol.
+- Les procédures de connexion en plusieurs étapes sur un autre appareil.
+
+**Ce que Luniqo doit faire pour elle** : portail des parents (LUN-68)
+utilisable en 800×600 et avec le texte agrandi (à créer), relevé de présence en
+PDF contrasté (à créer), compte famille lié à sa délégation.
+
+**Ce qu'il ne faut pas faire** : exiger un smartphone (application
+d'authentification, notification) pour consulter ; mettre l'information
+essentielle hors de la zone visible en 800×600 ; afficher des données de santé.
+
+**Hypothèses à vérifier**
+- Une grand-mère avec délégation d'autorité parentale a besoin de son propre compte : cela contredit l'hypothèse de [Marc](#3-marc-lefort-parent-de-deux-enfants).
+- Un relevé imprimable lui suffit, sans notification.

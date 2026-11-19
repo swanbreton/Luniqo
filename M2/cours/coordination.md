@@ -120,7 +120,8 @@ l'onboarding mis à jour et `docs/stage/`. Florent a pris chaque décision.
 - [ ] Vérifier les protections sur une vraie PR : fusion bloquée sans relecture ni CI pour un membre de l'équipe, contournement par PR pour l'administrateur.
 - [x] Stage, outils prêts : accès par fork, issue #86, onboarding mis à jour, modèles de rapport (2026-11-17, LUN-123).
 - [ ] Stage : vérifications avec le compte du stagiaire, protection des forks dans Vercel, rapports de fin de stage.
-- [ ] TD « Road to MVP », reste du barème : story map v2 et personas imposés, US de l'équipe, stories induites par les personas, stratégie de gestion des erreurs, sprints Jira.
+- [x] TD « Road to MVP » : [story map v2](../../docs/produit/STORY-MAP.md) de Thomas intégrée (version interactive [story-map.html](../../docs/produit/story-map.html)), clés et avancement vérifiés dans Jira, personas imposés Alex et Margeritte dans [PERSONAS.md](../../docs/produit/PERSONAS.md), fiches illustrées (2026-11-17, LUN-126).
+- [ ] TD « Road to MVP », reste du barème : stories induites par les personas (marquées « à créer » sur la carte), stratégie de gestion des erreurs, sprints Jira.
 - [ ] Première version `v0.1.0` par le circuit complet : préparation → `develop` → `staging` (`v0.1.0-rc.1`) → `main` (`v0.1.0`).
 - [x] Bonus du prof : [personas](../../docs/produit/PERSONAS.md) (4, fictifs) et [story map](../../docs/produit/STORY-MAP.md) avec la découpe du MVP (2026-10-09).
 - [x] Diagrammes Mermaid de la stratégie de branches, suggérés par le prof : cycle du ticket, circuit complet (`gitGraph` avec recette refusée et correctif urgent), flux entre environnements, dans [CONTRIBUTING.md](../../CONTRIBUTING.md). Rendu vérifié avec mermaid-cli 12.0.0.

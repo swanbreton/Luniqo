@@ -1,0 +1,407 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Luniqo Story Map</title>
+<style>
+  :root {
+    --bg: #f6f5f1;
+    --paper: #ffffff;
+    --ink: #1f2328;
+    --muted: #5d6470;
+    --line: #c9c6bd;
+    --epic: #8cc8ff;
+    --step: #86e0a3;
+    --task: #d9c4fb;
+    --task-new: #f1e9ff;
+    --p0: #ffd23f;
+    --p1: #ffa94d;
+    --p2: #c7ccd4;
+    --col: 196px;
+    --label: 210px;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font: 14px/1.4 "Segoe UI", system-ui, -apple-system, sans-serif;
+  }
+  header, section.text { max-width: 1200px; margin: 0 auto; padding: 0 16px; }
+  header { padding-top: 28px; }
+  h1 { font-size: 28px; margin: 0 0 4px; }
+  h2 { font-size: 19px; margin: 32px 0 12px; }
+  .sub { color: var(--muted); margin: 0 0 16px; }
+  .goal {
+    background: var(--paper); border-left: 5px solid var(--p0);
+    padding: 10px 14px; border-radius: 6px; margin: 0 0 12px;
+  }
+
+  /* Personas */
+  .personas { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 12px; }
+  .persona { background: var(--paper); border-radius: 10px; padding: 12px 14px; border: 1px solid #e3e0d8; }
+  .persona .head { display: flex; align-items: center; gap: 10px; margin-bottom: 6px; }
+  .persona b { font-size: 15px; }
+  .persona .role { color: var(--muted); font-size: 12.5px; }
+  .persona p { margin: 4px 0 0; font-size: 13px; }
+  .persona .sheet { display: block; margin-top: 8px; }
+  .persona .sheet img { width: 100%; height: auto; border-radius: 6px; border: 1px solid #e3e0d8; }
+  .persona.imposed { border: 2px dashed #e0a000; }
+  .tag-imposed { font-size: 11px; background: #fff1c2; color: #7a5600; border-radius: 4px; padding: 1px 6px; margin-left: 4px; white-space: nowrap; vertical-align: 1px; }
+
+  .chip {
+    display: inline-flex; align-items: center; justify-content: center;
+    min-width: 22px; height: 22px; padding: 0 5px; border-radius: 11px;
+    font-size: 11.5px; font-weight: 700; color: #fff; line-height: 1;
+  }
+  .chip.big { min-width: 34px; height: 34px; border-radius: 17px; font-size: 15px; }
+  .c-H { background: #0f8a7e; }
+  .c-Y { background: #c2387a; }
+  .c-M { background: #d9661a; }
+  .c-N { background: #4b4fc4; }
+  .c-A { background: #fde2e2; color: #000; }
+  .c-G { background: #e3e8ef; color: #000; }
+
+  /* Légende */
+  .legend { display: flex; flex-wrap: wrap; gap: 10px 22px; align-items: center; font-size: 13px; }
+  .legend span.sw { display: inline-block; width: 18px; height: 14px; border-radius: 3px; vertical-align: -2px; margin-right: 6px; }
+
+  /* La carte */
+  .map-wrap { overflow-x: auto; padding: 8px 16px 24px; }
+  .map {
+    display: grid;
+    grid-template-columns: var(--label) repeat(var(--ncols), var(--col));
+    column-gap: 12px;
+    background: var(--paper);
+    border-radius: 14px;
+    padding: 18px 18px 8px;
+    width: max-content;
+    box-shadow: 0 1px 3px rgba(0,0,0,.06);
+  }
+  .rowlabel { padding: 6px 10px 12px 0; }
+  .rowlabel .pill {
+    display: inline-block; font-weight: 700; border-radius: 5px; padding: 3px 10px; font-size: 13px;
+  }
+  .rowlabel p { margin: 6px 0 0; color: var(--muted); font-size: 12.5px; font-style: italic; }
+  .rowlabel .crit { font-style: normal; color: var(--ink); }
+  .rowlabel ul { margin: 6px 0 0; padding-left: 16px; font-size: 12px; color: var(--ink); font-style: normal; }
+
+  .note {
+    border-radius: 3px; padding: 8px 9px 7px; margin-bottom: 10px;
+    box-shadow: 0 1px 2px rgba(0,0,0,.12), 0 2px 6px rgba(0,0,0,.05);
+    font-size: 12.8px; position: relative;
+  }
+  .note .meta { display: flex; flex-wrap: wrap; gap: 4px; align-items: center; margin-top: 6px; font-size: 11px; color: #3b3f46; }
+  .note .key { font-family: ui-monospace, Consolas, monospace; font-size: 10.8px; background: rgba(255,255,255,.6); padding: 0 4px; border-radius: 3px; }
+  .note .new { font-size: 10.5px; font-weight: 700; color: #7a3fd1; border: 1px dashed #7a3fd1; border-radius: 3px; padding: 0 4px; }
+  .note .api { font-size: 10.5px; font-weight: 700; color: #11632f; background: #d8f5e1; border-radius: 3px; padding: 0 4px; }
+  .note .screen { font-size: 10.5px; font-weight: 700; color: #0b4a8b; background: #dcecff; border-radius: 3px; padding: 0 4px; }
+  .note .screen.partial { color: #5b6470; background: #eef0f3; }
+  .note .done { font-size: 10.5px; font-weight: 700; color: #11632f; }
+  .note .owner { display: inline-block; font-size: 10.5px; font-weight: 700; border-radius: 3px; padding: 1px 5px; margin-bottom: 4px; }
+  .note .owner.intern { background: #ffe8a3; color: #6b4e00; }
+  .note .owner.team { background: #1f2328; color: #fff; }
+  .note .who { margin-left: auto; display: flex; gap: 3px; }
+  .note .who .chip { min-width: 18px; height: 18px; font-size: 10px; padding: 0 4px; }
+
+  .epic { background: var(--epic); min-height: 92px; font-weight: 700; font-size: 14px; }
+  .epic small { display: block; font-weight: 400; font-size: 12px; margin-top: 3px; }
+  .step { background: var(--step); min-height: 92px; font-weight: 600; }
+  .task { background: var(--task); }
+  .task.isnew { background: var(--task-new); border: 1.5px dashed #9b6fe0; }
+
+  .cell { padding-top: 12px; }
+  .lane { border-top: 3px solid #333; }
+  .lane.l1 { border-top-color: #333; }
+  .lane.l2 { border-top: 2px dashed #777; }
+  .lane-head .pill { margin-top: 12px; }
+  .steps-line { border-bottom: 1.5px solid var(--line); padding-bottom: 4px; }
+  .empty { color: #b0aca3; font-size: 12px; font-style: italic; padding: 6px 2px; }
+
+  /* Fondations */
+  .enablers { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 12px; }
+  .enabler { background: #eceae4; border-radius: 8px; padding: 10px 12px; font-size: 13px; }
+  .enabler b { display: block; margin-bottom: 4px; }
+  .enabler ul { margin: 4px 0 0; padding-left: 18px; }
+
+  table { border-collapse: collapse; width: 100%; background: var(--paper); font-size: 13.5px; }
+  th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid #e6e3db; vertical-align: top; }
+  th { background: #efede7; }
+  code { font-family: ui-monospace, Consolas, monospace; font-size: 12.5px; }
+  footer { max-width: 1200px; margin: 30px auto 40px; padding: 0 16px; color: var(--muted); font-size: 12.5px; }
+
+  @media print {
+    @page { size: A3 landscape; margin: 8mm; }
+    body { background: #fff; }
+    .map-wrap { overflow: visible; }
+    .map { box-shadow: none; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Luniqo · User Story Map</h1>
+  <p class="sub">Version 2 · carte conçue par Thomas Abadie, d'après la méthode de Jeff Patton · personas : <a href="PERSONAS.md">PERSONAS.md</a> (4 personnalisés + 2 imposés par le TD) · tickets : Jira, projet <code>LUN</code> · version lisible sur GitHub : <a href="STORY-MAP.md">STORY-MAP.md</a></p>
+  <div class="goal"><b>Objectif du MVP (v1.0.0)</b> : une micro-crèche <b>remplace ses fiches papier de présence et de ménage</b>, et les parents voient la journée de leur enfant, <b>sans aucune donnée de santé</b>.</div>
+</header>
+
+<section class="text">
+  <h2>Les personas</h2>
+  <div class="personas" id="personas"></div>
+
+  <h2>Comment lire la carte</h2>
+  <div class="legend">
+    <span><span class="sw" style="background:var(--epic)"></span><b>Activités (épics)</b> : ce que l'utilisateur fait avec le produit</span>
+    <span><span class="sw" style="background:var(--step)"></span><b>Étapes (US)</b> : ce qu'il traverse pour réaliser l'activité</span>
+    <span><span class="sw" style="background:var(--task)"></span><b>Détails (sous-tâches)</b> : les interactions concrètes</span>
+    <span><span class="sw" style="background:var(--task-new);border:1.5px dashed #9b6fe0"></span>Story <b>à créer</b> dans Jira</span>
+    <span class="note" style="display:inline;padding:0;box-shadow:none;margin:0"><span class="api">API ✓</span></span><span>partie back faite</span>
+    <span class="note" style="display:inline;padding:0;box-shadow:none;margin:0"><span class="screen">Écran ✓</span> <span class="screen partial">Écran en partie</span></span><span>écrans du front v2 livrés</span>
+    <span class="note" style="display:inline;padding:0;box-shadow:none;margin:0"><span class="done">✓ fait</span></span><span>tous les tickets du post-it sont « Intégré » ou « Terminé » dans Jira</span>
+    <span class="note" style="display:inline;padding:0;box-shadow:none;margin:0"><span class="owner intern">US du stagiaire</span> <span class="owner team">US de l'équipe</span></span><span>les deux US fullstack imposées par le TD</span>
+  </div>
+  <p class="sub" style="margin-top:10px">De gauche à droite : l'ordre du récit (de l'installation de la crèche au suivi par les parents). De haut en bas : la priorité. Chaque ligne horizontale découpe une version ; tout ce qui est au-dessus de la ligne MVP suffit pour qu'une première crèche utilise Luniqo pour de vrai.</p>
+</section>
+
+<div class="map-wrap">
+  <div class="map" id="map"></div>
+</div>
+
+<section class="text">
+  <h2>Fondations : invisibles pour l'utilisateur, bloquantes pour le MVP</h2>
+  <div class="enablers">
+    <div class="enabler"><b>LUN-72 · Socle du front v2 ✓</b>Fait : chaque étape marquée « API ✓ » sans « Écran ✓ » attend maintenant son écran, pas son socle.
+      <ul><li>LUN-106 · ADR-002 : React + Vite retenu ✓</li><li>LUN-107 · Squelette du front et client TypeScript généré ✓</li><li>LUN-108 · Schéma OpenAPI publié par la CI ✓</li></ul></div>
+    <div class="enabler"><b>LUN-73 · Environnements PRÉ-PROD et PROD</b>Pas de crèche pilote sans production.
+      <ul><li>LUN-109 · VPS, domaine et HTTPS (requis par les passkeys)</li><li>LUN-110 · Images taguées, déploiement staging et main</li><li>LUN-111 · Retour arrière par tag, démontré</li></ul></div>
+    <div class="enabler"><b>LUN-127 · Gestion des erreurs (front et back)</b>Feature imposée par le TD : des messages d'erreur utiles à l'utilisateur et au développeur.
+      <ul><li>LUN-129 · Stratégie de gestion des erreurs</li><li>LUN-77 · Codes d'erreur stables (<code>reason</code>) du second facteur</li><li>Existant : réponses <code>{"detail"}</code> en français déclarées dans Swagger, classe <code>ApiError</code> et erreurs sous les champs côté front, error boundary du routeur ; pas encore de notifications (toasts)</li></ul></div>
+    <div class="enabler"><b>LUN-54 · Purge RGPD ✓</b>Sessions expirées et journal <code>auth_event</code> au-delà de 6 mois : faite ; il reste à la planifier chaque jour sur le VPS.</div>
+    <div class="enabler"><b>LUN-50 · Revoir le parcours central</b>Cette carte en est la version de travail ; le fil rouge M2 reste à mettre à jour.</div>
+  </div>
+
+  <h2>Ce qui change par rapport à la V1</h2>
+  <table>
+    <tr><th>V1</th><th>V2</th></tr>
+    <tr><td>Un tableau Markdown : activités, tâches et stories mélangées dans la même cellule.</td><td>Trois niveaux distincts, comme le modèle du cours : activités (épics) → étapes (US) → détails (sous-tâches).</td></tr>
+    <tr><td>Activités inventées pour la carte, sans lien direct avec Jira.</td><td>Les activités sont les épics Jira, rangés dans l'ordre du récit ; chaque colonne est une US.</td></tr>
+    <tr><td>Détails écrits comme des tickets techniques (<code>[Front]</code>, <code>[Back]</code>).</td><td>Détails écrits du point de vue de l'utilisateur ; le ticket reste noté sur le post-it.</td></tr>
+    <tr><td>4 personas.</td><td>6 personas : Alex et Margeritte, imposés par le TD, ajoutés ; leurs besoins sont marqués 🕹️ et 🖥️ sur la carte.</td></tr>
+    <tr><td>Chaque version n'a qu'un nom.</td><td>Chaque version a un objectif et des critères de réussite.</td></tr>
+    <tr><td>Un seul repère d'avancement (✅ = API faite), posé à tort sur la fiche de ménage, qui n'avait alors pas d'API.</td><td>Trois repères tirés de Jira et du code : API, écrans, tickets faits. Depuis, l'API du ménage existe (LUN-100, LUN-102, LUN-104) : le badge API est revenu, il manque les écrans.</td></tr>
+    <tr><td>Socle technique dans la carte des utilisateurs.</td><td>Socle sorti de la carte, dans une bande de fondations, avec la gestion des erreurs imposée par le TD.</td></tr>
+    <tr><td>—</td><td>Les deux US fullstack du TD ont leur colonne : LUN-124 pour le stagiaire, LUN-128 pour l'équipe.</td></tr>
+  </table>
+
+  <h2>Actions Jira qui découlent de la carte</h2>
+  <table>
+    <tr><th>Action</th><th>Pourquoi</th></tr>
+    <tr><td>Créer les stories en pointillés : portail en 800×600, sessions actives, séries et badges d'équipe, notifications, relevé PDF, statistiques multi-crèches…</td><td>Besoins apportés par les personas, absents du backlog. Le TD demande que les besoins induits par les personas se voient dans l'outil de gestion de projet.</td></tr>
+    <tr><td>Décider si LUN-55 (invitation des employés) reste sous l'épic « Authentification » ou passe sous « Crèches et personnel »</td><td>La carte la range dans « Donner accès au personnel ».</td></tr>
+    <tr><td>Vérifier avec la crèche pilote l'hypothèse « un grand-parent n'a pas besoin de compte »</td><td>Margeritte la contredit lorsqu'elle a la délégation d'autorité parentale.</td></tr>
+  </table>
+</section>
+
+<footer>
+  Personas fictifs <code>[SIMULÉ]</code>. Clés et statuts vérifiés un à un dans Jira le 2026-11-17 (LUN-126) ; écrans vérifiés dans le code de <code>develop</code> le même jour. Jusqu'au 2026-10-29, le dépôt citait les épics avec 29 de trop et les stories et sous-tâches avec 7 de trop (voir <code>docs/projet/JIRA.md</code> § 8).
+</footer>
+
+<script>
+const PERSONAS = {
+  H: { name: "Hélène", photo: "personas/helene-garnier.webp", role: "Directrice de micro-crèche · ordinateur, téléphone", need: "Ne plus remplir ni archiver de fiches papier ; savoir qui est présent ; qu'aucun enfant ne parte avec un adulte non autorisé." },
+  Y: { name: "Yasmine", photo: "personas/yasmine-benali.webp", role: "Auxiliaire de puériculture · tablette partagée", need: "Pointer en quelques secondes, avec de grands boutons, les mains souvent occupées." },
+  M: { name: "Marc", photo: "personas/marc-lefort.webp", role: "Parent de deux enfants · téléphone, texte agrandi", need: "Savoir que sa fille est arrivée et qui est venu la chercher ; un seul compte pour ses deux enfants." },
+  N: { name: "Nadia", photo: "personas/nadia-fontaine.webp", role: "Gestionnaire d'un groupe de 4 crèches · portable", need: "Une seule vue sur ses crèches, des accès par crèche, une traçabilité de qui fait quoi." },
+  A: { name: "Alex", label: "🕹️", imposed: true, photo: "personas/alex.png", role: "27 ans, informaticien · référent numérique du groupe de Nadia · ordinateur et mobile", need: "À l'aise avec la technique, il veut des données bien protégées et un outil avec des succès et de la gamification." },
+  G: { name: "Margeritte", label: "🖥️", imposed: true, photo: "personas/margeritte.png", role: "68 ans, pharmacienne · grand-mère avec délégation d'autorité parentale · ordinateur 800×600 uniquement", need: "Peu à l'aise avec la technique : des écrans simples, lisibles sur un vieil écran de bureau, sans version mobile." },
+};
+
+const EPICS = {
+  auth:     { key: "LUN-32", title: "Se connecter en sécurité", jira: "Authentification et sécurité des comptes" },
+  creches:  { key: "LUN-33", title: "Mettre en place la crèche", jira: "Crèches et personnel" },
+  familles: { key: "LUN-35", title: "Accueillir les familles", jira: "Enfants et familles" },
+  pointage: { key: "LUN-34", title: "Vivre la journée : les présences", jira: "Pointage sur tablette" },
+  menage:   { key: "LUN-36", title: "Vivre la journée : le ménage", jira: "Fiche de ménage" },
+};
+
+// Tickets « Intégré » ou « Terminé » dans Jira au 2026-11-17.
+const DONE = new Set([
+  "LUN-54", "LUN-55", "LUN-58", "LUN-74", "LUN-76", "LUN-78", "LUN-79",
+  "LUN-87", "LUN-88", "LUN-89", "LUN-91", "LUN-92", "LUN-93",
+  "LUN-100", "LUN-102", "LUN-104", "LUN-119", "LUN-120", "LUN-121",
+]);
+const isDone = key => {
+  const keys = (key || "").match(/LUN-\d+/g) || [];
+  return keys.length > 0 && keys.every(k => DONE.has(k));
+};
+
+// t(texte, clés, personas, nouveau)
+const t = (text, key, who = [], isNew = false) => ({ text, key, who, isNew });
+
+// api : partie back faite ; screen : "done" (écrans livrés) ou "partial" (en partie) ;
+// owner : "intern" (US du stagiaire) ou "team" (US de l'équipe).
+const COLUMNS = [
+  { epic: "auth", key: "LUN-61", title: "Se connecter avec un second facteur", who: ["H","N","A"], api: true, screen: "partial",
+    p0: [ t("Saisir e-mail et mot de passe ; message clair si le compte est bloqué", "LUN-74"),
+          t("Activer le TOTP en scannant un QR code", "LUN-75"),
+          t("Garder ses 10 codes de secours, affichés une seule fois", "LUN-75"),
+          t("Taper son code TOTP ou un code de secours", "LUN-76"),
+          t("Comprendre pourquoi un code est refusé", "LUN-77") ],
+    p1: [ t("Voir ses sessions actives et l'historique de ses connexions", null, ["A"], true) ],
+    p2: [] },
+  { epic: "auth", key: "LUN-62", title: "Se connecter avec Face ID (passkey)", who: ["H","N","A"], api: true,
+    p0: [],
+    p1: [ t("Enregistrer Face ID, Touch ID ou Windows Hello", "LUN-78 · LUN-80"),
+          t("Se connecter sans mot de passe ; la passkey vaut second facteur", "LUN-79 · LUN-80"),
+          t("Nommer et retirer ses passkeys", "LUN-81") ],
+    p2: [] },
+  { epic: "creches", key: "LUN-63", title: "Gérer ses crèches", who: ["H","N"], api: true, screen: "partial",
+    p0: [ t("Voir ses crèches et choisir la crèche courante", "LUN-82"),
+          t("Créer, modifier, fermer une crèche", "LUN-83") ],
+    p1: [],
+    p2: [ t("Administration par l'éditeur, sans accès aux données des crèches", "LUN-56"),
+          t("Facturation", null, [], true) ] },
+  { epic: "creches", key: "LUN-128", title: "Suivre la mise en route d'une crèche avec des succès", who: ["A","H"], owner: "team",
+    p0: [ t("Gagner un succès à chaque étape : 2FA activé, tablette enrôlée, 1re fiche de ménage remplie", "LUN-130", ["A","H"]),
+          t("Voir la page de mise en route de sa crèche et les succès qui restent", "LUN-131", ["A","H"]) ],
+    p1: [],
+    p2: [] },
+  { epic: "creches", key: "LUN-124", title: "Voir l'état de chaque crèche depuis l'accueil", who: ["N","H"], owner: "intern",
+    p0: [],
+    p1: [ t("Lire le résumé d'une crèche : inscrits, présents, personnel", "LUN-84", ["N"]),
+          t("Voir une carte de résumé par crèche sur l'accueil", "LUN-125", ["N","H"]) ],
+    p2: [] },
+  { epic: "creches", key: "LUN-64", title: "Donner accès au personnel", who: ["H","N"], api: true,
+    p0: [ t("Inviter un employé, qui crée son compte", "LUN-55"),
+          t("Accorder ou retirer l'accès à une crèche", "LUN-85"),
+          t("Débloquer le PIN d'un employé", "LUN-85") ],
+    p1: [ t("Retrouver un employé par nom ou e-mail", "LUN-86", ["N"]) ],
+    p2: [ t("Rôle de responsable de crèche, entre direction et employé", null, ["N"], true) ] },
+  { epic: "familles", key: "LUN-67", title: "Créer la fiche d'une famille", who: ["H"], api: true,
+    p0: [ t("Créer une famille, ses enfants et ses responsables", "LUN-94"),
+          t("Dire qui a l'autorité parentale et qui peut venir chercher l'enfant", "LUN-95"),
+          t("Générer le lien d'invitation d'un parent (usage unique)", "LUN-68") ],
+    p1: [ t("Retrouver un enfant par son nom", "LUN-96") ],
+    p2: [ t("Allergies et PAI, après l'analyse RGPD et HDS", "LUN-57") ] },
+  { epic: "familles", key: "LUN-68", title: "Suivre son enfant depuis le portail", who: ["M","G"], api: true,
+    p0: [ t("Accepter l'invitation et choisir son mot de passe", "LUN-97"),
+          t("Voir la présence du jour et l'historique de chaque enfant", "LUN-98"),
+          t("Portail utilisable sur un ordinateur en 800×600 et avec le texte agrandi", null, ["G","M"], true) ],
+    p1: [ t("Recevoir l'invitation par e-mail, sans donnée d'enfant", "LUN-99 · LUN-59"),
+          t("Être prévenu à l'arrivée et au départ", null, ["M"], true),
+          t("Imprimer un relevé de présence en PDF très contrasté", null, ["G"], true) ],
+    p2: [ t("Messagerie avec la crèche", null, ["M"], true) ] },
+  { epic: "pointage", key: "LUN-65", title: "Pointer arrivées et départs sur la tablette", who: ["Y"], api: true, screen: "done",
+    p0: [ t("Enrôler la tablette de la crèche (direction)", "LUN-87", ["H"]),
+          t("Choisir ou changer son PIN depuis son accueil", "LUN-119"),
+          t("Choisir son nom et taper son PIN, avec de grands boutons", "LUN-88"),
+          t("Pointer un enfant d'un geste", "LUN-89"),
+          t("Choisir l'adulte qui vient chercher ; départ refusé s'il n'est pas autorisé", "LUN-89") ],
+    p1: [ t("Pointer une fratrie d'un seul geste", "LUN-90") ],
+    p2: [ t("Transmissions de la journée", null, [], true) ] },
+  { epic: "pointage", key: "LUN-66", title: "Voir qui est présent", who: ["H","N"], api: true, screen: "done",
+    p0: [ t("Voir les présents du jour, par crèche", "LUN-91") ],
+    p1: [ t("Consulter l'historique des présences sur une période", "LUN-92"),
+          t("Exporter les présences en CSV", "LUN-93") ],
+    p2: [ t("Statistiques multi-crèches : occupation et régularité du ménage, avec classement", null, ["N","A"], true) ] },
+  { epic: "pointage", key: "LUN-58", title: "Corriger un pointage", who: ["H"], api: true, screen: "partial",
+    p0: [],
+    p1: [ t("Corriger un pointage avec un motif obligatoire", "LUN-120 · LUN-121"),
+          t("Voir l'historique des corrections", "LUN-120 · LUN-121"),
+          t("Corriger depuis les présences du jour", "LUN-122") ],
+    p2: [] },
+  { epic: "menage", key: "LUN-69", title: "Décrire les pièces et les tâches", who: ["H","N"], api: true,
+    p0: [ t("Créer les pièces de la crèche", "LUN-100 · LUN-101"),
+          t("Décrire les tâches et leur fréquence", "LUN-100 · LUN-101") ],
+    p1: [],
+    p2: [ t("Traçabilité HACCP de la cuisine", null, [], true) ] },
+  { epic: "menage", key: "LUN-70", title: "Remplir la fiche de ménage", who: ["Y"], api: true,
+    p0: [ t("Voir les tâches du jour, par pièce", "LUN-103"),
+          t("Cocher une tâche ; l'heure et l'auteur sont fixés par le serveur", "LUN-102 · LUN-103") ],
+    p1: [ t("Séries et badges de régularité pour l'équipe", null, ["A","Y"], true) ],
+    p2: [] },
+  { epic: "menage", key: "LUN-71", title: "Retrouver et présenter les fiches", who: ["H","N"], api: true,
+    p0: [ t("Consulter l'historique des fiches, filtré par pièce et par période", "LUN-104 · LUN-105") ],
+    p1: [ t("Exporter les fiches pour un contrôle", "LUN-104 · LUN-105") ],
+    p2: [] },
+];
+
+const LANES = [
+  { id: "p0", cls: "l0", pill: "P0 · MVP", color: "var(--p0)", version: "v1.0.0",
+    goal: "Une crèche abandonne le papier.",
+    crit: ["Aucune fiche papier de présence ni de ménage pendant un mois", "Un pointage en moins de 10 s", "Aucun départ avec un adulte non autorisé"] },
+  { id: "p1", cls: "l1", pill: "P1 · Release 1.1", color: "var(--p1)", version: "",
+    goal: "Gagner du temps et être prêt pour un contrôle.",
+    crit: ["Connexion par Face ID", "Fiches et présences exportables", "Parents prévenus sans ouvrir l'app"] },
+  { id: "p2", cls: "l2", pill: "P2 · Plus tard", color: "var(--p2)", version: "",
+    goal: "Couvrir les groupes de crèches et la vie de la crèche au-delà des présences.",
+    crit: [] },
+];
+
+const OWNERS = { intern: "US du stagiaire", team: "US de l'équipe" };
+const SCREENS = { done: '<span class="screen">Écran ✓</span>', partial: '<span class="screen partial">Écran en partie</span>' };
+
+const chip = (p, cls = "") => {
+  const P = PERSONAS[p];
+  return `<span class="chip c-${p} ${cls}" title="${P.name}">${P.label || p}</span>`;
+};
+const whoHtml = who => who.length ? `<span class="who">${who.map(p => chip(p)).join("")}</span>` : "";
+
+// Personas
+document.getElementById("personas").innerHTML = Object.entries(PERSONAS).map(([k, p]) => `
+  <div class="persona ${p.imposed ? "imposed" : ""}">
+    <div class="head">${chip(k, "big")}<div><b>${p.name}</b>${p.imposed ? ' <span class="tag-imposed">imposé par le TD</span>' : ""}<div class="role">${p.role}</div></div></div>
+    <p>${p.need}</p>
+    <a class="sheet" href="${p.photo}" title="Ouvrir la fiche de ${p.name}"><img src="${p.photo}" alt="Fiche persona de ${p.name}" loading="lazy"></a>
+  </div>`).join("");
+
+// Carte
+const map = document.getElementById("map");
+map.style.setProperty("--ncols", COLUMNS.length);
+let html = "";
+
+// Ligne 1 : activités (épics), une case par série de colonnes du même épic
+html += `<div class="rowlabel"><span class="pill" style="background:var(--epic)">Activités (épics)</span>
+  <p>Les grandes activités, dans l'ordre du récit →</p></div>`;
+for (let i = 0; i < COLUMNS.length;) {
+  const e = COLUMNS[i].epic;
+  let span = 1;
+  while (i + span < COLUMNS.length && COLUMNS[i + span].epic === e) span++;
+  const who = [...new Set(COLUMNS.slice(i, i + span).flatMap(c => c.who))];
+  const E = EPICS[e];
+  html += `<div style="grid-column: span ${span}"><div class="note epic">${E.title}
+    <small>Épic Jira : ${E.jira}</small>
+    <div class="meta"><span class="key">${E.key}</span>${whoHtml(who)}</div></div></div>`;
+  i += span;
+}
+
+// Ligne 2 : étapes (US)
+html += `<div class="rowlabel steps-line"><span class="pill" style="background:var(--step)">Étapes (US)</span>
+  <p>Ce que l'utilisateur traverse pour réaliser l'activité</p></div>`;
+for (const c of COLUMNS) {
+  html += `<div class="steps-line"><div class="note step">${c.owner ? `<span class="owner ${c.owner}">${OWNERS[c.owner]}</span><br>` : ""}${c.title}
+    <div class="meta"><span class="key">${c.key}</span>${c.api ? '<span class="api">API ✓</span>' : ""}${c.screen ? SCREENS[c.screen] : ""}${whoHtml(c.who)}</div></div></div>`;
+}
+
+// Lignes de version : détails
+LANES.forEach((L, idx) => {
+  html += `<div class="rowlabel lane ${L.cls} lane-head">
+    ${idx === 0 ? '<p style="margin-top:10px">Détails (sous-tâches), découpés par version</p>' : ""}
+    <span class="pill" style="background:${L.color}">${L.pill}</span>${L.version ? ` <b style="font-size:12px">${L.version}</b>` : ""}
+    <p class="crit"><b>Objectif :</b> ${L.goal}</p>
+    ${L.crit.length ? `<ul>${L.crit.map(c => `<li>${c}</li>`).join("")}</ul>` : ""}</div>`;
+  for (const c of COLUMNS) {
+    const items = c[L.id];
+    html += `<div class="cell lane ${L.cls}">${items.length ? items.map(it => `
+      <div class="note task ${it.isNew ? "isnew" : ""}">${it.text}
+        <div class="meta">${it.key ? `<span class="key">${it.key}</span>` : ""}${isDone(it.key) ? '<span class="done">✓ fait</span>' : ""}${it.isNew ? '<span class="new">à créer</span>' : ""}${whoHtml(it.who)}</div>
+      </div>`).join("") : '<div class="empty">—</div>'}</div>`;
+  }
+});
+
+map.innerHTML = html;
+</script>
+</body>
+</html>
