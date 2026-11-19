@@ -6,7 +6,7 @@ import type { paths } from './schema'
 
 /**
  * Toute réponse en erreur devient une `ApiError` levée : TanStack Query la
- * reçoit telle quelle, en-tête Retry-After compris.
+ * reçoit telle quelle, avec le délai de Retry-After et la référence X-Request-ID.
  */
 const throwOnError: Middleware = {
   async onResponse({ response }) {
@@ -15,7 +15,7 @@ const throwOnError: Middleware = {
       .clone()
       .json()
       .catch(() => null)
-    throw toApiError(response.status, body, response.headers.get('Retry-After'))
+    throw toApiError(response.status, body, response.headers.get('Retry-After'), response.headers.get('X-Request-ID'))
   },
 }
 
