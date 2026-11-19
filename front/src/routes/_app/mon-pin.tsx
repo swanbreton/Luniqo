@@ -2,7 +2,7 @@ import { createFileRoute, Link, redirect } from '@tanstack/react-router'
 import { CircleCheck } from 'lucide-react'
 
 import { $api } from '@/api/client'
-import { errorMessage } from '@/api/errors'
+import { errorMessage, fieldErrorsOf } from '@/api/errors'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { PinForm } from '@/features/pin/pin-form'
@@ -50,6 +50,7 @@ function MyPinPage() {
             onSubmit={({ pin, password }) => save.mutate({ body: { pin, password } })}
             pending={save.isPending}
             error={save.isError ? errorMessage(save.error) : null}
+            fieldErrors={fieldErrorsOf(save.error)}
           />
         </CardContent>
       </Card>

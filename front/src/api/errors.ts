@@ -71,6 +71,21 @@ function withDelay(message: string, retryAfter: number | null): string {
   return `${message} (dans ${minutes} minute${minutes > 1 ? 's' : ''})`
 }
 
+/**
+ * Codes de l'API sur lesquels le front décide (catalogue : docs/projet/ERREURS.md § 2).
+ * Ne jamais comparer `message` : il peut être reformulé, le code jamais.
+ */
+export const ERROR_CODES = {
+  mfaRequired: 'mfa_required',
+  pinLocked: 'pin_locked',
+  pinNotSet: 'pin_not_set',
+} as const
+
+/** Erreurs par champ d'une saisie refusée, ou `undefined` ; même objet tant que l'erreur ne change pas. */
+export function fieldErrorsOf(error: unknown): Readonly<Record<string, string>> | undefined {
+  return error instanceof ApiError && Object.keys(error.fields).length > 0 ? error.fields : undefined
+}
+
 /** Message à afficher pour n'importe quelle erreur (réseau compris). */
 export function errorMessage(error: unknown): string {
   if (error instanceof ApiError) return error.message

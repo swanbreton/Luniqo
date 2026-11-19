@@ -7,6 +7,7 @@ import { Field, SelectField, TextareaField } from '@/components/field'
 import { FormError } from '@/components/form-error'
 import { Button } from '@/components/ui/button'
 import { formatLongDay } from '@/lib/dates'
+import { type FieldMap, type ServerFieldErrors, useServerFieldErrors } from '@/lib/server-field-errors'
 
 import {
   changesSomething,
@@ -23,6 +24,16 @@ import {
 type Presence = Schemas['AttendanceOut']
 type ChildGuardian = Schemas['ChildGuardianOut']
 
+// Champs de l'API (PresenceUpdate) → champs du formulaire.
+const FIELDS: FieldMap<CorrectionValues> = {
+  arrived_at: 'arrival',
+  departed_at: 'departure',
+  dropped_off_by: 'droppedOffBy',
+  picked_up_by: 'pickedUpBy',
+  reason: 'reason',
+}
+const REMOVE_FIELDS: FieldMap<{ reason: string }> = { reason: 'reason' }
+
 type CorrectionFormProps = {
   presence: Presence
   /** Responsables de l'enfant ; `undefined` pendant leur chargement. */
@@ -32,6 +43,8 @@ type CorrectionFormProps = {
   onRemove: (reason: string) => void
   pending?: boolean
   error?: string | null
+  /** Erreurs par champ renvoyées par l'API (422), affichées sous chaque champ. */
+  fieldErrors?: ServerFieldErrors | undefined
 }
 
 /**
@@ -45,6 +58,7 @@ export function CorrectionForm({
   onRemove,
   pending = false,
   error = null,
+  fieldErrors,
 }: CorrectionFormProps) {
   const [removing, setRemoving] = useState(false)
   const [unchanged, setUnchanged] = useState(false)
@@ -52,6 +66,7 @@ export function CorrectionForm({
     resolver: zodResolver(correctionSchema),
     defaultValues: correctionDefaults(presence),
   })
+  useServerFieldErrors(form, removing ? undefined : fieldErrors, FIELDS)
   const { errors } = form.formState
 
   if (removing) {
@@ -62,6 +77,7 @@ export function CorrectionForm({
         onBack={() => setRemoving(false)}
         pending={pending}
         error={error}
+        fieldErrors={fieldErrors}
       />
     )
   }
@@ -151,13 +167,15 @@ type RemoveFormProps = {
   onBack: () => void
   pending: boolean
   error: string | null
+  fieldErrors: ServerFieldErrors | undefined
 }
 
 const removeSchema = reasonSchema
 
 /** Retrait d'une présence pointée par erreur : motif, puis confirmation explicite. */
-function RemoveForm({ presence, onRemove, onBack, pending, error }: RemoveFormProps) {
+function RemoveForm({ presence, onRemove, onBack, pending, error, fieldErrors }: RemoveFormProps) {
   const form = useForm<{ reason: string }>({ defaultValues: { reason: '' } })
+  useServerFieldErrors(form, fieldErrors, REMOVE_FIELDS)
   const { errors } = form.formState
 
   return (

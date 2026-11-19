@@ -3,7 +3,7 @@ import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { useState } from 'react'
 
 import { $api } from '@/api/client'
-import { errorMessage } from '@/api/errors'
+import { errorMessage, fieldErrorsOf } from '@/api/errors'
 import { FormError } from '@/components/form-error'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -73,6 +73,7 @@ function ActivationPage() {
               onSubmit={(body) => confirm.mutate({ body })}
               pending={confirm.isPending}
               error={confirm.isError ? errorMessage(confirm.error) : null}
+              fieldErrors={fieldErrorsOf(confirm.error)}
             />
           </>
         )}

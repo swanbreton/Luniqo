@@ -115,7 +115,7 @@ describe('corrections des pointages', () => {
       ...directorApi().handlers,
       http.patch(`${BASE}/attendance/${forgotten.id}`, () =>
         HttpResponse.json(
-          { detail: "Cette présence chevauche une autre présence de l'enfant ce jour-là" },
+          { detail: "Cette présence chevauche une autre présence de l'enfant ce jour-là", code: 'presence_overlap' },
           { status: 409 },
         ),
       ),
@@ -130,6 +130,35 @@ describe('corrections des pointages', () => {
     await expect
       .element(dialog.getByText("Cette présence chevauche une autre présence de l'enfant ce jour-là"))
       .toBeVisible()
+  })
+
+  test('erreurs par champ de l’API : sous les champs du formulaire, noms de l’API traduits', async ({ worker }) => {
+    worker.use(
+      ...directorApi().handlers,
+      http.patch(`${BASE}/attendance/${forgotten.id}`, () =>
+        HttpResponse.json(
+          {
+            detail: 'Certains champs sont invalides.',
+            code: 'validation_error',
+            fields: { arrived_at: 'Date et heure invalides', reason: 'Au plus 500 caractères' },
+          },
+          { status: 422 },
+        ),
+      ),
+    )
+    const { screen } = await start()
+    await screen.getByRole('button', { name: 'Corriger la présence de Léo Garnier, arrivée à 08:50' }).click()
+    const dialog = screen.getByRole('dialog', { name: 'Corriger la présence' })
+    await dialog.getByLabelText('Arrivée').fill('07:30')
+    await dialog.getByLabelText('Motif de la correction').fill('Arrivée pointée en retard')
+    await dialog.getByRole('button', { name: 'Enregistrer la correction' }).click()
+
+    await expect.element(dialog.getByText('Certains champs sont invalides.')).toBeVisible()
+    // arrived_at (API) → « Arrivée », reason → « Motif de la correction ».
+    await expect.element(dialog.getByLabelText('Arrivée')).toHaveAccessibleDescription('Date et heure invalides')
+    await expect
+      .element(dialog.getByLabelText('Motif de la correction'))
+      .toHaveAccessibleDescription(/Au plus 500 caractères/)
   })
 
   test("correction sans changement ou sans motif : refusée avant d'appeler l'API", async ({ worker }) => {

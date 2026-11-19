@@ -36,3 +36,15 @@ export const Envoi: Story = {
     await expect(args.onSubmit).toHaveBeenCalledWith({ label: "Tablette de l'entrée" }, expect.anything())
   },
 }
+
+/** Saisie refusée par l'API (422) : message sous le champ, résumé en haut du formulaire. */
+export const ErreursParChamp: Story = {
+  args: { error: 'Certains champs sont invalides.', fieldErrors: { label: 'Au plus 100 caractères' } },
+  play: async ({ canvas }) => {
+    await expect(canvas.getByRole('alert')).toHaveTextContent('Certains champs sont invalides.')
+    const field = canvas.getByLabelText('Nom de la tablette')
+    await expect(await canvas.findByText('Au plus 100 caractères')).toBeVisible()
+    await expect(field).toHaveAttribute('aria-invalid', 'true')
+    await expect(field).toHaveAccessibleDescription('Au plus 100 caractères')
+  },
+}

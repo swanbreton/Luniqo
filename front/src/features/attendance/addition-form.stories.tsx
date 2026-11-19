@@ -68,3 +68,15 @@ export const ChampsManquants: Story = {
 export const RefusParLApi: Story = {
   args: { error: "Cette présence chevauche une autre présence de l'enfant ce jour-là" },
 }
+
+/** Saisie refusée par l'API (422) : message sous le champ, résumé en haut du formulaire. */
+export const ErreursParChamp: Story = {
+  args: { error: 'Certains champs sont invalides.', fieldErrors: { child_id: 'Identifiant invalide' } },
+  play: async ({ canvas }) => {
+    await expect(canvas.getByRole('alert')).toHaveTextContent('Certains champs sont invalides.')
+    const field = canvas.getByLabelText('Enfant')
+    await expect(await canvas.findByText(/Identifiant invalide/)).toBeVisible()
+    await expect(field).toHaveAttribute('aria-invalid', 'true')
+    await expect(field).toHaveAccessibleDescription(/Identifiant invalide/)
+  },
+}

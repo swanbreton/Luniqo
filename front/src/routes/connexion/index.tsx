@@ -2,7 +2,7 @@ import { useQueryClient } from '@tanstack/react-query'
 import { createFileRoute, redirect, useNavigate } from '@tanstack/react-router'
 
 import { $api } from '@/api/client'
-import { errorMessage } from '@/api/errors'
+import { errorMessage, fieldErrorsOf } from '@/api/errors'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { LoginForm } from '@/features/auth/login-form'
 import { stepHref } from '@/features/auth/next-step'
@@ -40,6 +40,7 @@ function LoginPage() {
           onSubmit={(body) => login.mutate({ body })}
           pending={login.isPending}
           error={login.isError ? errorMessage(login.error) : null}
+          fieldErrors={fieldErrorsOf(login.error)}
         />
       </CardContent>
     </Card>

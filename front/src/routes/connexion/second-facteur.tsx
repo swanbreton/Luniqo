@@ -2,7 +2,7 @@ import { useQueryClient } from '@tanstack/react-query'
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
 
 import { $api } from '@/api/client'
-import { errorMessage } from '@/api/errors'
+import { errorMessage, fieldErrorsOf } from '@/api/errors'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { CodeForm } from '@/features/auth/code-form'
@@ -44,6 +44,7 @@ function SecondFactorPage() {
           onSubmit={(body) => verify.mutate({ body })}
           pending={verify.isPending}
           error={verify.isError ? errorMessage(verify.error) : null}
+          fieldErrors={fieldErrorsOf(verify.error)}
         />
         <Button variant="link" onClick={() => logout.mutate({})} disabled={logout.isPending}>
           Utiliser un autre compte
