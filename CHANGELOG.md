@@ -35,6 +35,7 @@ Chaque ligne cite son ticket Jira `LUN-<n>`.
 
 ### Modifié
 
+- API : chaque réponse porte une référence (`X-Request-ID`, reprise de la passerelle si elle est sûre), écrite aussi dans un journal JSON, une ligne par requête, sans IP ni données saisies ; une erreur imprévue répond 500 avec un message générique et cette référence, la pile n'allant qu'au journal (LUN-140).
 - API : toute erreur renvoie `{"detail", "code", "fields"?}` ; le `code` est stable et documenté dans Swagger pour chaque route, les erreurs de saisie (422) sont traduites en français avec un message par champ, les dates incohérentes d'un enfant indiquent chaque champ fautif ; un test vérifie que toute erreur levée est documentée (LUN-137).
 - API : toute réponse 429 indique le délai à attendre (`Retry-After`), y compris au changement de mot de passe, au choix du PIN et sur une tablette après trop d'erreurs de PIN (LUN-137).
 
