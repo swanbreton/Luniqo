@@ -104,6 +104,15 @@ route.
   Une erreur serveur (5xx) porte sa référence (`requestId` : `request_id` du
   corps, sinon en-tête `X-Request-ID`) ; `errorMessage()` l'ajoute au message
   (« Référence : … »), à transmettre au support. Jamais pour un refus (4xx).
+  **Que faire après une erreur** : `errorCategory()` classe l'erreur, et
+  `ActionError` (`components/action-error.tsx`) l'affiche avec « Réessayer » sur
+  une panne du serveur ou du réseau (lectures : `onRetry={retryFailed(query)}`)
+  et le compte à rebours d'une 429 (`useRetryCountdown(error)`, qui sert aussi à
+  désactiver le bouton d'envoi). Un formulaire qui peut recevoir une 429 reçoit
+  l'erreur brute (`error={mutation.error}`), pas un texte. Les lectures sont
+  rejouées 2 fois sur une panne ; les écritures jamais, ni mises en pause hors
+  ligne (`app/app.tsx`). Bannière hors ligne : `lib/connectivity.ts`, en haut de
+  toutes les pages (`routes/__root.tsx`).
   Stratégie, traitement par catégorie et cible :
   [docs/projet/ERREURS.md](../docs/projet/ERREURS.md).
 - **Erreurs dans les tests et les stories** : jamais de corps d'erreur écrit à la
@@ -112,7 +121,8 @@ route.
   `reply(apiErrors.serverError())` est la réponse MSW d'un test,
   `networkError()` une coupure réseau ; dans une story,
   `raised(apiErrors.serverError())` est l'erreur que le client lèverait
-  (`.message` pour un formulaire qui reçoit un texte), `networkFailure()` celle
+  (`errorMessage(raised(…))` pour un composant qui reçoit un texte),
+  `networkFailure()` celle
   d'une coupure. Un refus absent du catalogue passe par `apiErrors.refusal(…)`
   (statut, code, message), ou s'ajoute au catalogue s'il sert deux fois. Chaque composant qui
   appelle l'API a une story par catégorie utile (`RefusParLApi` ou `Erreur`,
