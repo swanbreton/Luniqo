@@ -17,6 +17,7 @@ import {
   owner,
   periodAttendance,
 } from '../../test/fixtures'
+import { apiErrors, reply } from '../../test/handlers/errors'
 import { test } from '../../test/msw'
 import { App, createApp } from './app'
 
@@ -113,12 +114,7 @@ describe('corrections des pointages', () => {
   test("correction refusée par l'API : message affiché, la fenêtre reste ouverte", async ({ worker }) => {
     worker.use(
       ...directorApi().handlers,
-      http.patch(`${BASE}/attendance/${forgotten.id}`, () =>
-        HttpResponse.json(
-          { detail: "Cette présence chevauche une autre présence de l'enfant ce jour-là", code: 'presence_overlap' },
-          { status: 409 },
-        ),
-      ),
+      http.patch(`${BASE}/attendance/${forgotten.id}`, () => reply(apiErrors.presenceOverlap())),
     )
     const { screen } = await start()
     await screen.getByRole('button', { name: 'Corriger la présence de Léo Garnier, arrivée à 08:50' }).click()
@@ -136,14 +132,7 @@ describe('corrections des pointages', () => {
     worker.use(
       ...directorApi().handlers,
       http.patch(`${BASE}/attendance/${forgotten.id}`, () =>
-        HttpResponse.json(
-          {
-            detail: 'Certains champs sont invalides.',
-            code: 'validation_error',
-            fields: { arrived_at: 'Date et heure invalides', reason: 'Au plus 500 caractères' },
-          },
-          { status: 422 },
-        ),
+        reply(apiErrors.validation({ arrived_at: 'Date et heure invalides', reason: 'Au plus 500 caractères' })),
       ),
     )
     const { screen } = await start()

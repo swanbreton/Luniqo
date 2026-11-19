@@ -4,6 +4,7 @@ import { describe, expect } from 'vitest'
 import { render } from 'vitest-browser-react'
 
 import { nursery, nurserySummary } from '../../../test/fixtures'
+import { apiErrors, reply } from '../../../test/handlers/errors'
 import { test } from '../../../test/msw'
 import { NurserySummary } from './nursery-summary'
 
@@ -46,7 +47,7 @@ describe('résumé de crèche', () => {
   })
 
   test('une erreur peut être réessayée', async ({ worker }) => {
-    worker.use(http.get(SUMMARY, () => HttpResponse.json({ detail: 'Service indisponible' }, { status: 503 })))
+    worker.use(http.get(SUMMARY, () => reply(apiErrors.unavailable())))
     const screen = await start()
     await expect.element(screen.getByRole('alert').getByText('Impossible de charger le résumé.')).toBeVisible()
     worker.use(http.get(SUMMARY, () => HttpResponse.json(nurserySummary)))

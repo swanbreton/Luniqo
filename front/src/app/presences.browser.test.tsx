@@ -4,6 +4,7 @@ import { describe, expect } from 'vitest'
 import { render } from 'vitest-browser-react'
 
 import { dayAttendance, employee, nursery, nurserySummary } from '../../test/fixtures'
+import { apiErrors, reply } from '../../test/handlers/errors'
 import { test } from '../../test/msw'
 import { App, createApp } from './app'
 
@@ -34,12 +35,8 @@ describe('présences du jour', () => {
   test("refus de l'API (crèche d'une autre entreprise) : message affiché", async ({ worker }) => {
     worker.use(
       http.get('/api/v2/auth/me', () => HttpResponse.json(employee)),
-      http.get(`/api/v2/nurseries/${nursery.id}`, () =>
-        HttpResponse.json({ detail: 'Crèche introuvable' }, { status: 404 }),
-      ),
-      http.get(`/api/v2/nurseries/${nursery.id}/attendance`, () =>
-        HttpResponse.json({ detail: 'Crèche introuvable' }, { status: 404 }),
-      ),
+      http.get(`/api/v2/nurseries/${nursery.id}`, () => reply(apiErrors.nurseryNotFound())),
+      http.get(`/api/v2/nurseries/${nursery.id}/attendance`, () => reply(apiErrors.nurseryNotFound())),
     )
     const { screen } = await start(`/creches/${nursery.id}/presences`)
     await expect.element(screen.getByRole('alert')).toBeVisible()

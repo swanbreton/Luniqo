@@ -6,6 +6,7 @@ import { render } from 'vitest-browser-react'
 import type { Schemas } from '@/api/types'
 
 import { employee, tabletActor, tabletChildren, tabletInfo } from '../../test/fixtures'
+import { apiErrors, networkError, reply } from '../../test/handlers/errors'
 import { test } from '../../test/msw'
 import { App, createApp } from './app'
 
@@ -16,22 +17,12 @@ async function start() {
 
 const childrenOfDay = http.get('/api/v2/tablet/children', () => HttpResponse.json(tabletChildren))
 
-const noActionSession = http.get('/api/v2/tablet/session', () =>
-  HttpResponse.json(
-    { detail: 'Session de tablette absente ou expirée : saisir le PIN', code: 'pin_session_required' },
-    { status: 401 },
-  ),
-)
+const noActionSession = http.get('/api/v2/tablet/session', () => reply(apiErrors.pinSessionRequired()))
 
 describe('mode tablette', () => {
   test("tablette non enrôlée : explication, et pas de renvoi vers l'écran de connexion", async ({ worker }) => {
     worker.use(
-      http.get('/api/v2/tablet', () =>
-        HttpResponse.json(
-          { detail: 'Tablette non enrôlée, expirée ou révoquée', code: 'tablet_required' },
-          { status: 401 },
-        ),
-      ),
+      http.get('/api/v2/tablet', () => reply(apiErrors.tabletRequired())),
       noActionSession,
     )
     const { app, screen } = await start()
@@ -45,13 +36,12 @@ describe('mode tablette', () => {
     worker.use(
       http.get('/api/v2/tablet', () => HttpResponse.json(tabletInfo)),
       http.get('/api/v2/tablet/session', () =>
-        actor === null ? HttpResponse.json({ detail: 'x' }, { status: 401 }) : HttpResponse.json(actor),
+        actor === null ? reply(apiErrors.pinSessionRequired()) : HttpResponse.json(actor),
       ),
       http.post('/api/v2/tablet/session', async ({ request }) => {
         const body = (await request.json()) as { pin: string }
         sent.push(body)
-        if (body.pin !== '4826')
-          return HttpResponse.json({ detail: 'PIN incorrect', code: 'pin_invalid' }, { status: 401 })
+        if (body.pin !== '4826') return reply(apiErrors.pinInvalid())
         actor = { ...tabletActor, expires_at: new Date(Date.now() + 120_000).toISOString() }
         return HttpResponse.json(actor, { status: 201 })
       }),
@@ -94,10 +84,7 @@ describe('mode tablette', () => {
             member.id === employee.id ? { ...member, pin_locked: true } : member,
           ),
         }
-        return HttpResponse.json(
-          { detail: 'PIN bloqué après 3 erreurs : demandez à la direction de le débloquer', code: 'pin_locked' },
-          { status: 423 },
-        )
+        return reply(apiErrors.pinLocked())
       }),
     )
     const { screen } = await start()
@@ -119,7 +106,7 @@ describe('mode tablette', () => {
       http.get('/api/v2/tablet', () => HttpResponse.json(tabletInfo)),
       http.get('/api/v2/tablet/session', () => {
         if (actor !== null && new Date(actor.expires_at).getTime() <= Date.now()) actor = null
-        return actor === null ? HttpResponse.json({ detail: 'x' }, { status: 401 }) : HttpResponse.json(actor)
+        return actor === null ? reply(apiErrors.pinSessionRequired()) : HttpResponse.json(actor)
       }),
       childrenOfDay,
     )
@@ -185,13 +172,7 @@ describe('mode tablette', () => {
         childrenOfDay,
         http.post(`/api/v2/tablet/children/${emma.id}/departure`, async ({ request }) => {
           sent.push(await request.json())
-          return HttpResponse.json(
-            {
-              detail: "Cette personne n'est pas autorisée à venir chercher l'enfant : prévenir la direction",
-              code: 'pickup_not_authorized',
-            },
-            { status: 403 },
-          )
+          return reply(apiErrors.pickupNotAuthorized())
         }),
       )
       const { app, screen } = await start()
@@ -209,17 +190,49 @@ describe('mode tablette', () => {
       expect(app.router.state.location.pathname).toBe('/tablette')
     })
 
+    test.for([
+      {
+        cas: 'erreur serveur',
+        failure: () => reply(apiErrors.serverError()),
+        message: apiErrors.serverError().body.detail,
+      },
+      {
+        cas: 'coupure réseau',
+        failure: networkError,
+        message: 'Connexion au serveur impossible. Vérifiez le réseau.',
+      },
+    ])(
+      '$cas pendant un pointage : message affiché, pointage jamais rejoué tout seul',
+      async ({ failure, message }, { worker }) => {
+        let attempts = 0
+        worker.use(
+          http.get('/api/v2/tablet', () => HttpResponse.json(tabletInfo)),
+          session,
+          childrenOfDay,
+          http.post(`/api/v2/tablet/children/${leo.id}/arrival`, () => {
+            attempts += 1
+            return failure()
+          }),
+        )
+        const { screen } = await start()
+        await screen.getByRole('button', { name: /Léo Garnier/ }).click()
+        await screen.getByRole('button', { name: "Pointer l'arrivée" }).click()
+
+        await expect.element(screen.getByRole('alert')).toHaveTextContent(message)
+        // Une écriture n'est jamais rejouée sans l'employée : elle pourrait être enregistrée deux fois.
+        await new Promise((resolve) => setTimeout(resolve, 1_500))
+        expect(attempts).toBe(1)
+        // Le formulaire reste ouvert : l'employée peut réessayer d'elle-même.
+        await expect.element(screen.getByRole('button', { name: "Pointer l'arrivée" })).toBeEnabled()
+      },
+    )
+
     test("session expirée pendant le pointage : retour au choix de l'employé, avec la raison", async ({ worker }) => {
       worker.use(
         http.get('/api/v2/tablet', () => HttpResponse.json(tabletInfo)),
         session,
         childrenOfDay,
-        http.post(`/api/v2/tablet/children/${leo.id}/arrival`, () =>
-          HttpResponse.json(
-            { detail: 'Session de tablette absente ou expirée : saisir le PIN', code: 'pin_session_required' },
-            { status: 401 },
-          ),
-        ),
+        http.post(`/api/v2/tablet/children/${leo.id}/arrival`, () => reply(apiErrors.pinSessionRequired())),
       )
       const { screen } = await start()
       await screen.getByRole('button', { name: /Léo Garnier/ }).click()

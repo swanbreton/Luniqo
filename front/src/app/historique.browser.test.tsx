@@ -7,6 +7,7 @@ import { lastDays, previousMonth } from '@/features/attendance/period'
 import { todayInParis } from '@/lib/dates'
 
 import { employee, nursery, owner, periodAttendance } from '../../test/fixtures'
+import { apiErrors, reply } from '../../test/handlers/errors'
 import { test } from '../../test/msw'
 import { App, createApp } from './app'
 
@@ -153,9 +154,7 @@ describe('historique des présences', () => {
       http.get(`/api/v2/nurseries/${nursery.id}`, () => HttpResponse.json(nursery)),
       http.get(CORRECTIONS, () => HttpResponse.json([])),
       http.get(HISTORY, () => HttpResponse.json(periodAttendance)),
-      http.get(`${HISTORY}.csv`, () =>
-        HttpResponse.json({ detail: 'Action non autorisée pour ce rôle' }, { status: 403 }),
-      ),
+      http.get(`${HISTORY}.csv`, () => reply(apiErrors.roleRefused())),
     )
     const saved = catchDownload()
     const { screen } = await start(`${PAGE}?du=2026-10-24&au=2026-10-30`)

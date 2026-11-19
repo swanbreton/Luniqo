@@ -7,6 +7,7 @@ import { page } from 'vitest/browser'
 import { render } from 'vitest-browser-react'
 
 import { dayAttendance, nursery, nurserySummary, owner } from '../../test/fixtures'
+import { apiErrors, reply } from '../../test/handlers/errors'
 import { test } from '../../test/msw'
 import { App, createApp } from './app'
 
@@ -24,9 +25,7 @@ describe('second facteur exigé par l’API', () => {
       http.get('/api/v2/auth/me', () =>
         HttpResponse.json({ ...owner, mfa: sessions++ === 0 ? 'verified' : 'required' }),
       ),
-      http.get('/api/v2/nurseries', () =>
-        HttpResponse.json({ detail: 'Message reformulé par l’API', code: 'mfa_required' }, { status: 403 }),
-      ),
+      http.get('/api/v2/nurseries', () => reply(apiErrors.refusal(403, 'mfa_required', 'Message reformulé par l’API'))),
     )
     const screen = await start()
     await expect.element(screen.getByRole('heading', { name: 'Second facteur' })).toBeVisible()
@@ -35,9 +34,7 @@ describe('second facteur exigé par l’API', () => {
   test('un autre refus au même texte ne redirige pas : seul le code compte', async ({ worker }) => {
     worker.use(
       http.get('/api/v2/auth/me', () => HttpResponse.json({ ...owner, mfa: 'verified' })),
-      http.get('/api/v2/nurseries', () =>
-        HttpResponse.json({ detail: 'Second facteur requis', code: 'role_refused' }, { status: 403 }),
-      ),
+      http.get('/api/v2/nurseries', () => reply(apiErrors.refusal(403, 'role_refused', 'Second facteur requis'))),
     )
     const screen = await start()
     await expect.element(screen.getByText('Second facteur requis')).toBeVisible()
@@ -74,9 +71,7 @@ describe('résumés sur l’accueil', () => {
       http.get('/api/v2/auth/me', () => HttpResponse.json({ ...owner, mfa: 'verified' })),
       http.get('/api/v2/nurseries', () => HttpResponse.json([nursery, south])),
       http.get(`/api/v2/nurseries/${nursery.id}/summary`, () => HttpResponse.json(nurserySummary)),
-      http.get(`/api/v2/nurseries/${south.id}/summary`, () =>
-        HttpResponse.json({ detail: 'Service indisponible' }, { status: 503 }),
-      ),
+      http.get(`/api/v2/nurseries/${south.id}/summary`, () => reply(apiErrors.unavailable())),
       http.get(`/api/v2/nurseries/${south.id}`, () => HttpResponse.json(south)),
       http.get(`/api/v2/nurseries/${south.id}/attendance`, () => HttpResponse.json(dayAttendance)),
     )

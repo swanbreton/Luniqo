@@ -4,6 +4,7 @@ import { describe, expect } from 'vitest'
 import { render } from 'vitest-browser-react'
 
 import { employee, nursery, nurserySummary, owner } from '../../test/fixtures'
+import { apiErrors, reply } from '../../test/handlers/errors'
 import { test } from '../../test/msw'
 import { App, createApp } from './app'
 
@@ -43,12 +44,7 @@ describe('PIN de tablette', () => {
   test("affiche le refus de l'API (PIN trop prévisible)", async ({ worker }) => {
     worker.use(
       http.get('/api/v2/auth/me', () => HttpResponse.json(employee)),
-      http.put('/api/v2/auth/me/pin', () =>
-        HttpResponse.json(
-          { detail: 'Ce PIN est trop prévisible (suite de chiffres).', code: 'pin_policy' },
-          { status: 422 },
-        ),
-      ),
+      http.put('/api/v2/auth/me/pin', () => reply(apiErrors.pinPolicy())),
     )
     const { screen } = await start('/mon-pin')
     await screen.getByLabelText('Nouveau PIN (4 chiffres)').fill('1234')
@@ -62,14 +58,7 @@ describe('PIN de tablette', () => {
     worker.use(
       http.get('/api/v2/auth/me', () => HttpResponse.json(employee)),
       http.put('/api/v2/auth/me/pin', () =>
-        HttpResponse.json(
-          {
-            detail: 'Certains champs sont invalides.',
-            code: 'validation_error',
-            fields: { password: 'Au plus 128 caractères', nursery_id: 'Identifiant invalide' },
-          },
-          { status: 422 },
-        ),
+        reply(apiErrors.validation({ password: 'Au plus 128 caractères', nursery_id: 'Identifiant invalide' })),
       ),
     )
     const { screen } = await start('/mon-pin')
