@@ -19,7 +19,10 @@ from app.config import get_settings
 from app.models import Base
 
 if context.config.config_file_name is not None:
-    fileConfig(context.config.config_file_name)
+    # disable_existing_loggers=False : lancées dans le processus de l'API ou des
+    # tests, les migrations ne doivent pas faire taire les journaux déjà créés
+    # (journal JSON des requêtes et des erreurs, app/requests.py).
+    fileConfig(context.config.config_file_name, disable_existing_loggers=False)
 
 target_metadata = Base.metadata
 
