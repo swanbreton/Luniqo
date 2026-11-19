@@ -3,12 +3,25 @@ import { createRootRouteWithContext, Link, Outlet, type ErrorComponentProps } fr
 
 import { errorMessage } from '@/api/errors'
 import { FormError } from '@/components/form-error'
+import { ConnectivityBanner } from '@/components/offline-banner'
+import type { Connectivity } from '@/lib/connectivity'
 
-export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()({
-  component: Outlet,
+export const Route = createRootRouteWithContext<{ queryClient: QueryClient; connectivity: Connectivity }>()({
+  component: Root,
   notFoundComponent: NotFound,
   errorComponent: RootError,
 })
+
+/** Toutes les pages : bannière hors ligne en haut, tablette et connexion comprises. */
+function Root() {
+  const { connectivity } = Route.useRouteContext()
+  return (
+    <>
+      <ConnectivityBanner connectivity={connectivity} />
+      <Outlet />
+    </>
+  )
+}
 
 function NotFound() {
   return (
