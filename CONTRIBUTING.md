@@ -340,6 +340,7 @@ Un ticket est fini, et sa PR peut entrer dans `develop`, quand :
 - [ ] la CI est verte (lint, tests, images, démarrage de la pile) ;
 - [ ] le parcours touché a été rejoué sur la pile Docker ;
 - [ ] la documentation est à jour (README, ce fichier, registre des choix techniques si un choix a été fait) ;
+- [ ] toute nouvelle erreur suit la [marche à suivre](docs/projet/ERREURS.md#6-ajouter-une-erreur--la-marche-à-suivre) (raison métier, code, Swagger, test, état d'erreur côté front, catalogue) ;
 - [ ] une ligne est ajoutée dans `CHANGELOG.md`, section « Non publié ».
 
 ## 6. Règles propres au projet

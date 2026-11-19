@@ -134,6 +134,8 @@ Pour qu'une route reste documentée sans liste à tenir à la main :
   (`json_schema_extra`), aux données fictives.
 
 `tests/test_openapi.py` vérifie tout cela et valide le schéma avec `openapi-spec-validator`.
+Contrat des erreurs, catalogue de toutes les erreurs levées et marche à suivre pour en
+ajouter une : [docs/projet/ERREURS.md](../docs/projet/ERREURS.md).
 Swagger UI et ReDoc chargent leurs scripts depuis le CDN jsDelivr, sur l'origine qui porte les
 cookies de session : c'est pourquoi ils sont désactivés en production.
 

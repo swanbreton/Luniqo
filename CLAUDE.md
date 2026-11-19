@@ -200,6 +200,7 @@ Détails et choix dans AGENTS.md et les ADR de `M2/decisions/`.
 | [docs/phases/](docs/phases/) | Historique des phases 0–9, pourcentages non vérifiés |
 | [README.md](README.md), [CONTRIBUTING.md](CONTRIBUTING.md), [CHANGELOG.md](CHANGELOG.md) | Réécrits le 2026-10-09 (LUN-60), à jour. Ancien README : [docs/archive/README-legacy.md](docs/archive/README-legacy.md) |
 | [docs/projet/JIRA.md](docs/projet/JIRA.md) | Mise en place de Jira (projet LUN) et de son lien avec GitHub |
+| [docs/projet/ERREURS.md](docs/projet/ERREURS.md) | Stratégie de gestion des erreurs front et back : existant, contrat cible, catalogue, marche à suivre (LUN-129) |
 | docs/INDEX.md, plan.md | Obsolètes : à réécrire ou archiver |
 
 Skills projet dans `.claude/skills/` : `database-helper`, `design-system-enforcer`, `frontend-design`, `lucide-animated`, `luniqo-security-audit`, `stripe-integration`.

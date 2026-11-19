@@ -93,7 +93,8 @@ route.
 - **Adresse de retour (`?redirect=`) limitée aux chemins de Luniqo**
   (`lib/safe-redirect.ts`), contre les redirections ouvertes.
 - **Erreurs** : `ApiError` porte le message de l'API, le délai de
-  `Retry-After` et les erreurs par champ des 422.
+  `Retry-After` et les erreurs par champ des 422. Stratégie, traitement par
+  catégorie et cible : [docs/projet/ERREURS.md](../docs/projet/ERREURS.md).
 - **Accessibilité (WCAG 2.2 AA visée)** : libellés reliés aux champs, erreurs
   annoncées, cibles de 44 px ; `jsx-a11y` au lint et axe sur chaque story.
 - **Données de test fictives uniquement** (règle 5 d'AGENTS.md).
