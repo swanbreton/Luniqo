@@ -9,13 +9,14 @@ import uuid
 from datetime import datetime, timedelta
 from typing import Annotated
 
-from fastapi import APIRouter, HTTPException, Query, status
+from fastapi import APIRouter, Query, status
 from sqlalchemy import select
 
 from app.attendance import policy as attendance_policy
 from app.auth.dependencies import ClientDep, NowDep
 from app.children.models import Child, Guardian
 from app.db import SessionDep
+from app.errors import ApiError, ErrorSpec
 from app.family import service
 from app.family.schemas import (
     AcceptedOut,
@@ -34,16 +35,21 @@ from app.openapi import error_responses
 router = APIRouter(prefix="/api/v2", tags=["espace famille"])
 
 _REFUSALS = {
-    "no_email": (status.HTTP_422_UNPROCESSABLE_CONTENT, "Ce responsable n'a pas d'adresse e-mail"),
-    "invalid": (status.HTTP_404_NOT_FOUND, "Invitation inconnue, expirée ou déjà utilisée"),
-    "email_taken": (status.HTTP_409_CONFLICT, "Cette adresse est déjà utilisée par un compte qui n'est pas un compte "
+    "no_email": ErrorSpec(status.HTTP_422_UNPROCESSABLE_CONTENT, "guardian_without_email",
+                          "Ce responsable n'a pas d'adresse e-mail"),
+    "invalid": ErrorSpec(status.HTTP_404_NOT_FOUND, "invitation_invalid",
+                         "Invitation inconnue, expirée ou déjà utilisée"),
+    "email_taken": ErrorSpec(status.HTTP_409_CONFLICT, "email_taken_not_family",
+                             "Cette adresse est déjà utilisée par un compte qui n'est pas un compte "
                                               "famille : contactez la crèche"),
-    "wrong_password": (status.HTTP_403_FORBIDDEN, "Un compte existe déjà avec cette adresse : saisir son mot de passe"),
+    "wrong_password": ErrorSpec(status.HTTP_403_FORBIDDEN, "account_exists_password_required",
+                                "Un compte existe déjà avec cette adresse : saisir son mot de passe"),
 }
 
-_WEAK_PASSWORD = (status.HTTP_422_UNPROCESSABLE_CONTENT, "Ce mot de passe est trop courant.")
-_GUARDIAN_NOT_FOUND = (status.HTTP_404_NOT_FOUND, "Responsable introuvable")
-_CHILD_NOT_FOUND = (status.HTTP_404_NOT_FOUND, "Enfant introuvable")
+_WEAK_PASSWORD = ErrorSpec(status.HTTP_422_UNPROCESSABLE_CONTENT, "password_policy",
+                           "Ce mot de passe est trop courant.")
+_GUARDIAN_NOT_FOUND = ErrorSpec(status.HTTP_404_NOT_FOUND, "guardian_not_found", "Responsable introuvable")
+_CHILD_NOT_FOUND = ErrorSpec(status.HTTP_404_NOT_FOUND, "child_not_found", "Enfant introuvable")
 MAX_HISTORY_DAYS = 62
 
 
@@ -51,11 +57,10 @@ def _errors(*reasons: str) -> dict:
     return error_responses(*(_REFUSALS[reason] for reason in reasons))
 
 
-def _refused(refusal: service.InvitationRefused) -> HTTPException:
+def _refused(refusal: service.InvitationRefused) -> ApiError:
     if refusal.reason == "weak_password":
-        return HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, refusal.detail)
-    code, message = _REFUSALS[refusal.reason]
-    return HTTPException(code, message)
+        return ApiError(_WEAK_PASSWORD, detail=refusal.detail)
+    return ApiError(_REFUSALS[refusal.reason])
 
 
 def _short(guardian: Guardian | None) -> str | None:
@@ -74,7 +79,7 @@ async def invite_guardian(guardian_id: uuid.UUID, context: ManagedNursery, db: S
     guardian = await db.scalar(select(Guardian).where(Guardian.id == guardian_id,
                                                       Guardian.nursery_id == context.nursery.id, Guardian.is_active))
     if guardian is None:
-        raise HTTPException(*_GUARDIAN_NOT_FOUND)
+        raise ApiError(_GUARDIAN_NOT_FOUND)
     try:
         invitation, token = await service.invite(db, guardian, context.user, client, now)
     except service.InvitationRefused as refusal:
@@ -139,7 +144,7 @@ async def my_child(child_id: uuid.UUID, user: GuardianUser, db: SessionDep, now:
     """Fiche de mon enfant : responsables (sans coordonnées) et présences des `days` derniers jours."""
     found = await service.child_of(db, user, child_id)
     if found is None:
-        raise HTTPException(*_CHILD_NOT_FOUND)
+        raise ApiError(_CHILD_NOT_FOUND)
     child, nursery = found
     today, arrived, departed = await _today(db, child, now)
     end = attendance_policy.local_day(now)

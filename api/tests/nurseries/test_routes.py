@@ -219,7 +219,7 @@ def test_routes_metier_fermees_tant_que_le_second_facteur_manque(as_user, world,
     assert client.get("/api/v2/auth/me").json()["mfa"] == "setup_required"
     response = client.get("/api/v2/nurseries")
     assert response.status_code == 403
-    assert response.json() == {"detail": "Second facteur requis"}
+    assert response.json() == {"detail": "Second facteur requis", "code": "mfa_required"}
     response = client.post("/api/v2/nurseries", json={"name": "Nouvelle", "city": "Albi", "capacity": 10},
                            headers=ORIGIN)
     assert response.status_code == 403

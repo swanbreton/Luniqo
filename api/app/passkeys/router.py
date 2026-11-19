@@ -9,13 +9,14 @@ pour vérification.
 import uuid
 from typing import Any
 
-from fastapi import APIRouter, HTTPException, Request, Response, status
+from fastapi import APIRouter, Request, Response, status
 
 from app.auth.dependencies import ClientDep, CurrentUser, CurrentWebSession, NowDep, cookie_name
 from app.auth.router import no_store, session_out
 from app.auth.schemas import SessionOut
 from app.config import get_settings
 from app.db import SessionDep
+from app.errors import TOO_MANY_ATTEMPTS, ApiError, ErrorSpec
 from app.mfa.service import Refused, TooManyAttempts
 from app.openapi import error_responses, retry_after
 from app.passkeys import policy, service
@@ -25,44 +26,50 @@ from app.passkeys.schemas import AssertionIn, PasskeyNameIn, PasskeyOut, Registr
 router = APIRouter(prefix="/api/v2/auth/passkeys", tags=["passkeys"])
 
 _REFUSALS = {
-    "mfa_pending": (status.HTTP_403_FORBIDDEN, "Présentez d'abord votre second facteur"),
-    "reauthentication_required": (status.HTTP_403_FORBIDDEN,
-                                  "Reconnectez-vous pour modifier vos facteurs (connexion de plus de 15 minutes)"),
-    "not_found": (status.HTTP_404_NOT_FOUND, "Passkey introuvable"),
-    "not_pending": (status.HTTP_409_CONFLICT, "Aucun second facteur attendu pour cette session"),
-    "no_passkey": (status.HTTP_409_CONFLICT, "Aucune passkey enregistrée pour ce compte"),
-    "no_challenge": (status.HTTP_409_CONFLICT, "Aucun enregistrement en cours, ou délai dépassé : recommencez"),
-    "too_many_passkeys": (status.HTTP_409_CONFLICT,
-                          f"{policy.MAX_PASSKEYS_PER_USER} passkeys au plus : retirez-en une d'abord"),
-    "already_registered": (status.HTTP_409_CONFLICT, "Cette passkey est déjà enregistrée"),
-    "last_factor": (status.HTTP_409_CONFLICT,
-                    "Second facteur obligatoire pour ce rôle : enregistrez-en un autre avant de retirer celui-ci"),
-    "invalid_name": (status.HTTP_422_UNPROCESSABLE_CONTENT, "Nom de passkey vide ou trop long"),
+    "mfa_pending": ErrorSpec(status.HTTP_403_FORBIDDEN, "mfa_pending", "Présentez d'abord votre second facteur"),
+    "reauthentication_required": ErrorSpec(status.HTTP_403_FORBIDDEN, "reauthentication_required",
+                                           "Reconnectez-vous pour modifier vos facteurs "
+                                           "(connexion de plus de 15 minutes)"),
+    "not_found": ErrorSpec(status.HTTP_404_NOT_FOUND, "passkey_not_found", "Passkey introuvable"),
+    "not_pending": ErrorSpec(status.HTTP_409_CONFLICT, "mfa_not_pending",
+                             "Aucun second facteur attendu pour cette session"),
+    "no_passkey": ErrorSpec(status.HTTP_409_CONFLICT, "no_passkey", "Aucune passkey enregistrée pour ce compte"),
+    "no_challenge": ErrorSpec(status.HTTP_409_CONFLICT, "passkey_challenge_expired",
+                              "Aucun enregistrement en cours, ou délai dépassé : recommencez"),
+    "too_many_passkeys": ErrorSpec(status.HTTP_409_CONFLICT, "too_many_passkeys",
+                                   f"{policy.MAX_PASSKEYS_PER_USER} passkeys au plus : retirez-en une d'abord"),
+    "already_registered": ErrorSpec(status.HTTP_409_CONFLICT, "passkey_already_registered",
+                                    "Cette passkey est déjà enregistrée"),
+    "last_factor": ErrorSpec(status.HTTP_409_CONFLICT, "last_factor",
+                             "Second facteur obligatoire pour ce rôle : "
+                             "enregistrez-en un autre avant de retirer celui-ci"),
+    "invalid_name": ErrorSpec(status.HTTP_422_UNPROCESSABLE_CONTENT, "passkey_name_invalid",
+                              "Nom de passkey vide ou trop long"),
 }
 
-_REJECTED = "Passkey refusée"
-_TOO_MANY_ATTEMPTS = (status.HTTP_429_TOO_MANY_REQUESTS, "Trop de tentatives, réessayez plus tard")
+# Réponse du navigateur refusée : 400 à l'enregistrement, 401 à la présentation.
+_REJECTED = {code: ErrorSpec(code, "passkey_rejected", "Passkey refusée")
+             for code in (status.HTTP_400_BAD_REQUEST, status.HTTP_401_UNAUTHORIZED)}
 # Aucune origine configurée (APP_ORIGINS) : configuration du serveur, pas une erreur de la personne.
-_UNAVAILABLE = (status.HTTP_503_SERVICE_UNAVAILABLE, "Passkeys momentanément indisponibles")
+_UNAVAILABLE = ErrorSpec(status.HTTP_503_SERVICE_UNAVAILABLE, "passkeys_unavailable",
+                         "Passkeys momentanément indisponibles")
 
 _ERRORS = retry_after(error_responses(
-    *_REFUSALS.values(), (status.HTTP_400_BAD_REQUEST, _REJECTED), (status.HTTP_401_UNAUTHORIZED, _REJECTED),
-    _TOO_MANY_ATTEMPTS, _UNAVAILABLE))
+    *_REFUSALS.values(), *_REJECTED.values(), TOO_MANY_ATTEMPTS, _UNAVAILABLE))
 
 
 def _rp() -> RelyingParty | None:
     return policy.relying_party(get_settings().app_origins)
 
 
-def _http_error(exc: Exception, rejected: int = status.HTTP_401_UNAUTHORIZED) -> HTTPException:
+def _http_error(exc: Exception, rejected: int = status.HTTP_401_UNAUTHORIZED) -> ApiError:
     if isinstance(exc, Refused):
-        code, message = _REFUSALS[exc.reason]
-        return HTTPException(code, message)
+        return ApiError(_REFUSALS[exc.reason])
     if isinstance(exc, service.InvalidPasskey):
-        return HTTPException(rejected, _REJECTED)
+        return ApiError(_REJECTED[rejected])
     if isinstance(exc, TooManyAttempts):
-        return HTTPException(*_TOO_MANY_ATTEMPTS, headers={"Retry-After": str(exc.retry_after)})
-    return HTTPException(*_UNAVAILABLE)
+        return ApiError(TOO_MANY_ATTEMPTS, retry_after=exc.retry_after)
+    return ApiError(_UNAVAILABLE)
 
 
 _HANDLED = (Refused, service.InvalidPasskey, TooManyAttempts, service.Unavailable)

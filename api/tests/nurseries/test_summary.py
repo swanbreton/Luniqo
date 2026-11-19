@@ -9,6 +9,7 @@ from fastapi.testclient import TestClient
 from app.auth.dependencies import get_now
 from app.main import app
 from app.nurseries.schemas import NurserySummary
+from app.openapi import documented_codes
 
 
 @pytest.mark.parametrize(("now", "day"), [
@@ -58,7 +59,7 @@ def test_resume_inaccessible_sans_lecture_des_compteurs(as_user, world, monkeypa
     if expected == 404:
         missing = client.get(f"/api/v2/nurseries/{uuid.uuid4()}/summary")
         assert missing.status_code == 404
-        assert response.json() == missing.json() == {"detail": "Crèche introuvable"}
+        assert response.json() == missing.json() == {"detail": "Crèche introuvable", "code": "nursery_not_found"}
 
 
 def test_resume_sans_session(as_user, world):
@@ -71,7 +72,7 @@ def test_resume_exige_le_second_facteur(as_user, world):
     response = as_user("owner_a", complete_mfa=False).get(
         f"/api/v2/nurseries/{world.nurseries['nord'].id}/summary")
     assert response.status_code == 403
-    assert response.json() == {"detail": "Second facteur requis"}
+    assert response.json() == {"detail": "Second facteur requis", "code": "mfa_required"}
 
 
 def test_resume_identifiant_invalide(as_user):
@@ -83,6 +84,5 @@ def test_resume_documente_sa_session_et_ses_erreurs():
     assert operation["security"] == [{"webSession": []}]
     responses = operation["responses"]
     assert set(responses) == {"200", "401", "403", "404", "422"}
-    assert "Crèche introuvable" in responses["404"]["content"]["application/json"]["examples"]
-    assert set(responses["403"]["content"]["application/json"]["examples"]) == {
-        "Second facteur requis", "Action non autorisée pour ce rôle"}
+    assert "nursery_not_found" in documented_codes(responses["404"])
+    assert documented_codes(responses["403"]) == {"mfa_required", "role_refused"}

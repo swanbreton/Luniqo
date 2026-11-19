@@ -14,9 +14,10 @@ import json
 from starlette.types import ASGIApp, Receive, Scope, Send
 
 from app.config import get_settings
+from app.errors import ErrorSpec, body
 
 SAFE_METHODS = frozenset({"GET", "HEAD", "OPTIONS"})
-ORIGIN_REFUSED = (403, "Origine de la requête refusée")
+ORIGIN_REFUSED = ErrorSpec(403, "origin_refused", "Origine de la requête refusée")
 
 
 class OriginCheckMiddleware:
@@ -31,11 +32,11 @@ class OriginCheckMiddleware:
         if origin in get_settings().app_origins:
             await self.app(scope, receive, send)
             return
-        status, message = ORIGIN_REFUSED
-        body = json.dumps({"detail": message}).encode()
+        # Middleware ASGI : hors des gestionnaires d'exception de FastAPI, le corps s'écrit ici.
+        content = json.dumps(body(ORIGIN_REFUSED.message, ORIGIN_REFUSED.code)).encode()
         await send({
             "type": "http.response.start",
-            "status": status,
-            "headers": [(b"content-type", b"application/json"), (b"content-length", str(len(body)).encode())],
+            "status": ORIGIN_REFUSED.status,
+            "headers": [(b"content-type", b"application/json"), (b"content-length", str(len(content)).encode())],
         })
-        await send({"type": "http.response.body", "body": body})
+        await send({"type": "http.response.body", "body": content})

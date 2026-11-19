@@ -7,17 +7,20 @@ Les futures routes de terrain (pointage, ménage, HACCP) déclareront `CurrentAc
 
 from typing import Annotated
 
-from fastapi import Depends, HTTPException, Request, status
+from fastapi import Depends, Request, status
 
 from app.auth.dependencies import NowDep
 from app.config import get_settings
 from app.db import SessionDep
+from app.errors import ApiError, ErrorSpec
 from app.openapi import raises
 from app.tablets import service
 from app.tablets.service import TabletActor, TabletContext
 
-TABLET_REQUIRED = (status.HTTP_401_UNAUTHORIZED, "Tablette non enrôlée, expirée ou révoquée")
-PIN_REQUIRED = (status.HTTP_401_UNAUTHORIZED, "Session de tablette absente ou expirée : saisir le PIN")
+TABLET_REQUIRED = ErrorSpec(status.HTTP_401_UNAUTHORIZED, "tablet_required",
+                            "Tablette non enrôlée, expirée ou révoquée")
+PIN_REQUIRED = ErrorSpec(status.HTTP_401_UNAUTHORIZED, "pin_session_required",
+                         "Session de tablette absente ou expirée : saisir le PIN")
 
 
 def device_cookie_name() -> str:
@@ -33,7 +36,7 @@ async def current_tablet(request: Request, db: SessionDep, now: NowDep) -> Table
     token = request.cookies.get(device_cookie_name())
     tablet = await service.tablet_from_token(db, token, now) if token else None
     if tablet is None:
-        raise HTTPException(*TABLET_REQUIRED)
+        raise ApiError(TABLET_REQUIRED)
     return tablet
 
 
@@ -45,7 +48,7 @@ async def current_actor(request: Request, tablet: CurrentTablet, db: SessionDep,
     token = request.cookies.get(action_cookie_name())
     actor = await service.actor_from_token(db, tablet, token, now) if token else None
     if actor is None:
-        raise HTTPException(*PIN_REQUIRED)
+        raise ApiError(PIN_REQUIRED)
     return actor
 
 

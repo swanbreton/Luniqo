@@ -205,17 +205,17 @@ async def test_export_csv_des_presences(clients, world, clock, db):
     ]
 
 
-@pytest.mark.parametrize(("params", "message"), [
-    ({"from": "2026-07-16", "to": "2026-07-15"}, "La date de début suit la date de fin"),
-    ({"from": "2025-07-14", "to": "2026-07-15"}, "Période limitée à 366 jours par requête"),
+@pytest.mark.parametrize(("params", "message", "code"), [
+    ({"from": "2026-07-16", "to": "2026-07-15"}, "La date de début suit la date de fin", "period_inverted"),
+    ({"from": "2025-07-14", "to": "2026-07-15"}, "Période limitée à 366 jours par requête", "period_too_long"),
 ])
-async def test_periode_refusee(clients, world, clock, params, message):
+async def test_periode_refusee(clients, world, clock, params, message, code):
     owner = clients()
     await login(owner, "direction@a.test")
     url = f"/api/v2/nurseries/{world['nord'].id}/attendance/history"
     for path in (url, f"{url}.csv"):
         response = await owner.get(path, params=params)
-        assert response.status_code == 422 and response.json() == {"detail": message}
+        assert response.status_code == 422 and response.json() == {"detail": message, "code": code}
 
 
 async def test_historique_isole_par_creche(clients, world, clock):

@@ -13,6 +13,7 @@ from openapi_spec_validator import validate
 
 from app.config import get_settings
 from app.main import app, create_app
+from app.openapi import documented_codes
 
 # Routes ouvertes sans session : connexion (mot de passe ou passkey), déconnexion, invitations, sonde.
 PUBLIC = {
@@ -81,14 +82,12 @@ def test_chaque_corps_de_requete_a_un_exemple(schema):
 def test_erreurs_des_dependances_reportees_sur_la_route(schema):
     # PATCH d'une crèche : session, second facteur, rôle, accès à la crèche, origine.
     responses = schema["paths"]["/api/v2/nurseries/{nursery_id}"]["patch"]["responses"]
-    assert set(responses["401"]["content"]["application/json"]["examples"]) == {"Authentification requise"}
-    assert set(responses["403"]["content"]["application/json"]["examples"]) == {
-        "Second facteur requis", "Action non autorisée pour ce rôle",
-        "Seule la direction peut gérer cette crèche", "Origine de la requête refusée"}
-    assert "Crèche introuvable" in responses["404"]["content"]["application/json"]["examples"]
+    assert documented_codes(responses["401"]) == {"auth_required"}
+    assert documented_codes(responses["403"]) == {"mfa_required", "role_refused", "manager_required", "origin_refused"}
+    assert "nursery_not_found" in documented_codes(responses["404"])
     # Une lecture n'est pas soumise au contrôle de l'origine.
     get = schema["paths"]["/api/v2/nurseries/{nursery_id}"]["get"]["responses"]
-    assert "Origine de la requête refusée" not in get["403"]["content"]["application/json"]["examples"]
+    assert "origin_refused" not in documented_codes(get["403"])
 
 
 def test_securite_des_routes_de_tablette(schema):
@@ -104,10 +103,12 @@ def test_noms_des_cookies_selon_la_configuration(schema):
     assert schemes["tabletAction"]["name"] == f"{prefix}luniqo_tablet"
 
 
-def test_422_de_la_route_et_de_la_validation(schema):
+def test_422_au_corps_unique(schema):
+    # Validation de FastAPI et refus métier : un seul corps, `Error`, avec ses `fields`.
     response = schema["paths"]["/api/v2/nurseries/{nursery_id}"]["patch"]["responses"]["422"]
-    assert response["content"]["application/json"]["schema"] == {"anyOf": [
-        {"$ref": "#/components/schemas/Error"}, {"$ref": "#/components/schemas/HTTPValidationError"}]}
+    assert response["content"]["application/json"]["schema"] == {"$ref": "#/components/schemas/Error"}
+    assert documented_codes(response) == {"validation_error"}
+    assert "HTTPValidationError" not in schema["components"]["schemas"]
 
 
 def test_retry_after_documente_sur_la_connexion(schema):

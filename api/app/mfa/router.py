@@ -5,13 +5,14 @@ facteur peut les appeler (c'est leur raison d'être), les règles de chaque cas
 étant vérifiées par le service.
 """
 
-from fastapi import APIRouter, HTTPException, Response, status
+from fastapi import APIRouter, Response, status
 
 from app.auth.dependencies import ClientDep, CurrentWebSession, NowDep
 from app.auth.router import no_store, session_out
 from app.auth.schemas import SessionOut
 from app.config import get_settings
 from app.db import SessionDep
+from app.errors import TOO_MANY_ATTEMPTS, ApiError, ErrorSpec
 from app.mfa import service
 from app.mfa.crypto import SecretUnreadable
 from app.mfa.schemas import BackupCodesOut, CodeIn, MfaStatusOut, TotpConfirmOut, TotpOut, TotpSetupOut
@@ -20,36 +21,38 @@ from app.openapi import error_responses, retry_after
 router = APIRouter(prefix="/api/v2/auth/mfa", tags=["second facteur"])
 
 _REFUSALS = {
-    "mfa_pending": (status.HTTP_403_FORBIDDEN, "Présentez d'abord votre second facteur"),
-    "reauthentication_required": (status.HTTP_403_FORBIDDEN,
-                                  "Reconnectez-vous pour modifier vos facteurs (connexion de plus de 15 minutes)"),
-    "totp_locked": (status.HTTP_403_FORBIDDEN, "Application d'authentification bloquée après trop d'échecs : "
+    "mfa_pending": ErrorSpec(status.HTTP_403_FORBIDDEN, "mfa_pending", "Présentez d'abord votre second facteur"),
+    "reauthentication_required": ErrorSpec(status.HTTP_403_FORBIDDEN, "reauthentication_required",
+                                           "Reconnectez-vous pour modifier vos facteurs "
+                                           "(connexion de plus de 15 minutes)"),
+    "totp_locked": ErrorSpec(status.HTTP_403_FORBIDDEN, "totp_locked",
+                             "Application d'authentification bloquée après trop d'échecs : "
                                                "utilisez un code de secours"),
-    "no_factor": (status.HTTP_404_NOT_FOUND, "Aucune application d'authentification active"),
-    "not_pending": (status.HTTP_409_CONFLICT, "Aucun second facteur attendu pour cette session"),
-    "no_pending_setup": (status.HTTP_409_CONFLICT, "Aucune activation en cours"),
-    "last_factor": (status.HTTP_409_CONFLICT,
-                    "Second facteur obligatoire pour ce rôle : remplacez-le au lieu de le retirer"),
+    "no_factor": ErrorSpec(status.HTTP_404_NOT_FOUND, "totp_not_found", "Aucune application d'authentification active"),
+    "not_pending": ErrorSpec(status.HTTP_409_CONFLICT, "mfa_not_pending",
+                             "Aucun second facteur attendu pour cette session"),
+    "no_pending_setup": ErrorSpec(status.HTTP_409_CONFLICT, "totp_setup_not_pending", "Aucune activation en cours"),
+    "last_factor": ErrorSpec(status.HTTP_409_CONFLICT, "last_factor",
+                             "Second facteur obligatoire pour ce rôle : remplacez-le au lieu de le retirer"),
 }
 
-_INVALID_CODE = (status.HTTP_401_UNAUTHORIZED, "Code invalide")
-_TOO_MANY_ATTEMPTS = (status.HTTP_429_TOO_MANY_REQUESTS, "Trop de tentatives, réessayez plus tard")
+_INVALID_CODE = ErrorSpec(status.HTTP_401_UNAUTHORIZED, "invalid_code", "Code invalide")
 # Clé de chiffrement absente ou différente de celle qui a chiffré le secret.
-_UNAVAILABLE = (status.HTTP_503_SERVICE_UNAVAILABLE, "Second facteur momentanément indisponible")
+_UNAVAILABLE = ErrorSpec(status.HTTP_503_SERVICE_UNAVAILABLE, "mfa_unavailable",
+                         "Second facteur momentanément indisponible")
 
-_ERRORS = retry_after(error_responses(*_REFUSALS.values(), _INVALID_CODE, _TOO_MANY_ATTEMPTS, _UNAVAILABLE))
+_ERRORS = retry_after(error_responses(*_REFUSALS.values(), _INVALID_CODE, TOO_MANY_ATTEMPTS, _UNAVAILABLE))
 
 
-def _http_error(exc: Exception) -> HTTPException:
+def _http_error(exc: Exception) -> ApiError:
     if isinstance(exc, service.Refused):
-        code, message = _REFUSALS[exc.reason]
-        return HTTPException(code, message)
+        return ApiError(_REFUSALS[exc.reason])
     if isinstance(exc, service.InvalidCode):
-        return HTTPException(*_INVALID_CODE)
+        return ApiError(_INVALID_CODE)
     if isinstance(exc, service.TooManyAttempts):
-        return HTTPException(*_TOO_MANY_ATTEMPTS, headers={"Retry-After": str(exc.retry_after)})
+        return ApiError(TOO_MANY_ATTEMPTS, retry_after=exc.retry_after)
     # MfaUnavailable, SecretUnreadable : configuration du serveur, pas une erreur de la personne.
-    return HTTPException(*_UNAVAILABLE)
+    return ApiError(_UNAVAILABLE)
 
 
 _HANDLED = (service.Refused, service.InvalidCode, service.TooManyAttempts, service.MfaUnavailable, SecretUnreadable)

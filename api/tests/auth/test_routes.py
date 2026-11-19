@@ -48,7 +48,7 @@ def test_adresse_insensible_a_la_casse_et_aux_espaces(client):
 def test_echec_de_connexion_meme_reponse_que_le_compte_existe_ou_non(client, repo, email, password, detail):
     response = login(client, email=email, password=password)
     assert response.status_code == 401
-    assert response.json() == {"detail": "Identifiants invalides"}
+    assert response.json() == {"detail": "Identifiants invalides", "code": "invalid_credentials"}
     assert "set-cookie" not in response.headers
     (event,) = repo.events_of(AuthEventType.LOGIN_FAILED)
     assert event.detail == detail and event.email == email
@@ -58,7 +58,7 @@ def test_compte_desactive_refuse_avec_la_meme_reponse(client, repo):
     repo.users["direction@demo.test"].is_active = False
     response = login(client)
     assert response.status_code == 401
-    assert response.json() == {"detail": "Identifiants invalides"}
+    assert response.json() == {"detail": "Identifiants invalides", "code": "invalid_credentials"}
     assert repo.events_of(AuthEventType.LOGIN_FAILED)[0].detail == "inactive_account"
 
 
