@@ -45,6 +45,8 @@ export function PresenceForm({ child, onSubmit, onCancel, pending = false, error
       <h3 className="text-2xl font-semibold">
         {departure ? 'Départ' : 'Arrivée'} de {name}
       </h3>
+      {/* En tête du formulaire : sur une tablette en 800 × 600, « Réessayer » reste visible sans défiler. */}
+      <ActionError error={error} onRetry={send} large />
       <fieldset className="grid gap-3">
         <legend className="mb-2 text-lg">
           {departure ? "Qui vient chercher l'enfant ?" : "Qui amène l'enfant ? (facultatif)"}
@@ -77,7 +79,6 @@ export function PresenceForm({ child, onSubmit, onCancel, pending = false, error
           <p className="text-muted-foreground">Aucun responsable enregistré : prévenir la direction.</p>
         )}
       </fieldset>
-      <ActionError error={error} onRetry={send} large />
       <div className="flex flex-wrap gap-3">
         <Button type="submit" size="lg" className="h-16 flex-1 text-xl" disabled={pending || choice === null}>
           {pending ? 'Envoi…' : departure ? 'Pointer le départ' : "Pointer l'arrivée"}

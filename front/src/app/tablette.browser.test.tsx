@@ -1,3 +1,6 @@
+// Styles réels : la vérification « visible sans défiler » en 800 × 600 en dépend.
+import '@/styles/index.css'
+
 import { createMemoryHistory } from '@tanstack/react-router'
 import { http, HttpResponse } from 'msw'
 import { describe, expect } from 'vitest'
