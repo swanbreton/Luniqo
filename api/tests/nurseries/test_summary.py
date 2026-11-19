@@ -83,6 +83,6 @@ def test_resume_documente_sa_session_et_ses_erreurs():
     operation = app.openapi()["paths"]["/api/v2/nurseries/{nursery_id}/summary"]["get"]
     assert operation["security"] == [{"webSession": []}]
     responses = operation["responses"]
-    assert set(responses) == {"200", "401", "403", "404", "422"}
+    assert set(responses) == {"200", "401", "403", "404", "422", "500"}
     assert "nursery_not_found" in documented_codes(responses["404"])
     assert documented_codes(responses["403"]) == {"mfa_required", "role_refused"}

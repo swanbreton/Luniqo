@@ -63,5 +63,7 @@ ENTRYPOINT ["/sbin/tini", "--", "/usr/local/bin/entrypoint.sh"]
 # --proxy-headers : uvicorn lit les en-têtes X-Forwarded-* ajoutés par la
 # passerelle (adresse réelle du client). Le nombre de workers vient de
 # WEB_CONCURRENCY, exporté par l'entrypoint à partir de API_WORKERS.
+# --no-access-log : l'API écrit son propre journal JSON, une ligne par requête
+# avec sa référence (app/requests.py) ; celui d'uvicorn, en texte, notait l'IP.
 CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", \
-     "--proxy-headers", "--timeout-graceful-shutdown", "10", "--no-server-header"]
+     "--proxy-headers", "--timeout-graceful-shutdown", "10", "--no-server-header", "--no-access-log"]

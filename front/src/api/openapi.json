@@ -2,7 +2,7 @@
   "openapi": "3.1.0",
   "info": {
     "title": "Luniqo API",
-    "description": "API de la v2 de Luniqo, logiciel de gestion de crèches.\n\n## Authentification\n\nTrois cookies `HttpOnly`, posés par l'API ; le navigateur les renvoie seul.\nHors développement local, leur nom porte le préfixe `__Host-`.\n\n| Cookie | Posé par | Ouvre |\n|---|---|---|\n| `luniqo_session` | `POST /api/v2/auth/login` | l'espace web (direction, employés, familles) |\n| `luniqo_device` | `POST /api/v2/nurseries/{id}/tablets` | les routes `/api/v2/tablet` (tablette enrôlée, 90 jours) |\n| `luniqo_tablet` | `POST /api/v2/tablet/session` (PIN) | les gestes de terrain, pendant 2 minutes |\n\nPour essayer une route protégée dans cette page : appeler `POST /api/v2/auth/login`,\npuis, si la réponse indique `mfa: required`, `POST /api/v2/auth/mfa/verify`.\nLe bouton « Authorize » est inutile : le cookie est déjà posé.\n\nLa direction et l'éditeur doivent présenter un second facteur (TOTP ou code de\nsecours) : tant que ce n'est pas fait, les routes répondent 403 `mfa_required`\n(« Second facteur requis »), sauf `/auth/me`, la déconnexion et `/auth/mfa`.\n\n## Protection contre les requêtes intersites\n\nLes requêtes `POST`, `PUT`, `PATCH` et `DELETE` doivent porter un en-tête\n`Origin` égal à l'origine de Luniqo, sinon : 403 `origin_refused`.\nLes navigateurs l'envoient d'eux-mêmes ; avec `curl`, ajouter `-H 'Origin: http://localhost:8080'`.\n\n## Conventions\n\n- Erreurs : `{\"detail\": \"message en français\", \"code\": \"code_stable\"}`. Le\n  `detail` s'affiche tel quel et peut être reformulé ; le `code` ne change jamais :\n  c'est sur lui qu'un client décide. Une saisie refusée (422 `validation_error`,\n  ou refus métier d'un champ) ajoute `fields`, un message par champ. Toute 429\n  porte l'en-tête `Retry-After` (secondes).\n- Un objet d'une autre crèche ou d'une autre entreprise répond **404**, comme un\n  objet inexistant : l'API ne révèle pas qu'il existe.\n- Dates `AAAA-MM-JJ`, horodatages ISO 8601 en UTC. Le « jour » (pointage,\n  fiche de ménage) est celui de Paris.\n- Rien ne se supprime : crèches, enfants, pièces, tâches et comptes se désactivent\n  (`is_active: false`) pour garder l'historique.\n",
+    "description": "API de la v2 de Luniqo, logiciel de gestion de crèches.\n\n## Authentification\n\nTrois cookies `HttpOnly`, posés par l'API ; le navigateur les renvoie seul.\nHors développement local, leur nom porte le préfixe `__Host-`.\n\n| Cookie | Posé par | Ouvre |\n|---|---|---|\n| `luniqo_session` | `POST /api/v2/auth/login` | l'espace web (direction, employés, familles) |\n| `luniqo_device` | `POST /api/v2/nurseries/{id}/tablets` | les routes `/api/v2/tablet` (tablette enrôlée, 90 jours) |\n| `luniqo_tablet` | `POST /api/v2/tablet/session` (PIN) | les gestes de terrain, pendant 2 minutes |\n\nPour essayer une route protégée dans cette page : appeler `POST /api/v2/auth/login`,\npuis, si la réponse indique `mfa: required`, `POST /api/v2/auth/mfa/verify`.\nLe bouton « Authorize » est inutile : le cookie est déjà posé.\n\nLa direction et l'éditeur doivent présenter un second facteur (TOTP ou code de\nsecours) : tant que ce n'est pas fait, les routes répondent 403 `mfa_required`\n(« Second facteur requis »), sauf `/auth/me`, la déconnexion et `/auth/mfa`.\n\n## Protection contre les requêtes intersites\n\nLes requêtes `POST`, `PUT`, `PATCH` et `DELETE` doivent porter un en-tête\n`Origin` égal à l'origine de Luniqo, sinon : 403 `origin_refused`.\nLes navigateurs l'envoient d'eux-mêmes ; avec `curl`, ajouter `-H 'Origin: http://localhost:8080'`.\n\n## Conventions\n\n- Erreurs : `{\"detail\": \"message en français\", \"code\": \"code_stable\"}`. Le\n  `detail` s'affiche tel quel et peut être reformulé ; le `code` ne change jamais :\n  c'est sur lui qu'un client décide. Une saisie refusée (422 `validation_error`,\n  ou refus métier d'un champ) ajoute `fields`, un message par champ. Toute 429\n  porte l'en-tête `Retry-After` (secondes).\n- Chaque réponse porte l'en-tête `X-Request-ID`, la référence de la requête,\n  reprise du client si elle est sûre. Une erreur serveur (5xx) la répète dans\n  `request_id` : c'est elle qu'on donne au support pour retrouver l'erreur dans\n  le journal. Une exception imprévue répond 500 `internal_error`, sans rien\n  d'interne.\n- Un objet d'une autre crèche ou d'une autre entreprise répond **404**, comme un\n  objet inexistant : l'API ne révèle pas qu'il existe.\n- Dates `AAAA-MM-JJ`, horodatages ISO 8601 en UTC. Le « jour » (pointage,\n  fiche de ménage) est celui de Paris.\n- Rien ne se supprime : crèches, enfants, pièces, tâches et comptes se désactivent\n  (`is_active: false`) pour garder l'historique.\n",
     "version": "0.1.0"
   },
   "paths": {
@@ -121,6 +121,26 @@
                 }
               }
             }
+          },
+          "500": {
+            "description": "`internal_error` : Une erreur est survenue de notre côté. Réessayez dans un instant ; si elle revient, donnez la référence à la crèche.",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "internal_error": {
+                    "summary": "Une erreur est survenue de notre côté. Réessayez dans un instant ; si elle revient, donnez la référence à la crèche.",
+                    "value": {
+                      "detail": "Une erreur est survenue de notre côté. Réessayez dans un instant ; si elle revient, donnez la référence à la crèche.",
+                      "code": "internal_error",
+                      "request_id": "6f1c0b0e9d2a4c5183e7a1b2c3d4e5f6"
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
           }
         }
       }
@@ -147,6 +167,26 @@
                     "value": {
                       "detail": "Origine de la requête refusée",
                       "code": "origin_refused"
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "`internal_error` : Une erreur est survenue de notre côté. Réessayez dans un instant ; si elle revient, donnez la référence à la crèche.",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "internal_error": {
+                    "summary": "Une erreur est survenue de notre côté. Réessayez dans un instant ; si elle revient, donnez la référence à la crèche.",
+                    "value": {
+                      "detail": "Une erreur est survenue de notre côté. Réessayez dans un instant ; si elle revient, donnez la référence à la crèche.",
+                      "code": "internal_error",
+                      "request_id": "6f1c0b0e9d2a4c5183e7a1b2c3d4e5f6"
                     }
                   }
                 },
@@ -188,6 +228,26 @@
                     "value": {
                       "detail": "Authentification requise",
                       "code": "auth_required"
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "`internal_error` : Une erreur est survenue de notre côté. Réessayez dans un instant ; si elle revient, donnez la référence à la crèche.",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "internal_error": {
+                    "summary": "Une erreur est survenue de notre côté. Réessayez dans un instant ; si elle revient, donnez la référence à la crèche.",
+                    "value": {
+                      "detail": "Une erreur est survenue de notre côté. Réessayez dans un instant ; si elle revient, donnez la référence à la crèche.",
+                      "code": "internal_error",
+                      "request_id": "6f1c0b0e9d2a4c5183e7a1b2c3d4e5f6"
                     }
                   }
                 },
@@ -362,6 +422,26 @@
               }
             }
           },
+          "500": {
+            "description": "`internal_error` : Une erreur est survenue de notre côté. Réessayez dans un instant ; si elle revient, donnez la référence à la crèche.",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "internal_error": {
+                    "summary": "Une erreur est survenue de notre côté. Réessayez dans un instant ; si elle revient, donnez la référence à la crèche.",
+                    "value": {
+                      "detail": "Une erreur est survenue de notre côté. Réessayez dans un instant ; si elle revient, donnez la référence à la crèche.",
+                      "code": "internal_error",
+                      "request_id": "6f1c0b0e9d2a4c5183e7a1b2c3d4e5f6"
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
           "503": {
             "description": "`mfa_unavailable` : Second facteur momentanément indisponible",
             "content": {
@@ -374,7 +454,8 @@
                     "summary": "Second facteur momentanément indisponible",
                     "value": {
                       "detail": "Second facteur momentanément indisponible",
-                      "code": "mfa_unavailable"
+                      "code": "mfa_unavailable",
+                      "request_id": "6f1c0b0e9d2a4c5183e7a1b2c3d4e5f6"
                     }
                   }
                 }
@@ -553,6 +634,26 @@
               }
             }
           },
+          "500": {
+            "description": "`internal_error` : Une erreur est survenue de notre côté. Réessayez dans un instant ; si elle revient, donnez la référence à la crèche.",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "internal_error": {
+                    "summary": "Une erreur est survenue de notre côté. Réessayez dans un instant ; si elle revient, donnez la référence à la crèche.",
+                    "value": {
+                      "detail": "Une erreur est survenue de notre côté. Réessayez dans un instant ; si elle revient, donnez la référence à la crèche.",
+                      "code": "internal_error",
+                      "request_id": "6f1c0b0e9d2a4c5183e7a1b2c3d4e5f6"
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
           "503": {
             "description": "`mfa_unavailable` : Second facteur momentanément indisponible",
             "content": {
@@ -565,7 +666,8 @@
                     "summary": "Second facteur momentanément indisponible",
                     "value": {
                       "detail": "Second facteur momentanément indisponible",
-                      "code": "mfa_unavailable"
+                      "code": "mfa_unavailable",
+                      "request_id": "6f1c0b0e9d2a4c5183e7a1b2c3d4e5f6"
                     }
                   }
                 }
@@ -735,6 +837,26 @@
               }
             }
           },
+          "500": {
+            "description": "`internal_error` : Une erreur est survenue de notre côté. Réessayez dans un instant ; si elle revient, donnez la référence à la crèche.",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "internal_error": {
+                    "summary": "Une erreur est survenue de notre côté. Réessayez dans un instant ; si elle revient, donnez la référence à la crèche.",
+                    "value": {
+                      "detail": "Une erreur est survenue de notre côté. Réessayez dans un instant ; si elle revient, donnez la référence à la crèche.",
+                      "code": "internal_error",
+                      "request_id": "6f1c0b0e9d2a4c5183e7a1b2c3d4e5f6"
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
           "503": {
             "description": "`mfa_unavailable` : Second facteur momentanément indisponible",
             "content": {
@@ -747,7 +869,8 @@
                     "summary": "Second facteur momentanément indisponible",
                     "value": {
                       "detail": "Second facteur momentanément indisponible",
-                      "code": "mfa_unavailable"
+                      "code": "mfa_unavailable",
+                      "request_id": "6f1c0b0e9d2a4c5183e7a1b2c3d4e5f6"
                     }
                   }
                 }
@@ -958,6 +1081,26 @@
               }
             }
           },
+          "500": {
+            "description": "`internal_error` : Une erreur est survenue de notre côté. Réessayez dans un instant ; si elle revient, donnez la référence à la crèche.",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "internal_error": {
+                    "summary": "Une erreur est survenue de notre côté. Réessayez dans un instant ; si elle revient, donnez la référence à la crèche.",
+                    "value": {
+                      "detail": "Une erreur est survenue de notre côté. Réessayez dans un instant ; si elle revient, donnez la référence à la crèche.",
+                      "code": "internal_error",
+                      "request_id": "6f1c0b0e9d2a4c5183e7a1b2c3d4e5f6"
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
           "503": {
             "description": "`mfa_unavailable` : Second facteur momentanément indisponible",
             "content": {
@@ -970,7 +1113,8 @@
                     "summary": "Second facteur momentanément indisponible",
                     "value": {
                       "detail": "Second facteur momentanément indisponible",
-                      "code": "mfa_unavailable"
+                      "code": "mfa_unavailable",
+                      "request_id": "6f1c0b0e9d2a4c5183e7a1b2c3d4e5f6"
                     }
                   }
                 }
@@ -1181,6 +1325,26 @@
               }
             }
           },
+          "500": {
+            "description": "`internal_error` : Une erreur est survenue de notre côté. Réessayez dans un instant ; si elle revient, donnez la référence à la crèche.",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "internal_error": {
+                    "summary": "Une erreur est survenue de notre côté. Réessayez dans un instant ; si elle revient, donnez la référence à la crèche.",
+                    "value": {
+                      "detail": "Une erreur est survenue de notre côté. Réessayez dans un instant ; si elle revient, donnez la référence à la crèche.",
+                      "code": "internal_error",
+                      "request_id": "6f1c0b0e9d2a4c5183e7a1b2c3d4e5f6"
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
           "503": {
             "description": "`mfa_unavailable` : Second facteur momentanément indisponible",
             "content": {
@@ -1193,7 +1357,8 @@
                     "summary": "Second facteur momentanément indisponible",
                     "value": {
                       "detail": "Second facteur momentanément indisponible",
-                      "code": "mfa_unavailable"
+                      "code": "mfa_unavailable",
+                      "request_id": "6f1c0b0e9d2a4c5183e7a1b2c3d4e5f6"
                     }
                   }
                 }
@@ -1372,6 +1537,26 @@
               }
             }
           },
+          "500": {
+            "description": "`internal_error` : Une erreur est survenue de notre côté. Réessayez dans un instant ; si elle revient, donnez la référence à la crèche.",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "internal_error": {
+                    "summary": "Une erreur est survenue de notre côté. Réessayez dans un instant ; si elle revient, donnez la référence à la crèche.",
+                    "value": {
+                      "detail": "Une erreur est survenue de notre côté. Réessayez dans un instant ; si elle revient, donnez la référence à la crèche.",
+                      "code": "internal_error",
+                      "request_id": "6f1c0b0e9d2a4c5183e7a1b2c3d4e5f6"
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
           "503": {
             "description": "`mfa_unavailable` : Second facteur momentanément indisponible",
             "content": {
@@ -1384,7 +1569,8 @@
                     "summary": "Second facteur momentanément indisponible",
                     "value": {
                       "detail": "Second facteur momentanément indisponible",
-                      "code": "mfa_unavailable"
+                      "code": "mfa_unavailable",
+                      "request_id": "6f1c0b0e9d2a4c5183e7a1b2c3d4e5f6"
                     }
                   }
                 }
@@ -1612,6 +1798,26 @@
               }
             }
           },
+          "500": {
+            "description": "`internal_error` : Une erreur est survenue de notre côté. Réessayez dans un instant ; si elle revient, donnez la référence à la crèche.",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "internal_error": {
+                    "summary": "Une erreur est survenue de notre côté. Réessayez dans un instant ; si elle revient, donnez la référence à la crèche.",
+                    "value": {
+                      "detail": "Une erreur est survenue de notre côté. Réessayez dans un instant ; si elle revient, donnez la référence à la crèche.",
+                      "code": "internal_error",
+                      "request_id": "6f1c0b0e9d2a4c5183e7a1b2c3d4e5f6"
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
           "503": {
             "description": "`passkeys_unavailable` : Passkeys momentanément indisponibles",
             "content": {
@@ -1624,7 +1830,8 @@
                     "summary": "Passkeys momentanément indisponibles",
                     "value": {
                       "detail": "Passkeys momentanément indisponibles",
-                      "code": "passkeys_unavailable"
+                      "code": "passkeys_unavailable",
+                      "request_id": "6f1c0b0e9d2a4c5183e7a1b2c3d4e5f6"
                     }
                   }
                 }
@@ -1873,6 +2080,26 @@
               }
             }
           },
+          "500": {
+            "description": "`internal_error` : Une erreur est survenue de notre côté. Réessayez dans un instant ; si elle revient, donnez la référence à la crèche.",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "internal_error": {
+                    "summary": "Une erreur est survenue de notre côté. Réessayez dans un instant ; si elle revient, donnez la référence à la crèche.",
+                    "value": {
+                      "detail": "Une erreur est survenue de notre côté. Réessayez dans un instant ; si elle revient, donnez la référence à la crèche.",
+                      "code": "internal_error",
+                      "request_id": "6f1c0b0e9d2a4c5183e7a1b2c3d4e5f6"
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
           "503": {
             "description": "`passkeys_unavailable` : Passkeys momentanément indisponibles",
             "content": {
@@ -1885,7 +2112,8 @@
                     "summary": "Passkeys momentanément indisponibles",
                     "value": {
                       "detail": "Passkeys momentanément indisponibles",
-                      "code": "passkeys_unavailable"
+                      "code": "passkeys_unavailable",
+                      "request_id": "6f1c0b0e9d2a4c5183e7a1b2c3d4e5f6"
                     }
                   }
                 }
@@ -2118,6 +2346,26 @@
               }
             }
           },
+          "500": {
+            "description": "`internal_error` : Une erreur est survenue de notre côté. Réessayez dans un instant ; si elle revient, donnez la référence à la crèche.",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "internal_error": {
+                    "summary": "Une erreur est survenue de notre côté. Réessayez dans un instant ; si elle revient, donnez la référence à la crèche.",
+                    "value": {
+                      "detail": "Une erreur est survenue de notre côté. Réessayez dans un instant ; si elle revient, donnez la référence à la crèche.",
+                      "code": "internal_error",
+                      "request_id": "6f1c0b0e9d2a4c5183e7a1b2c3d4e5f6"
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
           "503": {
             "description": "`passkeys_unavailable` : Passkeys momentanément indisponibles",
             "content": {
@@ -2130,7 +2378,8 @@
                     "summary": "Passkeys momentanément indisponibles",
                     "value": {
                       "detail": "Passkeys momentanément indisponibles",
-                      "code": "passkeys_unavailable"
+                      "code": "passkeys_unavailable",
+                      "request_id": "6f1c0b0e9d2a4c5183e7a1b2c3d4e5f6"
                     }
                   }
                 }
@@ -2400,6 +2649,26 @@
               }
             }
           },
+          "500": {
+            "description": "`internal_error` : Une erreur est survenue de notre côté. Réessayez dans un instant ; si elle revient, donnez la référence à la crèche.",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "internal_error": {
+                    "summary": "Une erreur est survenue de notre côté. Réessayez dans un instant ; si elle revient, donnez la référence à la crèche.",
+                    "value": {
+                      "detail": "Une erreur est survenue de notre côté. Réessayez dans un instant ; si elle revient, donnez la référence à la crèche.",
+                      "code": "internal_error",
+                      "request_id": "6f1c0b0e9d2a4c5183e7a1b2c3d4e5f6"
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
           "503": {
             "description": "`passkeys_unavailable` : Passkeys momentanément indisponibles",
             "content": {
@@ -2409,7 +2678,8 @@
                     "summary": "Passkeys momentanément indisponibles",
                     "value": {
                       "detail": "Passkeys momentanément indisponibles",
-                      "code": "passkeys_unavailable"
+                      "code": "passkeys_unavailable",
+                      "request_id": "6f1c0b0e9d2a4c5183e7a1b2c3d4e5f6"
                     }
                   }
                 },
@@ -2656,6 +2926,26 @@
               }
             }
           },
+          "500": {
+            "description": "`internal_error` : Une erreur est survenue de notre côté. Réessayez dans un instant ; si elle revient, donnez la référence à la crèche.",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "internal_error": {
+                    "summary": "Une erreur est survenue de notre côté. Réessayez dans un instant ; si elle revient, donnez la référence à la crèche.",
+                    "value": {
+                      "detail": "Une erreur est survenue de notre côté. Réessayez dans un instant ; si elle revient, donnez la référence à la crèche.",
+                      "code": "internal_error",
+                      "request_id": "6f1c0b0e9d2a4c5183e7a1b2c3d4e5f6"
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
           "503": {
             "description": "`passkeys_unavailable` : Passkeys momentanément indisponibles",
             "content": {
@@ -2665,7 +2955,8 @@
                     "summary": "Passkeys momentanément indisponibles",
                     "value": {
                       "detail": "Passkeys momentanément indisponibles",
-                      "code": "passkeys_unavailable"
+                      "code": "passkeys_unavailable",
+                      "request_id": "6f1c0b0e9d2a4c5183e7a1b2c3d4e5f6"
                     }
                   }
                 },
@@ -2901,6 +3192,26 @@
               }
             }
           },
+          "500": {
+            "description": "`internal_error` : Une erreur est survenue de notre côté. Réessayez dans un instant ; si elle revient, donnez la référence à la crèche.",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "internal_error": {
+                    "summary": "Une erreur est survenue de notre côté. Réessayez dans un instant ; si elle revient, donnez la référence à la crèche.",
+                    "value": {
+                      "detail": "Une erreur est survenue de notre côté. Réessayez dans un instant ; si elle revient, donnez la référence à la crèche.",
+                      "code": "internal_error",
+                      "request_id": "6f1c0b0e9d2a4c5183e7a1b2c3d4e5f6"
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
           "503": {
             "description": "`passkeys_unavailable` : Passkeys momentanément indisponibles",
             "content": {
@@ -2913,7 +3224,8 @@
                     "summary": "Passkeys momentanément indisponibles",
                     "value": {
                       "detail": "Passkeys momentanément indisponibles",
-                      "code": "passkeys_unavailable"
+                      "code": "passkeys_unavailable",
+                      "request_id": "6f1c0b0e9d2a4c5183e7a1b2c3d4e5f6"
                     }
                   }
                 }
@@ -3164,6 +3476,26 @@
               }
             }
           },
+          "500": {
+            "description": "`internal_error` : Une erreur est survenue de notre côté. Réessayez dans un instant ; si elle revient, donnez la référence à la crèche.",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "internal_error": {
+                    "summary": "Une erreur est survenue de notre côté. Réessayez dans un instant ; si elle revient, donnez la référence à la crèche.",
+                    "value": {
+                      "detail": "Une erreur est survenue de notre côté. Réessayez dans un instant ; si elle revient, donnez la référence à la crèche.",
+                      "code": "internal_error",
+                      "request_id": "6f1c0b0e9d2a4c5183e7a1b2c3d4e5f6"
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
           "503": {
             "description": "`passkeys_unavailable` : Passkeys momentanément indisponibles",
             "content": {
@@ -3176,7 +3508,8 @@
                     "summary": "Passkeys momentanément indisponibles",
                     "value": {
                       "detail": "Passkeys momentanément indisponibles",
-                      "code": "passkeys_unavailable"
+                      "code": "passkeys_unavailable",
+                      "request_id": "6f1c0b0e9d2a4c5183e7a1b2c3d4e5f6"
                     }
                   }
                 }
@@ -3402,6 +3735,26 @@
               }
             }
           },
+          "500": {
+            "description": "`internal_error` : Une erreur est survenue de notre côté. Réessayez dans un instant ; si elle revient, donnez la référence à la crèche.",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "internal_error": {
+                    "summary": "Une erreur est survenue de notre côté. Réessayez dans un instant ; si elle revient, donnez la référence à la crèche.",
+                    "value": {
+                      "detail": "Une erreur est survenue de notre côté. Réessayez dans un instant ; si elle revient, donnez la référence à la crèche.",
+                      "code": "internal_error",
+                      "request_id": "6f1c0b0e9d2a4c5183e7a1b2c3d4e5f6"
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
           "503": {
             "description": "`passkeys_unavailable` : Passkeys momentanément indisponibles",
             "content": {
@@ -3414,7 +3767,8 @@
                     "summary": "Passkeys momentanément indisponibles",
                     "value": {
                       "detail": "Passkeys momentanément indisponibles",
-                      "code": "passkeys_unavailable"
+                      "code": "passkeys_unavailable",
+                      "request_id": "6f1c0b0e9d2a4c5183e7a1b2c3d4e5f6"
                     }
                   }
                 }
@@ -3653,6 +4007,26 @@
               }
             }
           },
+          "500": {
+            "description": "`internal_error` : Une erreur est survenue de notre côté. Réessayez dans un instant ; si elle revient, donnez la référence à la crèche.",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "internal_error": {
+                    "summary": "Une erreur est survenue de notre côté. Réessayez dans un instant ; si elle revient, donnez la référence à la crèche.",
+                    "value": {
+                      "detail": "Une erreur est survenue de notre côté. Réessayez dans un instant ; si elle revient, donnez la référence à la crèche.",
+                      "code": "internal_error",
+                      "request_id": "6f1c0b0e9d2a4c5183e7a1b2c3d4e5f6"
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
           "503": {
             "description": "`passkeys_unavailable` : Passkeys momentanément indisponibles",
             "content": {
@@ -3665,7 +4039,8 @@
                     "summary": "Passkeys momentanément indisponibles",
                     "value": {
                       "detail": "Passkeys momentanément indisponibles",
-                      "code": "passkeys_unavailable"
+                      "code": "passkeys_unavailable",
+                      "request_id": "6f1c0b0e9d2a4c5183e7a1b2c3d4e5f6"
                     }
                   }
                 }
@@ -3776,6 +4151,26 @@
                 }
               }
             }
+          },
+          "500": {
+            "description": "`internal_error` : Une erreur est survenue de notre côté. Réessayez dans un instant ; si elle revient, donnez la référence à la crèche.",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "internal_error": {
+                    "summary": "Une erreur est survenue de notre côté. Réessayez dans un instant ; si elle revient, donnez la référence à la crèche.",
+                    "value": {
+                      "detail": "Une erreur est survenue de notre côté. Réessayez dans un instant ; si elle revient, donnez la référence à la crèche.",
+                      "code": "internal_error",
+                      "request_id": "6f1c0b0e9d2a4c5183e7a1b2c3d4e5f6"
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
           }
         },
         "security": [
@@ -3877,6 +4272,26 @@
                       "fields": {
                         "name": "Ne peut pas être vide"
                       }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "`internal_error` : Une erreur est survenue de notre côté. Réessayez dans un instant ; si elle revient, donnez la référence à la crèche.",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "internal_error": {
+                    "summary": "Une erreur est survenue de notre côté. Réessayez dans un instant ; si elle revient, donnez la référence à la crèche.",
+                    "value": {
+                      "detail": "Une erreur est survenue de notre côté. Réessayez dans un instant ; si elle revient, donnez la référence à la crèche.",
+                      "code": "internal_error",
+                      "request_id": "6f1c0b0e9d2a4c5183e7a1b2c3d4e5f6"
                     }
                   }
                 },
@@ -4002,6 +4417,26 @@
                       "fields": {
                         "name": "Ne peut pas être vide"
                       }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "`internal_error` : Une erreur est survenue de notre côté. Réessayez dans un instant ; si elle revient, donnez la référence à la crèche.",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "internal_error": {
+                    "summary": "Une erreur est survenue de notre côté. Réessayez dans un instant ; si elle revient, donnez la référence à la crèche.",
+                    "value": {
+                      "detail": "Une erreur est survenue de notre côté. Réessayez dans un instant ; si elle revient, donnez la référence à la crèche.",
+                      "code": "internal_error",
+                      "request_id": "6f1c0b0e9d2a4c5183e7a1b2c3d4e5f6"
                     }
                   }
                 },
@@ -4157,6 +4592,26 @@
                 }
               }
             }
+          },
+          "500": {
+            "description": "`internal_error` : Une erreur est survenue de notre côté. Réessayez dans un instant ; si elle revient, donnez la référence à la crèche.",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "internal_error": {
+                    "summary": "Une erreur est survenue de notre côté. Réessayez dans un instant ; si elle revient, donnez la référence à la crèche.",
+                    "value": {
+                      "detail": "Une erreur est survenue de notre côté. Réessayez dans un instant ; si elle revient, donnez la référence à la crèche.",
+                      "code": "internal_error",
+                      "request_id": "6f1c0b0e9d2a4c5183e7a1b2c3d4e5f6"
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
           }
         },
         "security": [
@@ -4274,6 +4729,26 @@
                       "fields": {
                         "name": "Ne peut pas être vide"
                       }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "`internal_error` : Une erreur est survenue de notre côté. Réessayez dans un instant ; si elle revient, donnez la référence à la crèche.",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "internal_error": {
+                    "summary": "Une erreur est survenue de notre côté. Réessayez dans un instant ; si elle revient, donnez la référence à la crèche.",
+                    "value": {
+                      "detail": "Une erreur est survenue de notre côté. Réessayez dans un instant ; si elle revient, donnez la référence à la crèche.",
+                      "code": "internal_error",
+                      "request_id": "6f1c0b0e9d2a4c5183e7a1b2c3d4e5f6"
                     }
                   }
                 },
@@ -4410,6 +4885,26 @@
                       "fields": {
                         "name": "Ne peut pas être vide"
                       }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "`internal_error` : Une erreur est survenue de notre côté. Réessayez dans un instant ; si elle revient, donnez la référence à la crèche.",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "internal_error": {
+                    "summary": "Une erreur est survenue de notre côté. Réessayez dans un instant ; si elle revient, donnez la référence à la crèche.",
+                    "value": {
+                      "detail": "Une erreur est survenue de notre côté. Réessayez dans un instant ; si elle revient, donnez la référence à la crèche.",
+                      "code": "internal_error",
+                      "request_id": "6f1c0b0e9d2a4c5183e7a1b2c3d4e5f6"
                     }
                   }
                 },
@@ -4567,6 +5062,26 @@
                 }
               }
             }
+          },
+          "500": {
+            "description": "`internal_error` : Une erreur est survenue de notre côté. Réessayez dans un instant ; si elle revient, donnez la référence à la crèche.",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "internal_error": {
+                    "summary": "Une erreur est survenue de notre côté. Réessayez dans un instant ; si elle revient, donnez la référence à la crèche.",
+                    "value": {
+                      "detail": "Une erreur est survenue de notre côté. Réessayez dans un instant ; si elle revient, donnez la référence à la crèche.",
+                      "code": "internal_error",
+                      "request_id": "6f1c0b0e9d2a4c5183e7a1b2c3d4e5f6"
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
           }
         },
         "security": [
@@ -4707,6 +5222,26 @@
                 }
               }
             }
+          },
+          "500": {
+            "description": "`internal_error` : Une erreur est survenue de notre côté. Réessayez dans un instant ; si elle revient, donnez la référence à la crèche.",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "internal_error": {
+                    "summary": "Une erreur est survenue de notre côté. Réessayez dans un instant ; si elle revient, donnez la référence à la crèche.",
+                    "value": {
+                      "detail": "Une erreur est survenue de notre côté. Réessayez dans un instant ; si elle revient, donnez la référence à la crèche.",
+                      "code": "internal_error",
+                      "request_id": "6f1c0b0e9d2a4c5183e7a1b2c3d4e5f6"
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
           }
         },
         "security": [
@@ -4776,6 +5311,26 @@
                     "value": {
                       "detail": "Action non autorisée pour ce rôle",
                       "code": "role_refused"
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "`internal_error` : Une erreur est survenue de notre côté. Réessayez dans un instant ; si elle revient, donnez la référence à la crèche.",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "internal_error": {
+                    "summary": "Une erreur est survenue de notre côté. Réessayez dans un instant ; si elle revient, donnez la référence à la crèche.",
+                    "value": {
+                      "detail": "Une erreur est survenue de notre côté. Réessayez dans un instant ; si elle revient, donnez la référence à la crèche.",
+                      "code": "internal_error",
+                      "request_id": "6f1c0b0e9d2a4c5183e7a1b2c3d4e5f6"
                     }
                   }
                 },
@@ -4904,6 +5459,26 @@
                       "fields": {
                         "name": "Ne peut pas être vide"
                       }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "`internal_error` : Une erreur est survenue de notre côté. Réessayez dans un instant ; si elle revient, donnez la référence à la crèche.",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "internal_error": {
+                    "summary": "Une erreur est survenue de notre côté. Réessayez dans un instant ; si elle revient, donnez la référence à la crèche.",
+                    "value": {
+                      "detail": "Une erreur est survenue de notre côté. Réessayez dans un instant ; si elle revient, donnez la référence à la crèche.",
+                      "code": "internal_error",
+                      "request_id": "6f1c0b0e9d2a4c5183e7a1b2c3d4e5f6"
                     }
                   }
                 },
@@ -5061,6 +5636,26 @@
                 }
               }
             }
+          },
+          "500": {
+            "description": "`internal_error` : Une erreur est survenue de notre côté. Réessayez dans un instant ; si elle revient, donnez la référence à la crèche.",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "internal_error": {
+                    "summary": "Une erreur est survenue de notre côté. Réessayez dans un instant ; si elle revient, donnez la référence à la crèche.",
+                    "value": {
+                      "detail": "Une erreur est survenue de notre côté. Réessayez dans un instant ; si elle revient, donnez la référence à la crèche.",
+                      "code": "internal_error",
+                      "request_id": "6f1c0b0e9d2a4c5183e7a1b2c3d4e5f6"
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
           }
         },
         "security": [
@@ -5187,6 +5782,26 @@
                       "fields": {
                         "name": "Ne peut pas être vide"
                       }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "`internal_error` : Une erreur est survenue de notre côté. Réessayez dans un instant ; si elle revient, donnez la référence à la crèche.",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "internal_error": {
+                    "summary": "Une erreur est survenue de notre côté. Réessayez dans un instant ; si elle revient, donnez la référence à la crèche.",
+                    "value": {
+                      "detail": "Une erreur est survenue de notre côté. Réessayez dans un instant ; si elle revient, donnez la référence à la crèche.",
+                      "code": "internal_error",
+                      "request_id": "6f1c0b0e9d2a4c5183e7a1b2c3d4e5f6"
                     }
                   }
                 },
@@ -5336,6 +5951,26 @@
                       "fields": {
                         "name": "Ne peut pas être vide"
                       }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "`internal_error` : Une erreur est survenue de notre côté. Réessayez dans un instant ; si elle revient, donnez la référence à la crèche.",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "internal_error": {
+                    "summary": "Une erreur est survenue de notre côté. Réessayez dans un instant ; si elle revient, donnez la référence à la crèche.",
+                    "value": {
+                      "detail": "Une erreur est survenue de notre côté. Réessayez dans un instant ; si elle revient, donnez la référence à la crèche.",
+                      "code": "internal_error",
+                      "request_id": "6f1c0b0e9d2a4c5183e7a1b2c3d4e5f6"
                     }
                   }
                 },
@@ -5504,6 +6139,26 @@
                 }
               }
             }
+          },
+          "500": {
+            "description": "`internal_error` : Une erreur est survenue de notre côté. Réessayez dans un instant ; si elle revient, donnez la référence à la crèche.",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "internal_error": {
+                    "summary": "Une erreur est survenue de notre côté. Réessayez dans un instant ; si elle revient, donnez la référence à la crèche.",
+                    "value": {
+                      "detail": "Une erreur est survenue de notre côté. Réessayez dans un instant ; si elle revient, donnez la référence à la crèche.",
+                      "code": "internal_error",
+                      "request_id": "6f1c0b0e9d2a4c5183e7a1b2c3d4e5f6"
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
           }
         },
         "security": [
@@ -5630,6 +6285,26 @@
                 }
               }
             }
+          },
+          "500": {
+            "description": "`internal_error` : Une erreur est survenue de notre côté. Réessayez dans un instant ; si elle revient, donnez la référence à la crèche.",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "internal_error": {
+                    "summary": "Une erreur est survenue de notre côté. Réessayez dans un instant ; si elle revient, donnez la référence à la crèche.",
+                    "value": {
+                      "detail": "Une erreur est survenue de notre côté. Réessayez dans un instant ; si elle revient, donnez la référence à la crèche.",
+                      "code": "internal_error",
+                      "request_id": "6f1c0b0e9d2a4c5183e7a1b2c3d4e5f6"
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
           }
         },
         "security": [
@@ -5668,6 +6343,26 @@
                     "value": {
                       "detail": "Tablette non enrôlée, expirée ou révoquée",
                       "code": "tablet_required"
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "`internal_error` : Une erreur est survenue de notre côté. Réessayez dans un instant ; si elle revient, donnez la référence à la crèche.",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "internal_error": {
+                    "summary": "Une erreur est survenue de notre côté. Réessayez dans un instant ; si elle revient, donnez la référence à la crèche.",
+                    "value": {
+                      "detail": "Une erreur est survenue de notre côté. Réessayez dans un instant ; si elle revient, donnez la référence à la crèche.",
+                      "code": "internal_error",
+                      "request_id": "6f1c0b0e9d2a4c5183e7a1b2c3d4e5f6"
                     }
                   }
                 },
@@ -5721,6 +6416,26 @@
                     "value": {
                       "detail": "Tablette non enrôlée, expirée ou révoquée",
                       "code": "tablet_required"
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "`internal_error` : Une erreur est survenue de notre côté. Réessayez dans un instant ; si elle revient, donnez la référence à la crèche.",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "internal_error": {
+                    "summary": "Une erreur est survenue de notre côté. Réessayez dans un instant ; si elle revient, donnez la référence à la crèche.",
+                    "value": {
+                      "detail": "Une erreur est survenue de notre côté. Réessayez dans un instant ; si elle revient, donnez la référence à la crèche.",
+                      "code": "internal_error",
+                      "request_id": "6f1c0b0e9d2a4c5183e7a1b2c3d4e5f6"
                     }
                   }
                 },
@@ -5897,6 +6612,26 @@
                 }
               }
             }
+          },
+          "500": {
+            "description": "`internal_error` : Une erreur est survenue de notre côté. Réessayez dans un instant ; si elle revient, donnez la référence à la crèche.",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "internal_error": {
+                    "summary": "Une erreur est survenue de notre côté. Réessayez dans un instant ; si elle revient, donnez la référence à la crèche.",
+                    "value": {
+                      "detail": "Une erreur est survenue de notre côté. Réessayez dans un instant ; si elle revient, donnez la référence à la crèche.",
+                      "code": "internal_error",
+                      "request_id": "6f1c0b0e9d2a4c5183e7a1b2c3d4e5f6"
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
           }
         },
         "security": [
@@ -5952,6 +6687,26 @@
                     "value": {
                       "detail": "Origine de la requête refusée",
                       "code": "origin_refused"
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "`internal_error` : Une erreur est survenue de notre côté. Réessayez dans un instant ; si elle revient, donnez la référence à la crèche.",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "internal_error": {
+                    "summary": "Une erreur est survenue de notre côté. Réessayez dans un instant ; si elle revient, donnez la référence à la crèche.",
+                    "value": {
+                      "detail": "Une erreur est survenue de notre côté. Réessayez dans un instant ; si elle revient, donnez la référence à la crèche.",
+                      "code": "internal_error",
+                      "request_id": "6f1c0b0e9d2a4c5183e7a1b2c3d4e5f6"
                     }
                   }
                 },
@@ -6082,6 +6837,26 @@
                       "fields": {
                         "name": "Ne peut pas être vide"
                       }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "`internal_error` : Une erreur est survenue de notre côté. Réessayez dans un instant ; si elle revient, donnez la référence à la crèche.",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "internal_error": {
+                    "summary": "Une erreur est survenue de notre côté. Réessayez dans un instant ; si elle revient, donnez la référence à la crèche.",
+                    "value": {
+                      "detail": "Une erreur est survenue de notre côté. Réessayez dans un instant ; si elle revient, donnez la référence à la crèche.",
+                      "code": "internal_error",
+                      "request_id": "6f1c0b0e9d2a4c5183e7a1b2c3d4e5f6"
                     }
                   }
                 },
@@ -6237,6 +7012,26 @@
                 }
               }
             }
+          },
+          "500": {
+            "description": "`internal_error` : Une erreur est survenue de notre côté. Réessayez dans un instant ; si elle revient, donnez la référence à la crèche.",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "internal_error": {
+                    "summary": "Une erreur est survenue de notre côté. Réessayez dans un instant ; si elle revient, donnez la référence à la crèche.",
+                    "value": {
+                      "detail": "Une erreur est survenue de notre côté. Réessayez dans un instant ; si elle revient, donnez la référence à la crèche.",
+                      "code": "internal_error",
+                      "request_id": "6f1c0b0e9d2a4c5183e7a1b2c3d4e5f6"
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
           }
         },
         "security": [
@@ -6371,6 +7166,26 @@
                       "fields": {
                         "name": "Ne peut pas être vide"
                       }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "`internal_error` : Une erreur est survenue de notre côté. Réessayez dans un instant ; si elle revient, donnez la référence à la crèche.",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "internal_error": {
+                    "summary": "Une erreur est survenue de notre côté. Réessayez dans un instant ; si elle revient, donnez la référence à la crèche.",
+                    "value": {
+                      "detail": "Une erreur est survenue de notre côté. Réessayez dans un instant ; si elle revient, donnez la référence à la crèche.",
+                      "code": "internal_error",
+                      "request_id": "6f1c0b0e9d2a4c5183e7a1b2c3d4e5f6"
                     }
                   }
                 },
@@ -6543,6 +7358,26 @@
                 }
               }
             }
+          },
+          "500": {
+            "description": "`internal_error` : Une erreur est survenue de notre côté. Réessayez dans un instant ; si elle revient, donnez la référence à la crèche.",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "internal_error": {
+                    "summary": "Une erreur est survenue de notre côté. Réessayez dans un instant ; si elle revient, donnez la référence à la crèche.",
+                    "value": {
+                      "detail": "Une erreur est survenue de notre côté. Réessayez dans un instant ; si elle revient, donnez la référence à la crèche.",
+                      "code": "internal_error",
+                      "request_id": "6f1c0b0e9d2a4c5183e7a1b2c3d4e5f6"
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
           }
         },
         "security": [
@@ -6680,6 +7515,26 @@
                       "fields": {
                         "name": "Ne peut pas être vide"
                       }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "`internal_error` : Une erreur est survenue de notre côté. Réessayez dans un instant ; si elle revient, donnez la référence à la crèche.",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "internal_error": {
+                    "summary": "Une erreur est survenue de notre côté. Réessayez dans un instant ; si elle revient, donnez la référence à la crèche.",
+                    "value": {
+                      "detail": "Une erreur est survenue de notre côté. Réessayez dans un instant ; si elle revient, donnez la référence à la crèche.",
+                      "code": "internal_error",
+                      "request_id": "6f1c0b0e9d2a4c5183e7a1b2c3d4e5f6"
                     }
                   }
                 },
@@ -6854,6 +7709,26 @@
                 }
               }
             }
+          },
+          "500": {
+            "description": "`internal_error` : Une erreur est survenue de notre côté. Réessayez dans un instant ; si elle revient, donnez la référence à la crèche.",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "internal_error": {
+                    "summary": "Une erreur est survenue de notre côté. Réessayez dans un instant ; si elle revient, donnez la référence à la crèche.",
+                    "value": {
+                      "detail": "Une erreur est survenue de notre côté. Réessayez dans un instant ; si elle revient, donnez la référence à la crèche.",
+                      "code": "internal_error",
+                      "request_id": "6f1c0b0e9d2a4c5183e7a1b2c3d4e5f6"
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
           }
         },
         "security": [
@@ -6988,6 +7863,26 @@
                       "fields": {
                         "name": "Ne peut pas être vide"
                       }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "`internal_error` : Une erreur est survenue de notre côté. Réessayez dans un instant ; si elle revient, donnez la référence à la crèche.",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "internal_error": {
+                    "summary": "Une erreur est survenue de notre côté. Réessayez dans un instant ; si elle revient, donnez la référence à la crèche.",
+                    "value": {
+                      "detail": "Une erreur est survenue de notre côté. Réessayez dans un instant ; si elle revient, donnez la référence à la crèche.",
+                      "code": "internal_error",
+                      "request_id": "6f1c0b0e9d2a4c5183e7a1b2c3d4e5f6"
                     }
                   }
                 },
@@ -7167,6 +8062,26 @@
                 }
               }
             }
+          },
+          "500": {
+            "description": "`internal_error` : Une erreur est survenue de notre côté. Réessayez dans un instant ; si elle revient, donnez la référence à la crèche.",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "internal_error": {
+                    "summary": "Une erreur est survenue de notre côté. Réessayez dans un instant ; si elle revient, donnez la référence à la crèche.",
+                    "value": {
+                      "detail": "Une erreur est survenue de notre côté. Réessayez dans un instant ; si elle revient, donnez la référence à la crèche.",
+                      "code": "internal_error",
+                      "request_id": "6f1c0b0e9d2a4c5183e7a1b2c3d4e5f6"
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
           }
         },
         "security": [
@@ -7333,6 +8248,26 @@
                 }
               }
             }
+          },
+          "500": {
+            "description": "`internal_error` : Une erreur est survenue de notre côté. Réessayez dans un instant ; si elle revient, donnez la référence à la crèche.",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "internal_error": {
+                    "summary": "Une erreur est survenue de notre côté. Réessayez dans un instant ; si elle revient, donnez la référence à la crèche.",
+                    "value": {
+                      "detail": "Une erreur est survenue de notre côté. Réessayez dans un instant ; si elle revient, donnez la référence à la crèche.",
+                      "code": "internal_error",
+                      "request_id": "6f1c0b0e9d2a4c5183e7a1b2c3d4e5f6"
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
           }
         },
         "security": [
@@ -7491,6 +8426,26 @@
                       "fields": {
                         "name": "Ne peut pas être vide"
                       }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "`internal_error` : Une erreur est survenue de notre côté. Réessayez dans un instant ; si elle revient, donnez la référence à la crèche.",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "internal_error": {
+                    "summary": "Une erreur est survenue de notre côté. Réessayez dans un instant ; si elle revient, donnez la référence à la crèche.",
+                    "value": {
+                      "detail": "Une erreur est survenue de notre côté. Réessayez dans un instant ; si elle revient, donnez la référence à la crèche.",
+                      "code": "internal_error",
+                      "request_id": "6f1c0b0e9d2a4c5183e7a1b2c3d4e5f6"
                     }
                   }
                 },
@@ -7682,6 +8637,26 @@
                 }
               }
             }
+          },
+          "500": {
+            "description": "`internal_error` : Une erreur est survenue de notre côté. Réessayez dans un instant ; si elle revient, donnez la référence à la crèche.",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "internal_error": {
+                    "summary": "Une erreur est survenue de notre côté. Réessayez dans un instant ; si elle revient, donnez la référence à la crèche.",
+                    "value": {
+                      "detail": "Une erreur est survenue de notre côté. Réessayez dans un instant ; si elle revient, donnez la référence à la crèche.",
+                      "code": "internal_error",
+                      "request_id": "6f1c0b0e9d2a4c5183e7a1b2c3d4e5f6"
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
           }
         },
         "security": [
@@ -7839,6 +8814,26 @@
                 }
               }
             }
+          },
+          "500": {
+            "description": "`internal_error` : Une erreur est survenue de notre côté. Réessayez dans un instant ; si elle revient, donnez la référence à la crèche.",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "internal_error": {
+                    "summary": "Une erreur est survenue de notre côté. Réessayez dans un instant ; si elle revient, donnez la référence à la crèche.",
+                    "value": {
+                      "detail": "Une erreur est survenue de notre côté. Réessayez dans un instant ; si elle revient, donnez la référence à la crèche.",
+                      "code": "internal_error",
+                      "request_id": "6f1c0b0e9d2a4c5183e7a1b2c3d4e5f6"
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
           }
         },
         "security": [
@@ -7888,6 +8883,26 @@
                     "value": {
                       "detail": "Tablette non enrôlée, expirée ou révoquée",
                       "code": "tablet_required"
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "`internal_error` : Une erreur est survenue de notre côté. Réessayez dans un instant ; si elle revient, donnez la référence à la crèche.",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "internal_error": {
+                    "summary": "Une erreur est survenue de notre côté. Réessayez dans un instant ; si elle revient, donnez la référence à la crèche.",
+                    "value": {
+                      "detail": "Une erreur est survenue de notre côté. Réessayez dans un instant ; si elle revient, donnez la référence à la crèche.",
+                      "code": "internal_error",
+                      "request_id": "6f1c0b0e9d2a4c5183e7a1b2c3d4e5f6"
                     }
                   }
                 },
@@ -8065,6 +9080,26 @@
                 }
               }
             }
+          },
+          "500": {
+            "description": "`internal_error` : Une erreur est survenue de notre côté. Réessayez dans un instant ; si elle revient, donnez la référence à la crèche.",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "internal_error": {
+                    "summary": "Une erreur est survenue de notre côté. Réessayez dans un instant ; si elle revient, donnez la référence à la crèche.",
+                    "value": {
+                      "detail": "Une erreur est survenue de notre côté. Réessayez dans un instant ; si elle revient, donnez la référence à la crèche.",
+                      "code": "internal_error",
+                      "request_id": "6f1c0b0e9d2a4c5183e7a1b2c3d4e5f6"
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
           }
         },
         "security": [
@@ -8227,6 +9262,26 @@
                 }
               }
             }
+          },
+          "500": {
+            "description": "`internal_error` : Une erreur est survenue de notre côté. Réessayez dans un instant ; si elle revient, donnez la référence à la crèche.",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "internal_error": {
+                    "summary": "Une erreur est survenue de notre côté. Réessayez dans un instant ; si elle revient, donnez la référence à la crèche.",
+                    "value": {
+                      "detail": "Une erreur est survenue de notre côté. Réessayez dans un instant ; si elle revient, donnez la référence à la crèche.",
+                      "code": "internal_error",
+                      "request_id": "6f1c0b0e9d2a4c5183e7a1b2c3d4e5f6"
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
           }
         },
         "security": [
@@ -8366,6 +9421,26 @@
                       "fields": {
                         "name": "Ne peut pas être vide"
                       }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "`internal_error` : Une erreur est survenue de notre côté. Réessayez dans un instant ; si elle revient, donnez la référence à la crèche.",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "internal_error": {
+                    "summary": "Une erreur est survenue de notre côté. Réessayez dans un instant ; si elle revient, donnez la référence à la crèche.",
+                    "value": {
+                      "detail": "Une erreur est survenue de notre côté. Réessayez dans un instant ; si elle revient, donnez la référence à la crèche.",
+                      "code": "internal_error",
+                      "request_id": "6f1c0b0e9d2a4c5183e7a1b2c3d4e5f6"
                     }
                   }
                 },
@@ -8624,6 +9699,26 @@
                 }
               }
             }
+          },
+          "500": {
+            "description": "`internal_error` : Une erreur est survenue de notre côté. Réessayez dans un instant ; si elle revient, donnez la référence à la crèche.",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "internal_error": {
+                    "summary": "Une erreur est survenue de notre côté. Réessayez dans un instant ; si elle revient, donnez la référence à la crèche.",
+                    "value": {
+                      "detail": "Une erreur est survenue de notre côté. Réessayez dans un instant ; si elle revient, donnez la référence à la crèche.",
+                      "code": "internal_error",
+                      "request_id": "6f1c0b0e9d2a4c5183e7a1b2c3d4e5f6"
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
           }
         },
         "security": [
@@ -8745,6 +9840,26 @@
                       "fields": {
                         "name": "Ne peut pas être vide"
                       }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "`internal_error` : Une erreur est survenue de notre côté. Réessayez dans un instant ; si elle revient, donnez la référence à la crèche.",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "internal_error": {
+                    "summary": "Une erreur est survenue de notre côté. Réessayez dans un instant ; si elle revient, donnez la référence à la crèche.",
+                    "value": {
+                      "detail": "Une erreur est survenue de notre côté. Réessayez dans un instant ; si elle revient, donnez la référence à la crèche.",
+                      "code": "internal_error",
+                      "request_id": "6f1c0b0e9d2a4c5183e7a1b2c3d4e5f6"
                     }
                   }
                 },
@@ -8934,6 +10049,26 @@
                 }
               }
             }
+          },
+          "500": {
+            "description": "`internal_error` : Une erreur est survenue de notre côté. Réessayez dans un instant ; si elle revient, donnez la référence à la crèche.",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "internal_error": {
+                    "summary": "Une erreur est survenue de notre côté. Réessayez dans un instant ; si elle revient, donnez la référence à la crèche.",
+                    "value": {
+                      "detail": "Une erreur est survenue de notre côté. Réessayez dans un instant ; si elle revient, donnez la référence à la crèche.",
+                      "code": "internal_error",
+                      "request_id": "6f1c0b0e9d2a4c5183e7a1b2c3d4e5f6"
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
           }
         },
         "security": [
@@ -9103,6 +10238,26 @@
                       "fields": {
                         "name": "Ne peut pas être vide"
                       }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "`internal_error` : Une erreur est survenue de notre côté. Réessayez dans un instant ; si elle revient, donnez la référence à la crèche.",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "internal_error": {
+                    "summary": "Une erreur est survenue de notre côté. Réessayez dans un instant ; si elle revient, donnez la référence à la crèche.",
+                    "value": {
+                      "detail": "Une erreur est survenue de notre côté. Réessayez dans un instant ; si elle revient, donnez la référence à la crèche.",
+                      "code": "internal_error",
+                      "request_id": "6f1c0b0e9d2a4c5183e7a1b2c3d4e5f6"
                     }
                   }
                 },
@@ -9380,6 +10535,26 @@
                 }
               }
             }
+          },
+          "500": {
+            "description": "`internal_error` : Une erreur est survenue de notre côté. Réessayez dans un instant ; si elle revient, donnez la référence à la crèche.",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "internal_error": {
+                    "summary": "Une erreur est survenue de notre côté. Réessayez dans un instant ; si elle revient, donnez la référence à la crèche.",
+                    "value": {
+                      "detail": "Une erreur est survenue de notre côté. Réessayez dans un instant ; si elle revient, donnez la référence à la crèche.",
+                      "code": "internal_error",
+                      "request_id": "6f1c0b0e9d2a4c5183e7a1b2c3d4e5f6"
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
           }
         },
         "security": [
@@ -9557,6 +10732,26 @@
                       "fields": {
                         "name": "Ne peut pas être vide"
                       }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "`internal_error` : Une erreur est survenue de notre côté. Réessayez dans un instant ; si elle revient, donnez la référence à la crèche.",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "internal_error": {
+                    "summary": "Une erreur est survenue de notre côté. Réessayez dans un instant ; si elle revient, donnez la référence à la crèche.",
+                    "value": {
+                      "detail": "Une erreur est survenue de notre côté. Réessayez dans un instant ; si elle revient, donnez la référence à la crèche.",
+                      "code": "internal_error",
+                      "request_id": "6f1c0b0e9d2a4c5183e7a1b2c3d4e5f6"
                     }
                   }
                 },
@@ -9753,6 +10948,26 @@
                 }
               }
             }
+          },
+          "500": {
+            "description": "`internal_error` : Une erreur est survenue de notre côté. Réessayez dans un instant ; si elle revient, donnez la référence à la crèche.",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "internal_error": {
+                    "summary": "Une erreur est survenue de notre côté. Réessayez dans un instant ; si elle revient, donnez la référence à la crèche.",
+                    "value": {
+                      "detail": "Une erreur est survenue de notre côté. Réessayez dans un instant ; si elle revient, donnez la référence à la crèche.",
+                      "code": "internal_error",
+                      "request_id": "6f1c0b0e9d2a4c5183e7a1b2c3d4e5f6"
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
           }
         },
         "security": [
@@ -9917,6 +11132,26 @@
                 }
               }
             }
+          },
+          "500": {
+            "description": "`internal_error` : Une erreur est survenue de notre côté. Réessayez dans un instant ; si elle revient, donnez la référence à la crèche.",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "internal_error": {
+                    "summary": "Une erreur est survenue de notre côté. Réessayez dans un instant ; si elle revient, donnez la référence à la crèche.",
+                    "value": {
+                      "detail": "Une erreur est survenue de notre côté. Réessayez dans un instant ; si elle revient, donnez la référence à la crèche.",
+                      "code": "internal_error",
+                      "request_id": "6f1c0b0e9d2a4c5183e7a1b2c3d4e5f6"
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
           }
         },
         "security": [
@@ -10006,6 +11241,26 @@
                       "fields": {
                         "name": "Ne peut pas être vide"
                       }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "`internal_error` : Une erreur est survenue de notre côté. Réessayez dans un instant ; si elle revient, donnez la référence à la crèche.",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "internal_error": {
+                    "summary": "Une erreur est survenue de notre côté. Réessayez dans un instant ; si elle revient, donnez la référence à la crèche.",
+                    "value": {
+                      "detail": "Une erreur est survenue de notre côté. Réessayez dans un instant ; si elle revient, donnez la référence à la crèche.",
+                      "code": "internal_error",
+                      "request_id": "6f1c0b0e9d2a4c5183e7a1b2c3d4e5f6"
                     }
                   }
                 },
@@ -10139,6 +11394,26 @@
                 }
               }
             }
+          },
+          "500": {
+            "description": "`internal_error` : Une erreur est survenue de notre côté. Réessayez dans un instant ; si elle revient, donnez la référence à la crèche.",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "internal_error": {
+                    "summary": "Une erreur est survenue de notre côté. Réessayez dans un instant ; si elle revient, donnez la référence à la crèche.",
+                    "value": {
+                      "detail": "Une erreur est survenue de notre côté. Réessayez dans un instant ; si elle revient, donnez la référence à la crèche.",
+                      "code": "internal_error",
+                      "request_id": "6f1c0b0e9d2a4c5183e7a1b2c3d4e5f6"
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
           }
         }
       }
@@ -10202,6 +11477,26 @@
                     "value": {
                       "detail": "Action non autorisée pour ce rôle",
                       "code": "role_refused"
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "`internal_error` : Une erreur est survenue de notre côté. Réessayez dans un instant ; si elle revient, donnez la référence à la crèche.",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "internal_error": {
+                    "summary": "Une erreur est survenue de notre côté. Réessayez dans un instant ; si elle revient, donnez la référence à la crèche.",
+                    "value": {
+                      "detail": "Une erreur est survenue de notre côté. Réessayez dans un instant ; si elle revient, donnez la référence à la crèche.",
+                      "code": "internal_error",
+                      "request_id": "6f1c0b0e9d2a4c5183e7a1b2c3d4e5f6"
                     }
                   }
                 },
@@ -10347,6 +11642,26 @@
                 }
               }
             }
+          },
+          "500": {
+            "description": "`internal_error` : Une erreur est survenue de notre côté. Réessayez dans un instant ; si elle revient, donnez la référence à la crèche.",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "internal_error": {
+                    "summary": "Une erreur est survenue de notre côté. Réessayez dans un instant ; si elle revient, donnez la référence à la crèche.",
+                    "value": {
+                      "detail": "Une erreur est survenue de notre côté. Réessayez dans un instant ; si elle revient, donnez la référence à la crèche.",
+                      "code": "internal_error",
+                      "request_id": "6f1c0b0e9d2a4c5183e7a1b2c3d4e5f6"
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
           }
         },
         "security": [
@@ -10449,6 +11764,26 @@
                       "fields": {
                         "name": "Ne peut pas être vide"
                       }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "`internal_error` : Une erreur est survenue de notre côté. Réessayez dans un instant ; si elle revient, donnez la référence à la crèche.",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "internal_error": {
+                    "summary": "Une erreur est survenue de notre côté. Réessayez dans un instant ; si elle revient, donnez la référence à la crèche.",
+                    "value": {
+                      "detail": "Une erreur est survenue de notre côté. Réessayez dans un instant ; si elle revient, donnez la référence à la crèche.",
+                      "code": "internal_error",
+                      "request_id": "6f1c0b0e9d2a4c5183e7a1b2c3d4e5f6"
                     }
                   }
                 },
@@ -10577,6 +11912,26 @@
                       "fields": {
                         "name": "Ne peut pas être vide"
                       }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "`internal_error` : Une erreur est survenue de notre côté. Réessayez dans un instant ; si elle revient, donnez la référence à la crèche.",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "internal_error": {
+                    "summary": "Une erreur est survenue de notre côté. Réessayez dans un instant ; si elle revient, donnez la référence à la crèche.",
+                    "value": {
+                      "detail": "Une erreur est survenue de notre côté. Réessayez dans un instant ; si elle revient, donnez la référence à la crèche.",
+                      "code": "internal_error",
+                      "request_id": "6f1c0b0e9d2a4c5183e7a1b2c3d4e5f6"
                     }
                   }
                 },
@@ -10746,6 +12101,26 @@
                 }
               }
             }
+          },
+          "500": {
+            "description": "`internal_error` : Une erreur est survenue de notre côté. Réessayez dans un instant ; si elle revient, donnez la référence à la crèche.",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "internal_error": {
+                    "summary": "Une erreur est survenue de notre côté. Réessayez dans un instant ; si elle revient, donnez la référence à la crèche.",
+                    "value": {
+                      "detail": "Une erreur est survenue de notre côté. Réessayez dans un instant ; si elle revient, donnez la référence à la crèche.",
+                      "code": "internal_error",
+                      "request_id": "6f1c0b0e9d2a4c5183e7a1b2c3d4e5f6"
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
           }
         },
         "security": [
@@ -10877,6 +12252,26 @@
                       "fields": {
                         "name": "Ne peut pas être vide"
                       }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "`internal_error` : Une erreur est survenue de notre côté. Réessayez dans un instant ; si elle revient, donnez la référence à la crèche.",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "internal_error": {
+                    "summary": "Une erreur est survenue de notre côté. Réessayez dans un instant ; si elle revient, donnez la référence à la crèche.",
+                    "value": {
+                      "detail": "Une erreur est survenue de notre côté. Réessayez dans un instant ; si elle revient, donnez la référence à la crèche.",
+                      "code": "internal_error",
+                      "request_id": "6f1c0b0e9d2a4c5183e7a1b2c3d4e5f6"
                     }
                   }
                 },
@@ -11051,6 +12446,26 @@
                 }
               }
             }
+          },
+          "500": {
+            "description": "`internal_error` : Une erreur est survenue de notre côté. Réessayez dans un instant ; si elle revient, donnez la référence à la crèche.",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "internal_error": {
+                    "summary": "Une erreur est survenue de notre côté. Réessayez dans un instant ; si elle revient, donnez la référence à la crèche.",
+                    "value": {
+                      "detail": "Une erreur est survenue de notre côté. Réessayez dans un instant ; si elle revient, donnez la référence à la crèche.",
+                      "code": "internal_error",
+                      "request_id": "6f1c0b0e9d2a4c5183e7a1b2c3d4e5f6"
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
           }
         },
         "security": [
@@ -11185,6 +12600,26 @@
                       "fields": {
                         "name": "Ne peut pas être vide"
                       }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "`internal_error` : Une erreur est survenue de notre côté. Réessayez dans un instant ; si elle revient, donnez la référence à la crèche.",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "internal_error": {
+                    "summary": "Une erreur est survenue de notre côté. Réessayez dans un instant ; si elle revient, donnez la référence à la crèche.",
+                    "value": {
+                      "detail": "Une erreur est survenue de notre côté. Réessayez dans un instant ; si elle revient, donnez la référence à la crèche.",
+                      "code": "internal_error",
+                      "request_id": "6f1c0b0e9d2a4c5183e7a1b2c3d4e5f6"
                     }
                   }
                 },
@@ -11368,6 +12803,26 @@
                       "fields": {
                         "name": "Ne peut pas être vide"
                       }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "`internal_error` : Une erreur est survenue de notre côté. Réessayez dans un instant ; si elle revient, donnez la référence à la crèche.",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "internal_error": {
+                    "summary": "Une erreur est survenue de notre côté. Réessayez dans un instant ; si elle revient, donnez la référence à la crèche.",
+                    "value": {
+                      "detail": "Une erreur est survenue de notre côté. Réessayez dans un instant ; si elle revient, donnez la référence à la crèche.",
+                      "code": "internal_error",
+                      "request_id": "6f1c0b0e9d2a4c5183e7a1b2c3d4e5f6"
                     }
                   }
                 },
@@ -11585,6 +13040,26 @@
                 }
               }
             }
+          },
+          "500": {
+            "description": "`internal_error` : Une erreur est survenue de notre côté. Réessayez dans un instant ; si elle revient, donnez la référence à la crèche.",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "internal_error": {
+                    "summary": "Une erreur est survenue de notre côté. Réessayez dans un instant ; si elle revient, donnez la référence à la crèche.",
+                    "value": {
+                      "detail": "Une erreur est survenue de notre côté. Réessayez dans un instant ; si elle revient, donnez la référence à la crèche.",
+                      "code": "internal_error",
+                      "request_id": "6f1c0b0e9d2a4c5183e7a1b2c3d4e5f6"
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
           }
         },
         "security": [
@@ -11719,6 +13194,26 @@
                       "fields": {
                         "name": "Ne peut pas être vide"
                       }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "`internal_error` : Une erreur est survenue de notre côté. Réessayez dans un instant ; si elle revient, donnez la référence à la crèche.",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "internal_error": {
+                    "summary": "Une erreur est survenue de notre côté. Réessayez dans un instant ; si elle revient, donnez la référence à la crèche.",
+                    "value": {
+                      "detail": "Une erreur est survenue de notre côté. Réessayez dans un instant ; si elle revient, donnez la référence à la crèche.",
+                      "code": "internal_error",
+                      "request_id": "6f1c0b0e9d2a4c5183e7a1b2c3d4e5f6"
                     }
                   }
                 },
@@ -11934,6 +13429,26 @@
                 }
               }
             }
+          },
+          "500": {
+            "description": "`internal_error` : Une erreur est survenue de notre côté. Réessayez dans un instant ; si elle revient, donnez la référence à la crèche.",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "internal_error": {
+                    "summary": "Une erreur est survenue de notre côté. Réessayez dans un instant ; si elle revient, donnez la référence à la crèche.",
+                    "value": {
+                      "detail": "Une erreur est survenue de notre côté. Réessayez dans un instant ; si elle revient, donnez la référence à la crèche.",
+                      "code": "internal_error",
+                      "request_id": "6f1c0b0e9d2a4c5183e7a1b2c3d4e5f6"
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
           }
         },
         "security": [
@@ -12137,6 +13652,26 @@
                 }
               }
             }
+          },
+          "500": {
+            "description": "`internal_error` : Une erreur est survenue de notre côté. Réessayez dans un instant ; si elle revient, donnez la référence à la crèche.",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "internal_error": {
+                    "summary": "Une erreur est survenue de notre côté. Réessayez dans un instant ; si elle revient, donnez la référence à la crèche.",
+                    "value": {
+                      "detail": "Une erreur est survenue de notre côté. Réessayez dans un instant ; si elle revient, donnez la référence à la crèche.",
+                      "code": "internal_error",
+                      "request_id": "6f1c0b0e9d2a4c5183e7a1b2c3d4e5f6"
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
           }
         },
         "security": [
@@ -12182,6 +13717,26 @@
                     "value": {
                       "detail": "Tablette non enrôlée, expirée ou révoquée",
                       "code": "tablet_required"
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "`internal_error` : Une erreur est survenue de notre côté. Réessayez dans un instant ; si elle revient, donnez la référence à la crèche.",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "internal_error": {
+                    "summary": "Une erreur est survenue de notre côté. Réessayez dans un instant ; si elle revient, donnez la référence à la crèche.",
+                    "value": {
+                      "detail": "Une erreur est survenue de notre côté. Réessayez dans un instant ; si elle revient, donnez la référence à la crèche.",
+                      "code": "internal_error",
+                      "request_id": "6f1c0b0e9d2a4c5183e7a1b2c3d4e5f6"
                     }
                   }
                 },
@@ -12342,6 +13897,26 @@
                 }
               }
             }
+          },
+          "500": {
+            "description": "`internal_error` : Une erreur est survenue de notre côté. Réessayez dans un instant ; si elle revient, donnez la référence à la crèche.",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "internal_error": {
+                    "summary": "Une erreur est survenue de notre côté. Réessayez dans un instant ; si elle revient, donnez la référence à la crèche.",
+                    "value": {
+                      "detail": "Une erreur est survenue de notre côté. Réessayez dans un instant ; si elle revient, donnez la référence à la crèche.",
+                      "code": "internal_error",
+                      "request_id": "6f1c0b0e9d2a4c5183e7a1b2c3d4e5f6"
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
           }
         },
         "security": [
@@ -12470,6 +14045,26 @@
                       "fields": {
                         "name": "Ne peut pas être vide"
                       }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "`internal_error` : Une erreur est survenue de notre côté. Réessayez dans un instant ; si elle revient, donnez la référence à la crèche.",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "internal_error": {
+                    "summary": "Une erreur est survenue de notre côté. Réessayez dans un instant ; si elle revient, donnez la référence à la crèche.",
+                    "value": {
+                      "detail": "Une erreur est survenue de notre côté. Réessayez dans un instant ; si elle revient, donnez la référence à la crèche.",
+                      "code": "internal_error",
+                      "request_id": "6f1c0b0e9d2a4c5183e7a1b2c3d4e5f6"
                     }
                   }
                 },
@@ -12630,6 +14225,26 @@
                 }
               }
             }
+          },
+          "500": {
+            "description": "`internal_error` : Une erreur est survenue de notre côté. Réessayez dans un instant ; si elle revient, donnez la référence à la crèche.",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "internal_error": {
+                    "summary": "Une erreur est survenue de notre côté. Réessayez dans un instant ; si elle revient, donnez la référence à la crèche.",
+                    "value": {
+                      "detail": "Une erreur est survenue de notre côté. Réessayez dans un instant ; si elle revient, donnez la référence à la crèche.",
+                      "code": "internal_error",
+                      "request_id": "6f1c0b0e9d2a4c5183e7a1b2c3d4e5f6"
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
           }
         },
         "security": [
@@ -12772,6 +14387,26 @@
                 }
               }
             }
+          },
+          "500": {
+            "description": "`internal_error` : Une erreur est survenue de notre côté. Réessayez dans un instant ; si elle revient, donnez la référence à la crèche.",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "internal_error": {
+                    "summary": "Une erreur est survenue de notre côté. Réessayez dans un instant ; si elle revient, donnez la référence à la crèche.",
+                    "value": {
+                      "detail": "Une erreur est survenue de notre côté. Réessayez dans un instant ; si elle revient, donnez la référence à la crèche.",
+                      "code": "internal_error",
+                      "request_id": "6f1c0b0e9d2a4c5183e7a1b2c3d4e5f6"
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
           }
         },
         "security": [
@@ -12861,6 +14496,26 @@
                       "fields": {
                         "name": "Ne peut pas être vide"
                       }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "`internal_error` : Une erreur est survenue de notre côté. Réessayez dans un instant ; si elle revient, donnez la référence à la crèche.",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "internal_error": {
+                    "summary": "Une erreur est survenue de notre côté. Réessayez dans un instant ; si elle revient, donnez la référence à la crèche.",
+                    "value": {
+                      "detail": "Une erreur est survenue de notre côté. Réessayez dans un instant ; si elle revient, donnez la référence à la crèche.",
+                      "code": "internal_error",
+                      "request_id": "6f1c0b0e9d2a4c5183e7a1b2c3d4e5f6"
                     }
                   }
                 },
@@ -12965,6 +14620,26 @@
                       }
                     }
                   }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "`internal_error` : Une erreur est survenue de notre côté. Réessayez dans un instant ; si elle revient, donnez la référence à la crèche.",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "internal_error": {
+                    "summary": "Une erreur est survenue de notre côté. Réessayez dans un instant ; si elle revient, donnez la référence à la crèche.",
+                    "value": {
+                      "detail": "Une erreur est survenue de notre côté. Réessayez dans un instant ; si elle revient, donnez la référence à la crèche.",
+                      "code": "internal_error",
+                      "request_id": "6f1c0b0e9d2a4c5183e7a1b2c3d4e5f6"
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
                 }
               }
             }
@@ -13106,6 +14781,26 @@
                       "code": "too_many_attempts"
                     }
                   }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "`internal_error` : Une erreur est survenue de notre côté. Réessayez dans un instant ; si elle revient, donnez la référence à la crèche.",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "internal_error": {
+                    "summary": "Une erreur est survenue de notre côté. Réessayez dans un instant ; si elle revient, donnez la référence à la crèche.",
+                    "value": {
+                      "detail": "Une erreur est survenue de notre côté. Réessayez dans un instant ; si elle revient, donnez la référence à la crèche.",
+                      "code": "internal_error",
+                      "request_id": "6f1c0b0e9d2a4c5183e7a1b2c3d4e5f6"
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
                 }
               }
             }
@@ -14097,6 +15792,11 @@
             "fields": {
               "name": "Ne peut pas être vide"
             }
+          },
+          {
+            "code": "internal_error",
+            "detail": "Une erreur est survenue de notre côté. Réessayez dans un instant ; si elle revient, donnez la référence à la crèche.",
+            "request_id": "6f1c0b0e9d2a4c5183e7a1b2c3d4e5f6"
           }
         ],
         "properties": {
@@ -14126,6 +15826,19 @@
             "default": null,
             "description": "Saisie refusée : un message par champ",
             "title": "Fields"
+          },
+          "request_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Erreur serveur (5xx) : référence de la requête, à donner au support ; aussi dans l'en-tête X-Request-ID",
+            "title": "Request Id"
           }
         },
         "required": [

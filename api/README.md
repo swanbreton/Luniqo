@@ -146,6 +146,21 @@ ajouter une : [docs/projet/ERREURS.md](../docs/projet/ERREURS.md).
 Swagger UI et ReDoc chargent leurs scripts depuis le CDN jsDelivr, sur l'origine qui porte les
 cookies de session : c'est pourquoi ils sont désactivés en production.
 
+### Référence des requêtes et journal
+
+Chaque réponse porte l'en-tête `X-Request-ID` (`app/requests.py`, `RequestIdMiddleware`) :
+celui reçu s'il est sûr (8 à 64 caractères, lettres, chiffres, `._-` ; la passerelle en pose
+un), sinon un nouveau. Une erreur serveur (5xx) le répète dans `request_id` ; une exception
+imprévue répond 500 `internal_error` avec un message générique, sans rien d'interne.
+
+Le journal de l'API est en JSON sur la sortie standard, une ligne par requête (référence,
+méthode, chemin sans chaîne de requête, statut, durée) et une par erreur imprévue (classe et
+pile). Ni IP, ni user-agent, ni corps. Retrouver une erreur signalée par une crèche :
+
+```bash
+docker compose logs api | grep <référence affichée à l'écran>
+```
+
 ## Structure
 
 ```
@@ -176,6 +191,8 @@ api/
 │   ├── security.py    contrôle de l'en-tête Origin (CSRF)
 │   ├── exports.py     historiques sur une période et exports CSV, communs au ménage et aux présences
 │   ├── openapi.py     schéma OpenAPI complété : erreurs, sécurités, présentation
+│   ├── errors.py      corps unique des erreurs, gestionnaires (422 traduites, 500 sans rien d'interne)
+│   ├── requests.py    référence de chaque requête (X-Request-ID) et journal JSON
 │   ├── config.py      configuration lue dans l'environnement
 │   ├── db.py          moteur SQLAlchemy asynchrone, session par requête
 │   ├── models.py      base commune des modèles SQLAlchemy

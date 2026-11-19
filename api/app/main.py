@@ -25,6 +25,7 @@ from app.family.router import router as family_router
 from app.mfa.router import router as mfa_router
 from app.nurseries.router import router as nurseries_router
 from app.passkeys.router import router as passkeys_router
+from app.requests import RequestIdMiddleware, configure_logging
 from app.schemas import Health
 from app.security import OriginCheckMiddleware
 from app.tablets.router import router as tablets_router
@@ -60,7 +61,10 @@ def create_app(settings: Settings) -> FastAPI:
         openapi_url="/api/openapi.json",
         swagger_ui_parameters={"defaultModelsExpandDepth": 0, "displayRequestDuration": True},
     )
+    configure_logging()
     application.add_middleware(OriginCheckMiddleware)
+    # Ajouté en dernier, donc le plus à l'extérieur : un refus d'origine porte aussi sa référence.
+    application.add_middleware(RequestIdMiddleware)
     errors.install(application)
     for router in (auth_router, mfa_router, passkeys_router, nurseries_router, tablets_router, children_router,
                    attendance_router, family_router, cleaning_router, accounts_router):

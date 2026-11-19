@@ -23,7 +23,7 @@ from fastapi.openapi.utils import get_openapi
 from fastapi.routing import APIRoute, RouteContext, iter_route_contexts
 from pydantic import BaseModel, ConfigDict, Field
 
-from app.errors import EMPTY_FIELD, VALIDATION_ERROR, ErrorSpec
+from app.errors import EMPTY_FIELD, INTERNAL_ERROR, VALIDATION_ERROR, ErrorSpec
 
 UNSAFE_METHODS = frozenset({"POST", "PUT", "PATCH", "DELETE"})
 
@@ -62,6 +62,11 @@ Les navigateurs l'envoient d'eux-mêmes ; avec `curl`, ajouter `-H 'Origin: http
   c'est sur lui qu'un client décide. Une saisie refusée (422 `validation_error`,
   ou refus métier d'un champ) ajoute `fields`, un message par champ. Toute 429
   porte l'en-tête `Retry-After` (secondes).
+- Chaque réponse porte l'en-tête `X-Request-ID`, la référence de la requête,
+  reprise du client si elle est sûre. Une erreur serveur (5xx) la répète dans
+  `request_id` : c'est elle qu'on donne au support pour retrouver l'erreur dans
+  le journal. Une exception imprévue répond 500 `internal_error`, sans rien
+  d'interne.
 - Un objet d'une autre crèche ou d'une autre entreprise répond **404**, comme un
   objet inexistant : l'API ne révèle pas qu'il existe.
 - Dates `AAAA-MM-JJ`, horodatages ISO 8601 en UTC. Le « jour » (pointage,
@@ -87,18 +92,24 @@ TAGS: list[dict[str, str]] = [
 ]
 
 
+_EXAMPLE_REQUEST_ID = "6f1c0b0e9d2a4c5183e7a1b2c3d4e5f6"
+
+
 class Error(BaseModel):
     """Corps de toute erreur de l'API."""
 
     model_config = ConfigDict(json_schema_extra={"examples": [
         {"detail": "Crèche introuvable", "code": "nursery_not_found"},
         {"detail": VALIDATION_ERROR.message, "code": VALIDATION_ERROR.code, "fields": {"name": EMPTY_FIELD}},
+        {"detail": INTERNAL_ERROR.message, "code": INTERNAL_ERROR.code, "request_id": _EXAMPLE_REQUEST_ID},
     ]})
 
     detail: str = Field(description="Message en français, affichable tel quel ; peut être reformulé")
     code: str = Field(pattern=r"^[a-z][a-z0-9_]*$",
                       description="Identifiant stable de l'erreur (snake_case) : ne change jamais une fois publié")
     fields: dict[str, str] | None = Field(default=None, description="Saisie refusée : un message par champ")
+    request_id: str | None = Field(default=None, description="Erreur serveur (5xx) : référence de la requête, "
+                                                             "à donner au support ; aussi dans l'en-tête X-Request-ID")
 
 
 def summary(description: str) -> str:
@@ -146,6 +157,8 @@ def _examples(specs: Iterable[ErrorSpec]) -> dict[str, dict[str, Any]]:
         value: dict[str, Any] = {"detail": spec.message, "code": spec.code}
         if spec == VALIDATION_ERROR:
             value["fields"] = {"name": EMPTY_FIELD}
+        if spec.status >= 500:
+            value["request_id"] = _EXAMPLE_REQUEST_ID
         examples[key] = {"summary": spec.message, "value": value}
     return examples
 
@@ -288,6 +301,8 @@ def complete_schema(app: FastAPI) -> dict[str, Any]:
             if (security := _security(calls)) is not None:
                 operation["security"] = security
             errors = derived + ([ORIGIN_REFUSED] if method in UNSAFE_METHODS else [])
+            if route.path_format != "/api/health":  # la sonde garde son propre corps
+                errors.append(INTERNAL_ERROR)
             _merge(operation["responses"], sorted(errors))
             for code, response in operation["responses"].items():
                 if code.isdigit() and int(code) >= 400 and route.path_format != "/api/health":
