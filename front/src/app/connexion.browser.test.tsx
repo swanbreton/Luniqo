@@ -4,6 +4,7 @@ import { describe, expect } from 'vitest'
 import { render } from 'vitest-browser-react'
 
 import { employee, nursery, nurserySummary, owner } from '../../test/fixtures'
+import { apiErrors, reply } from '../../test/handlers/errors'
 import { test } from '../../test/msw'
 import { App, createApp } from './app'
 
@@ -11,9 +12,7 @@ function start(url: string) {
   return render(<App instance={createApp(createMemoryHistory({ initialEntries: [url] }))} />)
 }
 
-const noSession = http.get('/api/v2/auth/me', () =>
-  HttpResponse.json({ detail: 'Authentification requise' }, { status: 401 }),
-)
+const noSession = http.get('/api/v2/auth/me', () => reply(apiErrors.authRequired()))
 
 describe('connexion', () => {
   test("sans session, l'espace connecté renvoie vers la connexion", async ({ worker }) => {
@@ -25,7 +24,7 @@ describe('connexion', () => {
   test("affiche le refus de l'API", async ({ worker }) => {
     worker.use(
       noSession,
-      http.post('/api/v2/auth/login', () => HttpResponse.json({ detail: 'Identifiants invalides' }, { status: 401 })),
+      http.post('/api/v2/auth/login', () => reply(apiErrors.invalidCredentials())),
     )
     const screen = await start('/connexion')
     await screen.getByLabelText('Adresse e-mail').fill('employe@demo.test')
@@ -37,12 +36,7 @@ describe('connexion', () => {
   test('indique le délai après trop de tentatives', async ({ worker }) => {
     worker.use(
       noSession,
-      http.post('/api/v2/auth/login', () =>
-        HttpResponse.json(
-          { detail: 'Trop de tentatives, réessayez plus tard' },
-          { status: 429, headers: { 'Retry-After': '900' } },
-        ),
-      ),
+      http.post('/api/v2/auth/login', () => reply(apiErrors.tooManyAttempts(900))),
     )
     const screen = await start('/connexion')
     await screen.getByLabelText('Adresse e-mail').fill('employe@demo.test')
@@ -65,9 +59,7 @@ describe('connexion', () => {
     let session: typeof owner | null = null
     worker.use(
       http.get('/api/v2/auth/me', () =>
-        session === null
-          ? HttpResponse.json({ detail: 'Authentification requise' }, { status: 401 })
-          : HttpResponse.json(session),
+        session === null ? reply(apiErrors.authRequired()) : HttpResponse.json(session),
       ),
       http.post('/api/v2/auth/login', () => {
         session = owner
@@ -75,7 +67,7 @@ describe('connexion', () => {
       }),
       http.post('/api/v2/auth/mfa/verify', async ({ request }) => {
         const { code } = (await request.json()) as { code: string }
-        if (code !== '123456') return HttpResponse.json({ detail: 'Code invalide' }, { status: 401 })
+        if (code !== '123456') return reply(apiErrors.invalidCode())
         session = { ...owner, mfa: 'verified' }
         return HttpResponse.json(session)
       }),
@@ -101,9 +93,7 @@ describe('connexion', () => {
   test("n'envoie jamais vers un autre site après la connexion", async ({ worker }) => {
     let connected = false
     worker.use(
-      http.get('/api/v2/auth/me', () =>
-        connected ? HttpResponse.json(employee) : HttpResponse.json({ detail: 'x' }, { status: 401 }),
-      ),
+      http.get('/api/v2/auth/me', () => (connected ? HttpResponse.json(employee) : reply(apiErrors.authRequired()))),
       http.post('/api/v2/auth/login', () => {
         connected = true
         return HttpResponse.json(employee)

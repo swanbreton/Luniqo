@@ -103,6 +103,17 @@ route.
   (`arrived_at` → `arrival`) ; chaque formulaire a sa story `ErreursParChamp`.
   Stratégie, traitement par catégorie et cible :
   [docs/projet/ERREURS.md](../docs/projet/ERREURS.md).
+- **Erreurs dans les tests et les stories** : jamais de corps d'erreur écrit à la
+  main. Les cas sont dans `test/handlers/errors.ts` (`apiErrors`), à la forme
+  exacte de l'API (code, message, `fields`, `Retry-After`, `request_id`) :
+  `reply(apiErrors.serverError())` est la réponse MSW d'un test,
+  `networkError()` une coupure réseau ; dans une story,
+  `raised(apiErrors.serverError())` est l'erreur que le client lèverait
+  (`.message` pour un formulaire qui reçoit un texte), `networkFailure()` celle
+  d'une coupure. Un refus absent du catalogue passe par `apiErrors.refusal(…)`
+  (statut, code, message), ou s'ajoute au catalogue s'il sert deux fois. Chaque composant qui
+  appelle l'API a une story par catégorie utile (`RefusParLApi` ou `Erreur`,
+  `ErreursParChamp`, `TropDeTentatives`, `ErreurServeur`, `HorsLigne`).
 - **Accessibilité (WCAG 2.2 AA visée)** : libellés reliés aux champs, erreurs
   annoncées, cibles de 44 px ; `jsx-a11y` au lint et axe sur chaque story.
 - **Données de test fictives uniquement** (règle 5 d'AGENTS.md).

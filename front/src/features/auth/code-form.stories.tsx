@@ -1,6 +1,9 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { expect, fn } from 'storybook/test'
 
+import { errorMessage } from '@/api/errors'
+
+import { apiErrors, networkFailure, raised } from '../../../test/handlers/errors'
 import { CodeForm } from './code-form'
 
 const meta = {
@@ -36,5 +39,31 @@ export const ErreursParChamp: Story = {
     await expect(await canvas.findByText('Au plus 32 caractères')).toBeVisible()
     await expect(field).toHaveAttribute('aria-invalid', 'true')
     await expect(field).toHaveAccessibleDescription('Au plus 32 caractères')
+  },
+}
+
+/** Exception imprévue côté serveur (500) : message générique, rien n'est rejoué tout seul. */
+export const ErreurServeur: Story = {
+  args: { error: raised(apiErrors.serverError()).message },
+  play: async ({ canvas }) => {
+    await expect(canvas.getByRole('alert')).toHaveTextContent('Une erreur est survenue de notre côté.')
+  },
+}
+
+/** Coupure réseau : aucune réponse de l'API (la demande a pu partir ou non). */
+export const HorsLigne: Story = {
+  args: { error: errorMessage(networkFailure()) },
+  play: async ({ canvas }) => {
+    await expect(canvas.getByRole('alert')).toHaveTextContent('Connexion au serveur impossible. Vérifiez le réseau.')
+  },
+}
+
+/** Trop d'essais (429) : le délai de `Retry-After` est ajouté au message. */
+export const TropDeTentatives: Story = {
+  args: { error: raised(apiErrors.tooManyAttempts()).message },
+  play: async ({ canvas }) => {
+    await expect(canvas.getByRole('alert')).toHaveTextContent(
+      'Trop de tentatives, réessayez plus tard (dans 15 minutes)',
+    )
   },
 }

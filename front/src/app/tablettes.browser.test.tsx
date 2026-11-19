@@ -6,6 +6,7 @@ import { render } from 'vitest-browser-react'
 import type { Schemas } from '@/api/types'
 
 import { employee, nursery, nurserySummary, owner, tablet } from '../../test/fixtures'
+import { apiErrors, reply } from '../../test/handlers/errors'
 import { test } from '../../test/msw'
 import { App, createApp } from './app'
 
@@ -80,9 +81,7 @@ describe('tablettes', () => {
       http.get('/api/v2/auth/me', () => HttpResponse.json(director)),
       http.get(`/api/v2/nurseries/${nursery.id}`, () => HttpResponse.json(nursery)),
       http.get(TABLETS, () => HttpResponse.json([])),
-      http.post(TABLETS, () =>
-        HttpResponse.json({ detail: 'Seule la direction peut gérer cette crèche' }, { status: 403 }),
-      ),
+      http.post(TABLETS, () => reply(apiErrors.managerRequired())),
     )
     const { screen } = await start(`/creches/${nursery.id}/tablettes`)
     await screen.getByLabelText('Nom de la tablette').fill('Tablette')

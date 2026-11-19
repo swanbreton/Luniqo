@@ -428,11 +428,16 @@ facilement.
   variante par catégorie utile (`Erreur`, `RefusParLApi`, `TropDeTentatives`,
   `HorsLigne`, `ErreurServeur`…), relue avec axe comme les autres stories.
 - **Des réponses MSW partagées.** Les réponses d'erreur types vivent dans
-  `front/test/handlers/` (422 avec champs, 409, 429 avec `Retry-After`, 500 avec
-  `request_id`, coupure réseau `HttpResponse.error()`), réutilisées par les
-  tests d'intégration au lieu d'être recopiées.
-- **Chaque catégorie a au moins un test d'intégration** côté front, dont les
-  trois qui manquent aujourd'hui : 5xx, coupure réseau, 422 avec champs.
+  `front/test/handlers/errors.ts` (422 avec champs, 409, 429 avec `Retry-After`,
+  500 avec `request_id`, coupure réseau `HttpResponse.error()`), réutilisées par
+  les tests d'intégration au lieu d'être recopiées. Le même cas donne l'erreur
+  d'une story (`raised(…)`) : test et story montrent la même erreur. En place
+  depuis LUN-143 (mode d'emploi : `front/README.md`, règle « Erreurs dans les
+  tests et les stories »).
+- **Chaque catégorie a au moins un test d'intégration** côté front. Depuis
+  LUN-143 : 5xx (résumé d'une crèche, pointage sur la tablette), coupure réseau
+  (pointage sur la tablette, jamais rejoué tout seul), 422 avec champs (PIN,
+  correction d'une présence).
 - **Toute route déclare ses erreurs**, comme aujourd'hui (`@raises`,
   `error_responses`), **avec leur code**. Le test « levé = documenté »
   (`api/tests/conftest.py`) observe chaque erreur rendue pendant les tests,
