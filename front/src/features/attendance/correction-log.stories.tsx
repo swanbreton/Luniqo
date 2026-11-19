@@ -1,9 +1,8 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { expect } from 'storybook/test'
 
-import { ApiError } from '@/api/errors'
-
 import { corrections } from '../../../test/fixtures'
+import { apiErrors, networkFailure, raised } from '../../../test/handlers/errors'
 import { CorrectionLog } from './correction-log'
 
 const meta = {
@@ -32,5 +31,21 @@ export const Chargement: Story = { args: { entries: undefined, pending: true } }
 export const AucuneCorrection: Story = { args: { entries: [] } }
 
 export const Erreur: Story = {
-  args: { entries: undefined, error: new ApiError(403, 'Seule la direction peut gérer cette crèche') },
+  args: { entries: undefined, error: raised(apiErrors.managerRequired()) },
+}
+
+/** Exception imprévue côté serveur (500), après les nouveaux essais automatiques de la lecture. */
+export const ErreurServeur: Story = {
+  args: { ...Erreur.args, error: raised(apiErrors.serverError()) },
+  play: async ({ canvas }) => {
+    await expect(canvas.getByRole('alert')).toHaveTextContent('Une erreur est survenue de notre côté.')
+  },
+}
+
+/** Coupure réseau : aucune réponse de l'API. */
+export const HorsLigne: Story = {
+  args: { ...Erreur.args, error: networkFailure() },
+  play: async ({ canvas }) => {
+    await expect(canvas.getByRole('alert')).toHaveTextContent('Connexion au serveur impossible. Vérifiez le réseau.')
+  },
 }

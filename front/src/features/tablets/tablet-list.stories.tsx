@@ -1,9 +1,8 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { expect, fn } from 'storybook/test'
 
-import { ApiError } from '@/api/errors'
-
 import { tablet } from '../../../test/fixtures'
+import { apiErrors, networkFailure, raised } from '../../../test/handlers/errors'
 import { TabletList } from './tablet-list'
 
 const now = new Date('2026-10-30T10:00:00Z')
@@ -70,5 +69,21 @@ export const RevocationEnCours: Story = {
 export const RevocationRefusee: Story = { args: { tablets: [tablet], revokeError: 'Tablette introuvable' } }
 
 export const Erreur: Story = {
-  args: { error: new ApiError(403, 'Seule la direction peut gérer cette crèche') },
+  args: { error: raised(apiErrors.managerRequired()) },
+}
+
+/** Exception imprévue côté serveur (500), après les nouveaux essais automatiques de la lecture. */
+export const ErreurServeur: Story = {
+  args: { ...Erreur.args, error: raised(apiErrors.serverError()) },
+  play: async ({ canvas }) => {
+    await expect(canvas.getByRole('alert')).toHaveTextContent('Une erreur est survenue de notre côté.')
+  },
+}
+
+/** Coupure réseau : aucune réponse de l'API. */
+export const HorsLigne: Story = {
+  args: { ...Erreur.args, error: networkFailure() },
+  play: async ({ canvas }) => {
+    await expect(canvas.getByRole('alert')).toHaveTextContent('Connexion au serveur impossible. Vérifiez le réseau.')
+  },
 }
