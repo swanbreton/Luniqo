@@ -35,6 +35,9 @@ Chaque ligne cite son ticket Jira `LUN-<n>`.
 
 ### Modifié
 
+- API : toute erreur renvoie `{"detail", "code", "fields"?}` ; le `code` est stable et documenté dans Swagger pour chaque route, les erreurs de saisie (422) sont traduites en français avec un message par champ, les dates incohérentes d'un enfant indiquent chaque champ fautif ; un test vérifie que toute erreur levée est documentée (LUN-137).
+- API : toute réponse 429 indique le délai à attendre (`Retry-After`), y compris au changement de mot de passe, au choix du PIN et sur une tablette après trop d'erreurs de PIN (LUN-137).
+
 - Onboarding mis à jour pour le stage du TD « Road to MVP » : matrice des droits, contribution par fork, front v2 (installation, tests, Storybook, contrat de l'API), design system du front v2 ; mission du stage et modèles de rapport (stagiaire, maître de stage) dans `docs/stage/` (LUN-123).
 - La pile Docker retrouve une image `front` distincte : elle construit le front v2 et le sert avec un nginx dédié (politique de sécurité du contenu, cache) ; la passerelle `web` ne fait plus que relayer le front et l'API (LUN-117).
 - La pile Docker sert le front v2 depuis l'image `web` (nginx), avec une politique de sécurité du contenu stricte et un cache adapté ; le conteneur du front Next.js v1 est retiré, la pile compte 4 images. La v1 reste en production sur Vercel jusqu'à la bascule (LUN-107).
