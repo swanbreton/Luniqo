@@ -1904,15 +1904,38 @@ export interface components {
         };
         /**
          * Error
-         * @description Corps de toute erreur levée par l'API (hors validation, voir 422).
+         * @description Corps de toute erreur de l'API.
+         * @example {
+         *       "code": "nursery_not_found",
+         *       "detail": "Crèche introuvable"
+         *     }
+         * @example {
+         *       "code": "validation_error",
+         *       "detail": "Certains champs sont invalides.",
+         *       "fields": {
+         *         "name": "Ne peut pas être vide"
+         *       }
+         *     }
          */
         Error: {
             /**
              * Detail
-             * @description Message en français, affichable tel quel
-             * @example Crèche introuvable
+             * @description Message en français, affichable tel quel ; peut être reformulé
              */
             detail: string;
+            /**
+             * Code
+             * @description Identifiant stable de l'erreur (snake_case) : ne change jamais une fois publié
+             */
+            code: string;
+            /**
+             * Fields
+             * @description Saisie refusée : un message par champ
+             * @default null
+             */
+            fields: {
+                [key: string]: string;
+            } | null;
         };
         /** FamilyChild */
         FamilyChild: {
@@ -2149,11 +2172,6 @@ export interface components {
             phone?: string | null;
             /** Is Active */
             is_active?: boolean | null;
-        };
-        /** HTTPValidationError */
-        HTTPValidationError: {
-            /** Detail */
-            detail?: components["schemas"]["ValidationError"][];
         };
         /** Health */
         Health: {
@@ -3208,19 +3226,6 @@ export interface components {
          * @enum {string}
          */
         UserRole: "developer" | "owner" | "employee" | "guardian";
-        /** ValidationError */
-        ValidationError: {
-            /** Location */
-            loc: (string | number)[];
-            /** Message */
-            msg: string;
-            /** Error Type */
-            type: string;
-            /** Input */
-            input?: unknown;
-            /** Context */
-            ctx?: Record<string, never>;
-        };
         /**
          * AcceptIn
          * @example {
@@ -3299,7 +3304,7 @@ export interface operations {
                     "application/json": components["schemas"]["SessionOut"];
                 };
             };
-            /** @description Identifiants invalides */
+            /** @description `invalid_credentials` : Identifiants invalides */
             401: {
                 headers: {
                     [name: string]: unknown;
@@ -3308,7 +3313,7 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description Origine de la requête refusée */
+            /** @description `origin_refused` : Origine de la requête refusée */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -3317,16 +3322,16 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description Validation Error */
+            /** @description `validation_error` : Certains champs sont invalides. */
             422: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
+                    "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description Trop de tentatives, réessayez plus tard */
+            /** @description `too_many_attempts` : Trop de tentatives, réessayez plus tard */
             429: {
                 headers: {
                     /** @description Secondes à attendre avant de réessayer */
@@ -3355,7 +3360,7 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description Origine de la requête refusée */
+            /** @description `origin_refused` : Origine de la requête refusée */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -3384,7 +3389,7 @@ export interface operations {
                     "application/json": components["schemas"]["SessionOut"];
                 };
             };
-            /** @description Authentification requise */
+            /** @description `auth_required` : Authentification requise */
             401: {
                 headers: {
                     [name: string]: unknown;
@@ -3413,7 +3418,7 @@ export interface operations {
                     "application/json": components["schemas"]["MfaStatusOut"];
                 };
             };
-            /** @description Code invalide ; Authentification requise */
+            /** @description `invalid_code` : Code invalide ; `auth_required` : Authentification requise */
             401: {
                 headers: {
                     [name: string]: unknown;
@@ -3422,7 +3427,7 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description Présentez d'abord votre second facteur ; Reconnectez-vous pour modifier vos facteurs (connexion de plus de 15 minutes) ; Application d'authentification bloquée après trop d'échecs : utilisez un code de secours */
+            /** @description `mfa_pending` : Présentez d'abord votre second facteur ; `reauthentication_required` : Reconnectez-vous pour modifier vos facteurs (connexion de plus de 15 minutes) ; `totp_locked` : Application d'authentification bloquée après trop d'échecs : utilisez un code de secours */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -3431,7 +3436,7 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description Aucune application d'authentification active */
+            /** @description `totp_not_found` : Aucune application d'authentification active */
             404: {
                 headers: {
                     [name: string]: unknown;
@@ -3440,7 +3445,7 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description Aucun second facteur attendu pour cette session ; Aucune activation en cours ; Second facteur obligatoire pour ce rôle : remplacez-le au lieu de le retirer */
+            /** @description `mfa_not_pending` : Aucun second facteur attendu pour cette session ; `totp_setup_not_pending` : Aucune activation en cours ; `last_factor` : Second facteur obligatoire pour ce rôle : remplacez-le au lieu de le retirer */
             409: {
                 headers: {
                     [name: string]: unknown;
@@ -3449,7 +3454,7 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description Trop de tentatives, réessayez plus tard */
+            /** @description `too_many_attempts` : Trop de tentatives, réessayez plus tard */
             429: {
                 headers: {
                     /** @description Secondes à attendre avant de réessayer */
@@ -3460,7 +3465,7 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description Second facteur momentanément indisponible */
+            /** @description `mfa_unavailable` : Second facteur momentanément indisponible */
             503: {
                 headers: {
                     [name: string]: unknown;
@@ -3489,7 +3494,7 @@ export interface operations {
                     "application/json": components["schemas"]["TotpSetupOut"];
                 };
             };
-            /** @description Code invalide ; Authentification requise */
+            /** @description `invalid_code` : Code invalide ; `auth_required` : Authentification requise */
             401: {
                 headers: {
                     [name: string]: unknown;
@@ -3498,7 +3503,7 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description Présentez d'abord votre second facteur ; Reconnectez-vous pour modifier vos facteurs (connexion de plus de 15 minutes) ; Application d'authentification bloquée après trop d'échecs : utilisez un code de secours ; Origine de la requête refusée */
+            /** @description `mfa_pending` : Présentez d'abord votre second facteur ; `reauthentication_required` : Reconnectez-vous pour modifier vos facteurs (connexion de plus de 15 minutes) ; `totp_locked` : Application d'authentification bloquée après trop d'échecs : utilisez un code de secours ; `origin_refused` : Origine de la requête refusée */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -3507,7 +3512,7 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description Aucune application d'authentification active */
+            /** @description `totp_not_found` : Aucune application d'authentification active */
             404: {
                 headers: {
                     [name: string]: unknown;
@@ -3516,7 +3521,7 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description Aucun second facteur attendu pour cette session ; Aucune activation en cours ; Second facteur obligatoire pour ce rôle : remplacez-le au lieu de le retirer */
+            /** @description `mfa_not_pending` : Aucun second facteur attendu pour cette session ; `totp_setup_not_pending` : Aucune activation en cours ; `last_factor` : Second facteur obligatoire pour ce rôle : remplacez-le au lieu de le retirer */
             409: {
                 headers: {
                     [name: string]: unknown;
@@ -3525,7 +3530,7 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description Trop de tentatives, réessayez plus tard */
+            /** @description `too_many_attempts` : Trop de tentatives, réessayez plus tard */
             429: {
                 headers: {
                     /** @description Secondes à attendre avant de réessayer */
@@ -3536,7 +3541,7 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description Second facteur momentanément indisponible */
+            /** @description `mfa_unavailable` : Second facteur momentanément indisponible */
             503: {
                 headers: {
                     [name: string]: unknown;
@@ -3563,7 +3568,7 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description Code invalide ; Authentification requise */
+            /** @description `invalid_code` : Code invalide ; `auth_required` : Authentification requise */
             401: {
                 headers: {
                     [name: string]: unknown;
@@ -3572,7 +3577,7 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description Présentez d'abord votre second facteur ; Reconnectez-vous pour modifier vos facteurs (connexion de plus de 15 minutes) ; Application d'authentification bloquée après trop d'échecs : utilisez un code de secours ; Origine de la requête refusée */
+            /** @description `mfa_pending` : Présentez d'abord votre second facteur ; `reauthentication_required` : Reconnectez-vous pour modifier vos facteurs (connexion de plus de 15 minutes) ; `totp_locked` : Application d'authentification bloquée après trop d'échecs : utilisez un code de secours ; `origin_refused` : Origine de la requête refusée */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -3581,7 +3586,7 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description Aucune application d'authentification active */
+            /** @description `totp_not_found` : Aucune application d'authentification active */
             404: {
                 headers: {
                     [name: string]: unknown;
@@ -3590,7 +3595,7 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description Aucun second facteur attendu pour cette session ; Aucune activation en cours ; Second facteur obligatoire pour ce rôle : remplacez-le au lieu de le retirer */
+            /** @description `mfa_not_pending` : Aucun second facteur attendu pour cette session ; `totp_setup_not_pending` : Aucune activation en cours ; `last_factor` : Second facteur obligatoire pour ce rôle : remplacez-le au lieu de le retirer */
             409: {
                 headers: {
                     [name: string]: unknown;
@@ -3599,7 +3604,7 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description Trop de tentatives, réessayez plus tard */
+            /** @description `too_many_attempts` : Trop de tentatives, réessayez plus tard */
             429: {
                 headers: {
                     /** @description Secondes à attendre avant de réessayer */
@@ -3610,7 +3615,7 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description Second facteur momentanément indisponible */
+            /** @description `mfa_unavailable` : Second facteur momentanément indisponible */
             503: {
                 headers: {
                     [name: string]: unknown;
@@ -3643,7 +3648,7 @@ export interface operations {
                     "application/json": components["schemas"]["TotpConfirmOut"];
                 };
             };
-            /** @description Code invalide ; Authentification requise */
+            /** @description `invalid_code` : Code invalide ; `auth_required` : Authentification requise */
             401: {
                 headers: {
                     [name: string]: unknown;
@@ -3652,7 +3657,7 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description Présentez d'abord votre second facteur ; Reconnectez-vous pour modifier vos facteurs (connexion de plus de 15 minutes) ; Application d'authentification bloquée après trop d'échecs : utilisez un code de secours ; Origine de la requête refusée */
+            /** @description `mfa_pending` : Présentez d'abord votre second facteur ; `reauthentication_required` : Reconnectez-vous pour modifier vos facteurs (connexion de plus de 15 minutes) ; `totp_locked` : Application d'authentification bloquée après trop d'échecs : utilisez un code de secours ; `origin_refused` : Origine de la requête refusée */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -3661,7 +3666,7 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description Aucune application d'authentification active */
+            /** @description `totp_not_found` : Aucune application d'authentification active */
             404: {
                 headers: {
                     [name: string]: unknown;
@@ -3670,7 +3675,7 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description Aucun second facteur attendu pour cette session ; Aucune activation en cours ; Second facteur obligatoire pour ce rôle : remplacez-le au lieu de le retirer */
+            /** @description `mfa_not_pending` : Aucun second facteur attendu pour cette session ; `totp_setup_not_pending` : Aucune activation en cours ; `last_factor` : Second facteur obligatoire pour ce rôle : remplacez-le au lieu de le retirer */
             409: {
                 headers: {
                     [name: string]: unknown;
@@ -3679,16 +3684,16 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description Validation Error */
+            /** @description `validation_error` : Certains champs sont invalides. */
             422: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
+                    "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description Trop de tentatives, réessayez plus tard */
+            /** @description `too_many_attempts` : Trop de tentatives, réessayez plus tard */
             429: {
                 headers: {
                     /** @description Secondes à attendre avant de réessayer */
@@ -3699,7 +3704,7 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description Second facteur momentanément indisponible */
+            /** @description `mfa_unavailable` : Second facteur momentanément indisponible */
             503: {
                 headers: {
                     [name: string]: unknown;
@@ -3732,7 +3737,7 @@ export interface operations {
                     "application/json": components["schemas"]["SessionOut"];
                 };
             };
-            /** @description Code invalide ; Authentification requise */
+            /** @description `invalid_code` : Code invalide ; `auth_required` : Authentification requise */
             401: {
                 headers: {
                     [name: string]: unknown;
@@ -3741,7 +3746,7 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description Présentez d'abord votre second facteur ; Reconnectez-vous pour modifier vos facteurs (connexion de plus de 15 minutes) ; Application d'authentification bloquée après trop d'échecs : utilisez un code de secours ; Origine de la requête refusée */
+            /** @description `mfa_pending` : Présentez d'abord votre second facteur ; `reauthentication_required` : Reconnectez-vous pour modifier vos facteurs (connexion de plus de 15 minutes) ; `totp_locked` : Application d'authentification bloquée après trop d'échecs : utilisez un code de secours ; `origin_refused` : Origine de la requête refusée */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -3750,7 +3755,7 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description Aucune application d'authentification active */
+            /** @description `totp_not_found` : Aucune application d'authentification active */
             404: {
                 headers: {
                     [name: string]: unknown;
@@ -3759,7 +3764,7 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description Aucun second facteur attendu pour cette session ; Aucune activation en cours ; Second facteur obligatoire pour ce rôle : remplacez-le au lieu de le retirer */
+            /** @description `mfa_not_pending` : Aucun second facteur attendu pour cette session ; `totp_setup_not_pending` : Aucune activation en cours ; `last_factor` : Second facteur obligatoire pour ce rôle : remplacez-le au lieu de le retirer */
             409: {
                 headers: {
                     [name: string]: unknown;
@@ -3768,16 +3773,16 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description Validation Error */
+            /** @description `validation_error` : Certains champs sont invalides. */
             422: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
+                    "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description Trop de tentatives, réessayez plus tard */
+            /** @description `too_many_attempts` : Trop de tentatives, réessayez plus tard */
             429: {
                 headers: {
                     /** @description Secondes à attendre avant de réessayer */
@@ -3788,7 +3793,7 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description Second facteur momentanément indisponible */
+            /** @description `mfa_unavailable` : Second facteur momentanément indisponible */
             503: {
                 headers: {
                     [name: string]: unknown;
@@ -3817,7 +3822,7 @@ export interface operations {
                     "application/json": components["schemas"]["BackupCodesOut"];
                 };
             };
-            /** @description Code invalide ; Authentification requise */
+            /** @description `invalid_code` : Code invalide ; `auth_required` : Authentification requise */
             401: {
                 headers: {
                     [name: string]: unknown;
@@ -3826,7 +3831,7 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description Présentez d'abord votre second facteur ; Reconnectez-vous pour modifier vos facteurs (connexion de plus de 15 minutes) ; Application d'authentification bloquée après trop d'échecs : utilisez un code de secours ; Origine de la requête refusée */
+            /** @description `mfa_pending` : Présentez d'abord votre second facteur ; `reauthentication_required` : Reconnectez-vous pour modifier vos facteurs (connexion de plus de 15 minutes) ; `totp_locked` : Application d'authentification bloquée après trop d'échecs : utilisez un code de secours ; `origin_refused` : Origine de la requête refusée */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -3835,7 +3840,7 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description Aucune application d'authentification active */
+            /** @description `totp_not_found` : Aucune application d'authentification active */
             404: {
                 headers: {
                     [name: string]: unknown;
@@ -3844,7 +3849,7 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description Aucun second facteur attendu pour cette session ; Aucune activation en cours ; Second facteur obligatoire pour ce rôle : remplacez-le au lieu de le retirer */
+            /** @description `mfa_not_pending` : Aucun second facteur attendu pour cette session ; `totp_setup_not_pending` : Aucune activation en cours ; `last_factor` : Second facteur obligatoire pour ce rôle : remplacez-le au lieu de le retirer */
             409: {
                 headers: {
                     [name: string]: unknown;
@@ -3853,7 +3858,7 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description Trop de tentatives, réessayez plus tard */
+            /** @description `too_many_attempts` : Trop de tentatives, réessayez plus tard */
             429: {
                 headers: {
                     /** @description Secondes à attendre avant de réessayer */
@@ -3864,7 +3869,7 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description Second facteur momentanément indisponible */
+            /** @description `mfa_unavailable` : Second facteur momentanément indisponible */
             503: {
                 headers: {
                     [name: string]: unknown;
@@ -3893,7 +3898,7 @@ export interface operations {
                     "application/json": components["schemas"]["PasskeyOut"][];
                 };
             };
-            /** @description Passkey refusée */
+            /** @description `passkey_rejected` : Passkey refusée */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -3902,7 +3907,7 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description Passkey refusée ; Authentification requise */
+            /** @description `passkey_rejected` : Passkey refusée ; `auth_required` : Authentification requise */
             401: {
                 headers: {
                     [name: string]: unknown;
@@ -3911,7 +3916,7 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description Présentez d'abord votre second facteur ; Reconnectez-vous pour modifier vos facteurs (connexion de plus de 15 minutes) */
+            /** @description `mfa_pending` : Présentez d'abord votre second facteur ; `reauthentication_required` : Reconnectez-vous pour modifier vos facteurs (connexion de plus de 15 minutes) */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -3920,7 +3925,7 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description Passkey introuvable */
+            /** @description `passkey_not_found` : Passkey introuvable */
             404: {
                 headers: {
                     [name: string]: unknown;
@@ -3929,7 +3934,7 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description Aucun second facteur attendu pour cette session ; Aucune passkey enregistrée pour ce compte ; Aucun enregistrement en cours, ou délai dépassé : recommencez ; 10 passkeys au plus : retirez-en une d'abord ; Cette passkey est déjà enregistrée ; Second facteur obligatoire pour ce rôle : enregistrez-en un autre avant de retirer celui-ci */
+            /** @description `mfa_not_pending` : Aucun second facteur attendu pour cette session ; `no_passkey` : Aucune passkey enregistrée pour ce compte ; `passkey_challenge_expired` : Aucun enregistrement en cours, ou délai dépassé : recommencez ; `too_many_passkeys` : 10 passkeys au plus : retirez-en une d'abord ; `passkey_already_registered` : Cette passkey est déjà enregistrée ; `last_factor` : Second facteur obligatoire pour ce rôle : enregistrez-en un autre avant de retirer celui-ci */
             409: {
                 headers: {
                     [name: string]: unknown;
@@ -3938,7 +3943,7 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description Nom de passkey vide ou trop long */
+            /** @description `passkey_name_invalid` : Nom de passkey vide ou trop long */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -3947,7 +3952,7 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description Trop de tentatives, réessayez plus tard */
+            /** @description `too_many_attempts` : Trop de tentatives, réessayez plus tard */
             429: {
                 headers: {
                     /** @description Secondes à attendre avant de réessayer */
@@ -3958,7 +3963,7 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description Passkeys momentanément indisponibles */
+            /** @description `passkeys_unavailable` : Passkeys momentanément indisponibles */
             503: {
                 headers: {
                     [name: string]: unknown;
@@ -3991,7 +3996,7 @@ export interface operations {
                     "application/json": components["schemas"]["RegistrationOut"];
                 };
             };
-            /** @description Passkey refusée */
+            /** @description `passkey_rejected` : Passkey refusée */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -4000,7 +4005,7 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description Passkey refusée ; Authentification requise */
+            /** @description `passkey_rejected` : Passkey refusée ; `auth_required` : Authentification requise */
             401: {
                 headers: {
                     [name: string]: unknown;
@@ -4009,7 +4014,7 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description Présentez d'abord votre second facteur ; Reconnectez-vous pour modifier vos facteurs (connexion de plus de 15 minutes) ; Origine de la requête refusée */
+            /** @description `mfa_pending` : Présentez d'abord votre second facteur ; `reauthentication_required` : Reconnectez-vous pour modifier vos facteurs (connexion de plus de 15 minutes) ; `origin_refused` : Origine de la requête refusée */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -4018,7 +4023,7 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description Passkey introuvable */
+            /** @description `passkey_not_found` : Passkey introuvable */
             404: {
                 headers: {
                     [name: string]: unknown;
@@ -4027,7 +4032,7 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description Aucun second facteur attendu pour cette session ; Aucune passkey enregistrée pour ce compte ; Aucun enregistrement en cours, ou délai dépassé : recommencez ; 10 passkeys au plus : retirez-en une d'abord ; Cette passkey est déjà enregistrée ; Second facteur obligatoire pour ce rôle : enregistrez-en un autre avant de retirer celui-ci */
+            /** @description `mfa_not_pending` : Aucun second facteur attendu pour cette session ; `no_passkey` : Aucune passkey enregistrée pour ce compte ; `passkey_challenge_expired` : Aucun enregistrement en cours, ou délai dépassé : recommencez ; `too_many_passkeys` : 10 passkeys au plus : retirez-en une d'abord ; `passkey_already_registered` : Cette passkey est déjà enregistrée ; `last_factor` : Second facteur obligatoire pour ce rôle : enregistrez-en un autre avant de retirer celui-ci */
             409: {
                 headers: {
                     [name: string]: unknown;
@@ -4036,16 +4041,16 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description Nom de passkey vide ou trop long */
+            /** @description `passkey_name_invalid` : Nom de passkey vide ou trop long ; `validation_error` : Certains champs sont invalides. */
             422: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Error"] | components["schemas"]["HTTPValidationError"];
+                    "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description Trop de tentatives, réessayez plus tard */
+            /** @description `too_many_attempts` : Trop de tentatives, réessayez plus tard */
             429: {
                 headers: {
                     /** @description Secondes à attendre avant de réessayer */
@@ -4056,7 +4061,7 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description Passkeys momentanément indisponibles */
+            /** @description `passkeys_unavailable` : Passkeys momentanément indisponibles */
             503: {
                 headers: {
                     [name: string]: unknown;
@@ -4087,7 +4092,7 @@ export interface operations {
                     };
                 };
             };
-            /** @description Passkey refusée */
+            /** @description `passkey_rejected` : Passkey refusée */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -4096,7 +4101,7 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description Passkey refusée ; Authentification requise */
+            /** @description `passkey_rejected` : Passkey refusée ; `auth_required` : Authentification requise */
             401: {
                 headers: {
                     [name: string]: unknown;
@@ -4105,7 +4110,7 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description Présentez d'abord votre second facteur ; Reconnectez-vous pour modifier vos facteurs (connexion de plus de 15 minutes) ; Origine de la requête refusée */
+            /** @description `mfa_pending` : Présentez d'abord votre second facteur ; `reauthentication_required` : Reconnectez-vous pour modifier vos facteurs (connexion de plus de 15 minutes) ; `origin_refused` : Origine de la requête refusée */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -4114,7 +4119,7 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description Passkey introuvable */
+            /** @description `passkey_not_found` : Passkey introuvable */
             404: {
                 headers: {
                     [name: string]: unknown;
@@ -4123,7 +4128,7 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description Aucun second facteur attendu pour cette session ; Aucune passkey enregistrée pour ce compte ; Aucun enregistrement en cours, ou délai dépassé : recommencez ; 10 passkeys au plus : retirez-en une d'abord ; Cette passkey est déjà enregistrée ; Second facteur obligatoire pour ce rôle : enregistrez-en un autre avant de retirer celui-ci */
+            /** @description `mfa_not_pending` : Aucun second facteur attendu pour cette session ; `no_passkey` : Aucune passkey enregistrée pour ce compte ; `passkey_challenge_expired` : Aucun enregistrement en cours, ou délai dépassé : recommencez ; `too_many_passkeys` : 10 passkeys au plus : retirez-en une d'abord ; `passkey_already_registered` : Cette passkey est déjà enregistrée ; `last_factor` : Second facteur obligatoire pour ce rôle : enregistrez-en un autre avant de retirer celui-ci */
             409: {
                 headers: {
                     [name: string]: unknown;
@@ -4132,7 +4137,7 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description Nom de passkey vide ou trop long */
+            /** @description `passkey_name_invalid` : Nom de passkey vide ou trop long */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -4141,7 +4146,7 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description Trop de tentatives, réessayez plus tard */
+            /** @description `too_many_attempts` : Trop de tentatives, réessayez plus tard */
             429: {
                 headers: {
                     /** @description Secondes à attendre avant de réessayer */
@@ -4152,7 +4157,7 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description Passkeys momentanément indisponibles */
+            /** @description `passkeys_unavailable` : Passkeys momentanément indisponibles */
             503: {
                 headers: {
                     [name: string]: unknown;
@@ -4181,7 +4186,7 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description Passkey refusée */
+            /** @description `passkey_rejected` : Passkey refusée */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -4190,7 +4195,7 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description Passkey refusée ; Authentification requise */
+            /** @description `passkey_rejected` : Passkey refusée ; `auth_required` : Authentification requise */
             401: {
                 headers: {
                     [name: string]: unknown;
@@ -4199,7 +4204,7 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description Présentez d'abord votre second facteur ; Reconnectez-vous pour modifier vos facteurs (connexion de plus de 15 minutes) ; Origine de la requête refusée */
+            /** @description `mfa_pending` : Présentez d'abord votre second facteur ; `reauthentication_required` : Reconnectez-vous pour modifier vos facteurs (connexion de plus de 15 minutes) ; `origin_refused` : Origine de la requête refusée */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -4208,7 +4213,7 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description Passkey introuvable */
+            /** @description `passkey_not_found` : Passkey introuvable */
             404: {
                 headers: {
                     [name: string]: unknown;
@@ -4217,7 +4222,7 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description Aucun second facteur attendu pour cette session ; Aucune passkey enregistrée pour ce compte ; Aucun enregistrement en cours, ou délai dépassé : recommencez ; 10 passkeys au plus : retirez-en une d'abord ; Cette passkey est déjà enregistrée ; Second facteur obligatoire pour ce rôle : enregistrez-en un autre avant de retirer celui-ci */
+            /** @description `mfa_not_pending` : Aucun second facteur attendu pour cette session ; `no_passkey` : Aucune passkey enregistrée pour ce compte ; `passkey_challenge_expired` : Aucun enregistrement en cours, ou délai dépassé : recommencez ; `too_many_passkeys` : 10 passkeys au plus : retirez-en une d'abord ; `passkey_already_registered` : Cette passkey est déjà enregistrée ; `last_factor` : Second facteur obligatoire pour ce rôle : enregistrez-en un autre avant de retirer celui-ci */
             409: {
                 headers: {
                     [name: string]: unknown;
@@ -4226,16 +4231,16 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description Nom de passkey vide ou trop long */
+            /** @description `passkey_name_invalid` : Nom de passkey vide ou trop long ; `validation_error` : Certains champs sont invalides. */
             422: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Error"] | components["schemas"]["HTTPValidationError"];
+                    "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description Trop de tentatives, réessayez plus tard */
+            /** @description `too_many_attempts` : Trop de tentatives, réessayez plus tard */
             429: {
                 headers: {
                     /** @description Secondes à attendre avant de réessayer */
@@ -4246,7 +4251,7 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description Passkeys momentanément indisponibles */
+            /** @description `passkeys_unavailable` : Passkeys momentanément indisponibles */
             503: {
                 headers: {
                     [name: string]: unknown;
@@ -4281,7 +4286,7 @@ export interface operations {
                     "application/json": components["schemas"]["PasskeyOut"];
                 };
             };
-            /** @description Passkey refusée */
+            /** @description `passkey_rejected` : Passkey refusée */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -4290,7 +4295,7 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description Passkey refusée ; Authentification requise */
+            /** @description `passkey_rejected` : Passkey refusée ; `auth_required` : Authentification requise */
             401: {
                 headers: {
                     [name: string]: unknown;
@@ -4299,7 +4304,7 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description Présentez d'abord votre second facteur ; Reconnectez-vous pour modifier vos facteurs (connexion de plus de 15 minutes) ; Origine de la requête refusée ; Second facteur requis */
+            /** @description `mfa_pending` : Présentez d'abord votre second facteur ; `reauthentication_required` : Reconnectez-vous pour modifier vos facteurs (connexion de plus de 15 minutes) ; `mfa_required` : Second facteur requis ; `origin_refused` : Origine de la requête refusée */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -4308,7 +4313,7 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description Passkey introuvable */
+            /** @description `passkey_not_found` : Passkey introuvable */
             404: {
                 headers: {
                     [name: string]: unknown;
@@ -4317,7 +4322,7 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description Aucun second facteur attendu pour cette session ; Aucune passkey enregistrée pour ce compte ; Aucun enregistrement en cours, ou délai dépassé : recommencez ; 10 passkeys au plus : retirez-en une d'abord ; Cette passkey est déjà enregistrée ; Second facteur obligatoire pour ce rôle : enregistrez-en un autre avant de retirer celui-ci */
+            /** @description `mfa_not_pending` : Aucun second facteur attendu pour cette session ; `no_passkey` : Aucune passkey enregistrée pour ce compte ; `passkey_challenge_expired` : Aucun enregistrement en cours, ou délai dépassé : recommencez ; `too_many_passkeys` : 10 passkeys au plus : retirez-en une d'abord ; `passkey_already_registered` : Cette passkey est déjà enregistrée ; `last_factor` : Second facteur obligatoire pour ce rôle : enregistrez-en un autre avant de retirer celui-ci */
             409: {
                 headers: {
                     [name: string]: unknown;
@@ -4326,16 +4331,16 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description Nom de passkey vide ou trop long */
+            /** @description `passkey_name_invalid` : Nom de passkey vide ou trop long ; `validation_error` : Certains champs sont invalides. */
             422: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Error"] | components["schemas"]["HTTPValidationError"];
+                    "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description Trop de tentatives, réessayez plus tard */
+            /** @description `too_many_attempts` : Trop de tentatives, réessayez plus tard */
             429: {
                 headers: {
                     /** @description Secondes à attendre avant de réessayer */
@@ -4346,7 +4351,7 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description Passkeys momentanément indisponibles */
+            /** @description `passkeys_unavailable` : Passkeys momentanément indisponibles */
             503: {
                 headers: {
                     [name: string]: unknown;
@@ -4377,7 +4382,7 @@ export interface operations {
                     };
                 };
             };
-            /** @description Passkey refusée */
+            /** @description `passkey_rejected` : Passkey refusée */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -4386,7 +4391,7 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description Passkey refusée ; Authentification requise */
+            /** @description `passkey_rejected` : Passkey refusée ; `auth_required` : Authentification requise */
             401: {
                 headers: {
                     [name: string]: unknown;
@@ -4395,7 +4400,7 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description Présentez d'abord votre second facteur ; Reconnectez-vous pour modifier vos facteurs (connexion de plus de 15 minutes) ; Origine de la requête refusée */
+            /** @description `mfa_pending` : Présentez d'abord votre second facteur ; `reauthentication_required` : Reconnectez-vous pour modifier vos facteurs (connexion de plus de 15 minutes) ; `origin_refused` : Origine de la requête refusée */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -4404,7 +4409,7 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description Passkey introuvable */
+            /** @description `passkey_not_found` : Passkey introuvable */
             404: {
                 headers: {
                     [name: string]: unknown;
@@ -4413,7 +4418,7 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description Aucun second facteur attendu pour cette session ; Aucune passkey enregistrée pour ce compte ; Aucun enregistrement en cours, ou délai dépassé : recommencez ; 10 passkeys au plus : retirez-en une d'abord ; Cette passkey est déjà enregistrée ; Second facteur obligatoire pour ce rôle : enregistrez-en un autre avant de retirer celui-ci */
+            /** @description `mfa_not_pending` : Aucun second facteur attendu pour cette session ; `no_passkey` : Aucune passkey enregistrée pour ce compte ; `passkey_challenge_expired` : Aucun enregistrement en cours, ou délai dépassé : recommencez ; `too_many_passkeys` : 10 passkeys au plus : retirez-en une d'abord ; `passkey_already_registered` : Cette passkey est déjà enregistrée ; `last_factor` : Second facteur obligatoire pour ce rôle : enregistrez-en un autre avant de retirer celui-ci */
             409: {
                 headers: {
                     [name: string]: unknown;
@@ -4422,7 +4427,7 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description Nom de passkey vide ou trop long */
+            /** @description `passkey_name_invalid` : Nom de passkey vide ou trop long */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -4431,7 +4436,7 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description Trop de tentatives, réessayez plus tard */
+            /** @description `too_many_attempts` : Trop de tentatives, réessayez plus tard */
             429: {
                 headers: {
                     /** @description Secondes à attendre avant de réessayer */
@@ -4442,7 +4447,7 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description Passkeys momentanément indisponibles */
+            /** @description `passkeys_unavailable` : Passkeys momentanément indisponibles */
             503: {
                 headers: {
                     [name: string]: unknown;
@@ -4475,7 +4480,7 @@ export interface operations {
                     "application/json": components["schemas"]["SessionOut"];
                 };
             };
-            /** @description Passkey refusée */
+            /** @description `passkey_rejected` : Passkey refusée */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -4484,7 +4489,7 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description Passkey refusée ; Authentification requise */
+            /** @description `passkey_rejected` : Passkey refusée ; `auth_required` : Authentification requise */
             401: {
                 headers: {
                     [name: string]: unknown;
@@ -4493,7 +4498,7 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description Présentez d'abord votre second facteur ; Reconnectez-vous pour modifier vos facteurs (connexion de plus de 15 minutes) ; Origine de la requête refusée */
+            /** @description `mfa_pending` : Présentez d'abord votre second facteur ; `reauthentication_required` : Reconnectez-vous pour modifier vos facteurs (connexion de plus de 15 minutes) ; `origin_refused` : Origine de la requête refusée */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -4502,7 +4507,7 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description Passkey introuvable */
+            /** @description `passkey_not_found` : Passkey introuvable */
             404: {
                 headers: {
                     [name: string]: unknown;
@@ -4511,7 +4516,7 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description Aucun second facteur attendu pour cette session ; Aucune passkey enregistrée pour ce compte ; Aucun enregistrement en cours, ou délai dépassé : recommencez ; 10 passkeys au plus : retirez-en une d'abord ; Cette passkey est déjà enregistrée ; Second facteur obligatoire pour ce rôle : enregistrez-en un autre avant de retirer celui-ci */
+            /** @description `mfa_not_pending` : Aucun second facteur attendu pour cette session ; `no_passkey` : Aucune passkey enregistrée pour ce compte ; `passkey_challenge_expired` : Aucun enregistrement en cours, ou délai dépassé : recommencez ; `too_many_passkeys` : 10 passkeys au plus : retirez-en une d'abord ; `passkey_already_registered` : Cette passkey est déjà enregistrée ; `last_factor` : Second facteur obligatoire pour ce rôle : enregistrez-en un autre avant de retirer celui-ci */
             409: {
                 headers: {
                     [name: string]: unknown;
@@ -4520,16 +4525,16 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description Nom de passkey vide ou trop long */
+            /** @description `passkey_name_invalid` : Nom de passkey vide ou trop long ; `validation_error` : Certains champs sont invalides. */
             422: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Error"] | components["schemas"]["HTTPValidationError"];
+                    "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description Trop de tentatives, réessayez plus tard */
+            /** @description `too_many_attempts` : Trop de tentatives, réessayez plus tard */
             429: {
                 headers: {
                     /** @description Secondes à attendre avant de réessayer */
@@ -4540,7 +4545,7 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description Passkeys momentanément indisponibles */
+            /** @description `passkeys_unavailable` : Passkeys momentanément indisponibles */
             503: {
                 headers: {
                     [name: string]: unknown;
@@ -4571,7 +4576,7 @@ export interface operations {
                     };
                 };
             };
-            /** @description Passkey refusée */
+            /** @description `passkey_rejected` : Passkey refusée */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -4580,7 +4585,7 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description Passkey refusée */
+            /** @description `passkey_rejected` : Passkey refusée */
             401: {
                 headers: {
                     [name: string]: unknown;
@@ -4589,7 +4594,7 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description Présentez d'abord votre second facteur ; Reconnectez-vous pour modifier vos facteurs (connexion de plus de 15 minutes) ; Origine de la requête refusée */
+            /** @description `mfa_pending` : Présentez d'abord votre second facteur ; `reauthentication_required` : Reconnectez-vous pour modifier vos facteurs (connexion de plus de 15 minutes) ; `origin_refused` : Origine de la requête refusée */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -4598,7 +4603,7 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description Passkey introuvable */
+            /** @description `passkey_not_found` : Passkey introuvable */
             404: {
                 headers: {
                     [name: string]: unknown;
@@ -4607,7 +4612,7 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description Aucun second facteur attendu pour cette session ; Aucune passkey enregistrée pour ce compte ; Aucun enregistrement en cours, ou délai dépassé : recommencez ; 10 passkeys au plus : retirez-en une d'abord ; Cette passkey est déjà enregistrée ; Second facteur obligatoire pour ce rôle : enregistrez-en un autre avant de retirer celui-ci */
+            /** @description `mfa_not_pending` : Aucun second facteur attendu pour cette session ; `no_passkey` : Aucune passkey enregistrée pour ce compte ; `passkey_challenge_expired` : Aucun enregistrement en cours, ou délai dépassé : recommencez ; `too_many_passkeys` : 10 passkeys au plus : retirez-en une d'abord ; `passkey_already_registered` : Cette passkey est déjà enregistrée ; `last_factor` : Second facteur obligatoire pour ce rôle : enregistrez-en un autre avant de retirer celui-ci */
             409: {
                 headers: {
                     [name: string]: unknown;
@@ -4616,7 +4621,7 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description Nom de passkey vide ou trop long */
+            /** @description `passkey_name_invalid` : Nom de passkey vide ou trop long */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -4625,7 +4630,7 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description Trop de tentatives, réessayez plus tard */
+            /** @description `too_many_attempts` : Trop de tentatives, réessayez plus tard */
             429: {
                 headers: {
                     /** @description Secondes à attendre avant de réessayer */
@@ -4636,7 +4641,7 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description Passkeys momentanément indisponibles */
+            /** @description `passkeys_unavailable` : Passkeys momentanément indisponibles */
             503: {
                 headers: {
                     [name: string]: unknown;
@@ -4669,7 +4674,7 @@ export interface operations {
                     "application/json": components["schemas"]["SessionOut"];
                 };
             };
-            /** @description Passkey refusée */
+            /** @description `passkey_rejected` : Passkey refusée */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -4678,7 +4683,7 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description Passkey refusée */
+            /** @description `passkey_rejected` : Passkey refusée */
             401: {
                 headers: {
                     [name: string]: unknown;
@@ -4687,7 +4692,7 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description Présentez d'abord votre second facteur ; Reconnectez-vous pour modifier vos facteurs (connexion de plus de 15 minutes) ; Origine de la requête refusée */
+            /** @description `mfa_pending` : Présentez d'abord votre second facteur ; `reauthentication_required` : Reconnectez-vous pour modifier vos facteurs (connexion de plus de 15 minutes) ; `origin_refused` : Origine de la requête refusée */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -4696,7 +4701,7 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description Passkey introuvable */
+            /** @description `passkey_not_found` : Passkey introuvable */
             404: {
                 headers: {
                     [name: string]: unknown;
@@ -4705,7 +4710,7 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description Aucun second facteur attendu pour cette session ; Aucune passkey enregistrée pour ce compte ; Aucun enregistrement en cours, ou délai dépassé : recommencez ; 10 passkeys au plus : retirez-en une d'abord ; Cette passkey est déjà enregistrée ; Second facteur obligatoire pour ce rôle : enregistrez-en un autre avant de retirer celui-ci */
+            /** @description `mfa_not_pending` : Aucun second facteur attendu pour cette session ; `no_passkey` : Aucune passkey enregistrée pour ce compte ; `passkey_challenge_expired` : Aucun enregistrement en cours, ou délai dépassé : recommencez ; `too_many_passkeys` : 10 passkeys au plus : retirez-en une d'abord ; `passkey_already_registered` : Cette passkey est déjà enregistrée ; `last_factor` : Second facteur obligatoire pour ce rôle : enregistrez-en un autre avant de retirer celui-ci */
             409: {
                 headers: {
                     [name: string]: unknown;
@@ -4714,16 +4719,16 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description Nom de passkey vide ou trop long */
+            /** @description `passkey_name_invalid` : Nom de passkey vide ou trop long ; `validation_error` : Certains champs sont invalides. */
             422: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Error"] | components["schemas"]["HTTPValidationError"];
+                    "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description Trop de tentatives, réessayez plus tard */
+            /** @description `too_many_attempts` : Trop de tentatives, réessayez plus tard */
             429: {
                 headers: {
                     /** @description Secondes à attendre avant de réessayer */
@@ -4734,7 +4739,7 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description Passkeys momentanément indisponibles */
+            /** @description `passkeys_unavailable` : Passkeys momentanément indisponibles */
             503: {
                 headers: {
                     [name: string]: unknown;
@@ -4765,7 +4770,7 @@ export interface operations {
                     "application/json": components["schemas"]["NurseryOut"][];
                 };
             };
-            /** @description Authentification requise */
+            /** @description `auth_required` : Authentification requise */
             401: {
                 headers: {
                     [name: string]: unknown;
@@ -4774,7 +4779,7 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description Action non autorisée pour ce rôle ; Second facteur requis */
+            /** @description `mfa_required` : Second facteur requis ; `role_refused` : Action non autorisée pour ce rôle */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -4783,13 +4788,13 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description Validation Error */
+            /** @description `validation_error` : Certains champs sont invalides. */
             422: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
+                    "application/json": components["schemas"]["Error"];
                 };
             };
         };
@@ -4816,7 +4821,7 @@ export interface operations {
                     "application/json": components["schemas"]["NurseryOut"];
                 };
             };
-            /** @description Authentification requise */
+            /** @description `auth_required` : Authentification requise */
             401: {
                 headers: {
                     [name: string]: unknown;
@@ -4825,7 +4830,7 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description Action non autorisée pour ce rôle ; Origine de la requête refusée ; Second facteur requis */
+            /** @description `mfa_required` : Second facteur requis ; `origin_refused` : Origine de la requête refusée ; `role_refused` : Action non autorisée pour ce rôle */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -4834,13 +4839,13 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description Validation Error */
+            /** @description `validation_error` : Certains champs sont invalides. */
             422: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
+                    "application/json": components["schemas"]["Error"];
                 };
             };
         };
@@ -4865,7 +4870,7 @@ export interface operations {
                     "application/json": components["schemas"]["NurseryOut"];
                 };
             };
-            /** @description Authentification requise */
+            /** @description `auth_required` : Authentification requise */
             401: {
                 headers: {
                     [name: string]: unknown;
@@ -4874,7 +4879,7 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description Action non autorisée pour ce rôle ; Second facteur requis */
+            /** @description `mfa_required` : Second facteur requis ; `role_refused` : Action non autorisée pour ce rôle */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -4883,7 +4888,7 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description Crèche introuvable */
+            /** @description `nursery_not_found` : Crèche introuvable */
             404: {
                 headers: {
                     [name: string]: unknown;
@@ -4892,13 +4897,13 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description Validation Error */
+            /** @description `validation_error` : Certains champs sont invalides. */
             422: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
+                    "application/json": components["schemas"]["Error"];
                 };
             };
         };
@@ -4927,7 +4932,7 @@ export interface operations {
                     "application/json": components["schemas"]["NurseryOut"];
                 };
             };
-            /** @description Authentification requise */
+            /** @description `auth_required` : Authentification requise */
             401: {
                 headers: {
                     [name: string]: unknown;
@@ -4936,7 +4941,7 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description Action non autorisée pour ce rôle ; Origine de la requête refusée ; Second facteur requis ; Seule la direction peut gérer cette crèche */
+            /** @description `manager_required` : Seule la direction peut gérer cette crèche ; `mfa_required` : Second facteur requis ; `origin_refused` : Origine de la requête refusée ; `role_refused` : Action non autorisée pour ce rôle */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -4945,7 +4950,7 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description Crèche introuvable */
+            /** @description `nursery_not_found` : Crèche introuvable */
             404: {
                 headers: {
                     [name: string]: unknown;
@@ -4954,13 +4959,13 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description Le champ name ne peut pas être vide */
+            /** @description `validation_error` : Certains champs sont invalides. */
             422: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Error"] | components["schemas"]["HTTPValidationError"];
+                    "application/json": components["schemas"]["Error"];
                 };
             };
         };
@@ -4985,7 +4990,7 @@ export interface operations {
                     "application/json": components["schemas"]["NurserySummary"];
                 };
             };
-            /** @description Authentification requise */
+            /** @description `auth_required` : Authentification requise */
             401: {
                 headers: {
                     [name: string]: unknown;
@@ -4994,7 +4999,7 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description Action non autorisée pour ce rôle ; Second facteur requis */
+            /** @description `mfa_required` : Second facteur requis ; `role_refused` : Action non autorisée pour ce rôle */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -5003,7 +5008,7 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description Crèche introuvable */
+            /** @description `nursery_not_found` : Crèche introuvable */
             404: {
                 headers: {
                     [name: string]: unknown;
@@ -5012,13 +5017,13 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description Validation Error */
+            /** @description `validation_error` : Certains champs sont invalides. */
             422: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
+                    "application/json": components["schemas"]["Error"];
                 };
             };
         };
@@ -5043,7 +5048,7 @@ export interface operations {
                     "application/json": components["schemas"]["StaffOut"][];
                 };
             };
-            /** @description Authentification requise */
+            /** @description `auth_required` : Authentification requise */
             401: {
                 headers: {
                     [name: string]: unknown;
@@ -5052,7 +5057,7 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description Action non autorisée pour ce rôle ; Second facteur requis ; Seule la direction peut gérer cette crèche */
+            /** @description `manager_required` : Seule la direction peut gérer cette crèche ; `mfa_required` : Second facteur requis ; `role_refused` : Action non autorisée pour ce rôle */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -5061,7 +5066,7 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description Crèche introuvable */
+            /** @description `nursery_not_found` : Crèche introuvable */
             404: {
                 headers: {
                     [name: string]: unknown;
@@ -5070,13 +5075,13 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description Validation Error */
+            /** @description `validation_error` : Certains champs sont invalides. */
             422: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
+                    "application/json": components["schemas"]["Error"];
                 };
             };
         };
@@ -5100,7 +5105,7 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description Authentification requise */
+            /** @description `auth_required` : Authentification requise */
             401: {
                 headers: {
                     [name: string]: unknown;
@@ -5109,7 +5114,7 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description Action non autorisée pour ce rôle ; Origine de la requête refusée ; Second facteur requis ; Seule la direction peut gérer cette crèche */
+            /** @description `manager_required` : Seule la direction peut gérer cette crèche ; `mfa_required` : Second facteur requis ; `origin_refused` : Origine de la requête refusée ; `role_refused` : Action non autorisée pour ce rôle */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -5118,7 +5123,7 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description Employé introuvable ; Crèche introuvable */
+            /** @description `employee_not_found` : Employé introuvable ; `nursery_not_found` : Crèche introuvable */
             404: {
                 headers: {
                     [name: string]: unknown;
@@ -5127,13 +5132,13 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description Validation Error */
+            /** @description `validation_error` : Certains champs sont invalides. */
             422: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
+                    "application/json": components["schemas"]["Error"];
                 };
             };
         };
@@ -5157,7 +5162,7 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description Authentification requise */
+            /** @description `auth_required` : Authentification requise */
             401: {
                 headers: {
                     [name: string]: unknown;
@@ -5166,7 +5171,7 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description Action non autorisée pour ce rôle ; Origine de la requête refusée ; Second facteur requis ; Seule la direction peut gérer cette crèche */
+            /** @description `manager_required` : Seule la direction peut gérer cette crèche ; `mfa_required` : Second facteur requis ; `origin_refused` : Origine de la requête refusée ; `role_refused` : Action non autorisée pour ce rôle */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -5175,7 +5180,7 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description Crèche introuvable */
+            /** @description `nursery_not_found` : Crèche introuvable */
             404: {
                 headers: {
                     [name: string]: unknown;
@@ -5184,13 +5189,13 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description Validation Error */
+            /** @description `validation_error` : Certains champs sont invalides. */
             422: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
+                    "application/json": components["schemas"]["Error"];
                 };
             };
         };
@@ -5213,7 +5218,7 @@ export interface operations {
                     "application/json": components["schemas"]["EmployeeOut"][];
                 };
             };
-            /** @description Authentification requise */
+            /** @description `auth_required` : Authentification requise */
             401: {
                 headers: {
                     [name: string]: unknown;
@@ -5222,7 +5227,7 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description Action non autorisée pour ce rôle ; Second facteur requis */
+            /** @description `mfa_required` : Second facteur requis ; `role_refused` : Action non autorisée pour ce rôle */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -5255,7 +5260,7 @@ export interface operations {
                     "application/json": components["schemas"]["StaffInvitationOut"];
                 };
             };
-            /** @description Authentification requise */
+            /** @description `auth_required` : Authentification requise */
             401: {
                 headers: {
                     [name: string]: unknown;
@@ -5264,7 +5269,7 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description Action non autorisée pour ce rôle ; Origine de la requête refusée ; Second facteur requis */
+            /** @description `mfa_required` : Second facteur requis ; `origin_refused` : Origine de la requête refusée ; `role_refused` : Action non autorisée pour ce rôle */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -5273,7 +5278,7 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description Cette adresse est déjà utilisée par un compte */
+            /** @description `email_taken` : Cette adresse est déjà utilisée par un compte */
             409: {
                 headers: {
                     [name: string]: unknown;
@@ -5282,13 +5287,13 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description Validation Error */
+            /** @description `validation_error` : Certains champs sont invalides. */
             422: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
+                    "application/json": components["schemas"]["Error"];
                 };
             };
         };
@@ -5313,7 +5318,7 @@ export interface operations {
                     "application/json": components["schemas"]["TabletOut"][];
                 };
             };
-            /** @description Authentification requise */
+            /** @description `auth_required` : Authentification requise */
             401: {
                 headers: {
                     [name: string]: unknown;
@@ -5322,7 +5327,7 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description Action non autorisée pour ce rôle ; Second facteur requis ; Seule la direction peut gérer cette crèche */
+            /** @description `manager_required` : Seule la direction peut gérer cette crèche ; `mfa_required` : Second facteur requis ; `role_refused` : Action non autorisée pour ce rôle */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -5331,7 +5336,7 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description Crèche introuvable */
+            /** @description `nursery_not_found` : Crèche introuvable */
             404: {
                 headers: {
                     [name: string]: unknown;
@@ -5340,13 +5345,13 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description Validation Error */
+            /** @description `validation_error` : Certains champs sont invalides. */
             422: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
+                    "application/json": components["schemas"]["Error"];
                 };
             };
         };
@@ -5375,7 +5380,7 @@ export interface operations {
                     "application/json": components["schemas"]["TabletOut"];
                 };
             };
-            /** @description Authentification requise */
+            /** @description `auth_required` : Authentification requise */
             401: {
                 headers: {
                     [name: string]: unknown;
@@ -5384,7 +5389,7 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description Action non autorisée pour ce rôle ; Origine de la requête refusée ; Second facteur requis ; Seule la direction peut gérer cette crèche */
+            /** @description `manager_required` : Seule la direction peut gérer cette crèche ; `mfa_required` : Second facteur requis ; `origin_refused` : Origine de la requête refusée ; `role_refused` : Action non autorisée pour ce rôle */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -5393,7 +5398,7 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description Crèche introuvable */
+            /** @description `nursery_not_found` : Crèche introuvable */
             404: {
                 headers: {
                     [name: string]: unknown;
@@ -5402,13 +5407,13 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description Validation Error */
+            /** @description `validation_error` : Certains champs sont invalides. */
             422: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
+                    "application/json": components["schemas"]["Error"];
                 };
             };
         };
@@ -5432,7 +5437,7 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description Authentification requise */
+            /** @description `auth_required` : Authentification requise */
             401: {
                 headers: {
                     [name: string]: unknown;
@@ -5441,7 +5446,7 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description Action non autorisée pour ce rôle ; Origine de la requête refusée ; Second facteur requis ; Seule la direction peut gérer cette crèche */
+            /** @description `manager_required` : Seule la direction peut gérer cette crèche ; `mfa_required` : Second facteur requis ; `origin_refused` : Origine de la requête refusée ; `role_refused` : Action non autorisée pour ce rôle */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -5450,7 +5455,7 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description Tablette introuvable ; Crèche introuvable */
+            /** @description `tablet_not_found` : Tablette introuvable ; `nursery_not_found` : Crèche introuvable */
             404: {
                 headers: {
                     [name: string]: unknown;
@@ -5459,13 +5464,13 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description Validation Error */
+            /** @description `validation_error` : Certains champs sont invalides. */
             422: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
+                    "application/json": components["schemas"]["Error"];
                 };
             };
         };
@@ -5490,7 +5495,7 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description Authentification requise */
+            /** @description `auth_required` : Authentification requise */
             401: {
                 headers: {
                     [name: string]: unknown;
@@ -5499,7 +5504,7 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description Le PIN de tablette est réservé aux employés ; Mot de passe incorrect ; Origine de la requête refusée ; Second facteur requis */
+            /** @description `pin_for_employees_only` : Le PIN de tablette est réservé aux employés ; `wrong_password` : Mot de passe incorrect ; `mfa_required` : Second facteur requis ; `origin_refused` : Origine de la requête refusée */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -5508,18 +5513,20 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description Le PIN doit contenir exactement 4 chiffres. ; Ce PIN est trop prévisible (chiffres identiques). ; Ce PIN est trop prévisible (suite de chiffres). */
+            /** @description `pin_policy` : Le PIN doit contenir exactement 4 chiffres. ; `pin_policy` : Ce PIN est trop prévisible (chiffres identiques). ; `pin_policy` : Ce PIN est trop prévisible (suite de chiffres). ; `validation_error` : Certains champs sont invalides. */
             422: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Error"] | components["schemas"]["HTTPValidationError"];
+                    "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description Trop de tentatives, réessayez plus tard */
+            /** @description `too_many_attempts` : Trop de tentatives, réessayez plus tard */
             429: {
                 headers: {
+                    /** @description Secondes à attendre avant de réessayer */
+                    "Retry-After"?: number;
                     [name: string]: unknown;
                 };
                 content: {
@@ -5546,7 +5553,7 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description Authentification requise */
+            /** @description `auth_required` : Authentification requise */
             401: {
                 headers: {
                     [name: string]: unknown;
@@ -5555,7 +5562,7 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description Action non autorisée pour ce rôle ; Origine de la requête refusée ; Second facteur requis */
+            /** @description `mfa_required` : Second facteur requis ; `origin_refused` : Origine de la requête refusée ; `role_refused` : Action non autorisée pour ce rôle */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -5564,7 +5571,7 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description Employé introuvable */
+            /** @description `employee_not_found` : Employé introuvable */
             404: {
                 headers: {
                     [name: string]: unknown;
@@ -5573,13 +5580,13 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description Validation Error */
+            /** @description `validation_error` : Certains champs sont invalides. */
             422: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
+                    "application/json": components["schemas"]["Error"];
                 };
             };
         };
@@ -5602,7 +5609,7 @@ export interface operations {
                     "application/json": components["schemas"]["TabletInfo"];
                 };
             };
-            /** @description Tablette non enrôlée, expirée ou révoquée */
+            /** @description `tablet_required` : Tablette non enrôlée, expirée ou révoquée */
             401: {
                 headers: {
                     [name: string]: unknown;
@@ -5631,7 +5638,7 @@ export interface operations {
                     "application/json": components["schemas"]["TabletActorOut"];
                 };
             };
-            /** @description Session de tablette absente ou expirée : saisir le PIN ; Tablette non enrôlée, expirée ou révoquée */
+            /** @description `pin_session_required` : Session de tablette absente ou expirée : saisir le PIN ; `tablet_required` : Tablette non enrôlée, expirée ou révoquée */
             401: {
                 headers: {
                     [name: string]: unknown;
@@ -5664,7 +5671,7 @@ export interface operations {
                     "application/json": components["schemas"]["TabletActorOut"];
                 };
             };
-            /** @description PIN incorrect ; Tablette non enrôlée, expirée ou révoquée */
+            /** @description `pin_invalid` : PIN incorrect ; `tablet_required` : Tablette non enrôlée, expirée ou révoquée */
             401: {
                 headers: {
                     [name: string]: unknown;
@@ -5673,7 +5680,7 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description Origine de la requête refusée */
+            /** @description `origin_refused` : Origine de la requête refusée */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -5682,7 +5689,7 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description PIN non défini : le choisir depuis l'espace employé */
+            /** @description `pin_not_set` : PIN non défini : le choisir depuis l'espace employé */
             409: {
                 headers: {
                     [name: string]: unknown;
@@ -5691,16 +5698,16 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description Validation Error */
+            /** @description `validation_error` : Certains champs sont invalides. */
             422: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
+                    "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description PIN bloqué après 3 erreurs : demandez à la direction de le débloquer */
+            /** @description `pin_locked` : PIN bloqué après 3 erreurs : demandez à la direction de le débloquer */
             423: {
                 headers: {
                     [name: string]: unknown;
@@ -5709,9 +5716,11 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description Trop d'erreurs de PIN sur cette tablette, réessayez plus tard */
+            /** @description `tablet_throttled` : Trop d'erreurs de PIN sur cette tablette, réessayez plus tard */
             429: {
                 headers: {
+                    /** @description Secondes à attendre avant de réessayer */
+                    "Retry-After"?: number;
                     [name: string]: unknown;
                 };
                 content: {
@@ -5736,7 +5745,7 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description Session de tablette absente ou expirée : saisir le PIN ; Tablette non enrôlée, expirée ou révoquée */
+            /** @description `pin_session_required` : Session de tablette absente ou expirée : saisir le PIN ; `tablet_required` : Tablette non enrôlée, expirée ou révoquée */
             401: {
                 headers: {
                     [name: string]: unknown;
@@ -5745,7 +5754,7 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description Origine de la requête refusée */
+            /** @description `origin_refused` : Origine de la requête refusée */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -5776,7 +5785,7 @@ export interface operations {
                     "application/json": components["schemas"]["FamilyOut"][];
                 };
             };
-            /** @description Authentification requise */
+            /** @description `auth_required` : Authentification requise */
             401: {
                 headers: {
                     [name: string]: unknown;
@@ -5785,7 +5794,7 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description Action non autorisée pour ce rôle ; Second facteur requis */
+            /** @description `mfa_required` : Second facteur requis ; `role_refused` : Action non autorisée pour ce rôle */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -5794,7 +5803,7 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description Crèche introuvable */
+            /** @description `nursery_not_found` : Crèche introuvable */
             404: {
                 headers: {
                     [name: string]: unknown;
@@ -5803,13 +5812,13 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description Validation Error */
+            /** @description `validation_error` : Certains champs sont invalides. */
             422: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
+                    "application/json": components["schemas"]["Error"];
                 };
             };
         };
@@ -5838,7 +5847,7 @@ export interface operations {
                     "application/json": components["schemas"]["FamilyOut"];
                 };
             };
-            /** @description Authentification requise */
+            /** @description `auth_required` : Authentification requise */
             401: {
                 headers: {
                     [name: string]: unknown;
@@ -5847,7 +5856,7 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description Action non autorisée pour ce rôle ; Origine de la requête refusée ; Second facteur requis ; Seule la direction peut gérer cette crèche */
+            /** @description `manager_required` : Seule la direction peut gérer cette crèche ; `mfa_required` : Second facteur requis ; `origin_refused` : Origine de la requête refusée ; `role_refused` : Action non autorisée pour ce rôle */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -5856,7 +5865,7 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description Crèche introuvable */
+            /** @description `nursery_not_found` : Crèche introuvable */
             404: {
                 headers: {
                     [name: string]: unknown;
@@ -5865,13 +5874,13 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description Validation Error */
+            /** @description `validation_error` : Certains champs sont invalides. */
             422: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
+                    "application/json": components["schemas"]["Error"];
                 };
             };
         };
@@ -5897,7 +5906,7 @@ export interface operations {
                     "application/json": components["schemas"]["FamilyDetail"];
                 };
             };
-            /** @description Authentification requise */
+            /** @description `auth_required` : Authentification requise */
             401: {
                 headers: {
                     [name: string]: unknown;
@@ -5906,7 +5915,7 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description Action non autorisée pour ce rôle ; Second facteur requis */
+            /** @description `mfa_required` : Second facteur requis ; `role_refused` : Action non autorisée pour ce rôle */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -5915,7 +5924,7 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description Famille introuvable ; Crèche introuvable */
+            /** @description `family_not_found` : Famille introuvable ; `nursery_not_found` : Crèche introuvable */
             404: {
                 headers: {
                     [name: string]: unknown;
@@ -5924,13 +5933,13 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description Validation Error */
+            /** @description `validation_error` : Certains champs sont invalides. */
             422: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
+                    "application/json": components["schemas"]["Error"];
                 };
             };
         };
@@ -5960,7 +5969,7 @@ export interface operations {
                     "application/json": components["schemas"]["FamilyOut"];
                 };
             };
-            /** @description Authentification requise */
+            /** @description `auth_required` : Authentification requise */
             401: {
                 headers: {
                     [name: string]: unknown;
@@ -5969,7 +5978,7 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description Action non autorisée pour ce rôle ; Origine de la requête refusée ; Second facteur requis ; Seule la direction peut gérer cette crèche */
+            /** @description `manager_required` : Seule la direction peut gérer cette crèche ; `mfa_required` : Second facteur requis ; `origin_refused` : Origine de la requête refusée ; `role_refused` : Action non autorisée pour ce rôle */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -5978,7 +5987,7 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description Famille introuvable ; Crèche introuvable */
+            /** @description `family_not_found` : Famille introuvable ; `nursery_not_found` : Crèche introuvable */
             404: {
                 headers: {
                     [name: string]: unknown;
@@ -5987,13 +5996,13 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description Le champ first_name ne peut pas être vide */
+            /** @description `validation_error` : Certains champs sont invalides. */
             422: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Error"] | components["schemas"]["HTTPValidationError"];
+                    "application/json": components["schemas"]["Error"];
                 };
             };
         };
@@ -6020,7 +6029,7 @@ export interface operations {
                     "application/json": components["schemas"]["ChildOut"][];
                 };
             };
-            /** @description Authentification requise */
+            /** @description `auth_required` : Authentification requise */
             401: {
                 headers: {
                     [name: string]: unknown;
@@ -6029,7 +6038,7 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description Action non autorisée pour ce rôle ; Second facteur requis */
+            /** @description `mfa_required` : Second facteur requis ; `role_refused` : Action non autorisée pour ce rôle */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -6038,7 +6047,7 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description Crèche introuvable */
+            /** @description `nursery_not_found` : Crèche introuvable */
             404: {
                 headers: {
                     [name: string]: unknown;
@@ -6047,13 +6056,13 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description Validation Error */
+            /** @description `validation_error` : Certains champs sont invalides. */
             422: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
+                    "application/json": components["schemas"]["Error"];
                 };
             };
         };
@@ -6083,7 +6092,7 @@ export interface operations {
                     "application/json": components["schemas"]["ChildOut"];
                 };
             };
-            /** @description Authentification requise */
+            /** @description `auth_required` : Authentification requise */
             401: {
                 headers: {
                     [name: string]: unknown;
@@ -6092,7 +6101,7 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description Action non autorisée pour ce rôle ; Origine de la requête refusée ; Second facteur requis ; Seule la direction peut gérer cette crèche */
+            /** @description `manager_required` : Seule la direction peut gérer cette crèche ; `mfa_required` : Second facteur requis ; `origin_refused` : Origine de la requête refusée ; `role_refused` : Action non autorisée pour ce rôle */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -6101,7 +6110,7 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description Famille introuvable ; Crèche introuvable */
+            /** @description `family_not_found` : Famille introuvable ; `nursery_not_found` : Crèche introuvable */
             404: {
                 headers: {
                     [name: string]: unknown;
@@ -6110,13 +6119,13 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description Validation Error */
+            /** @description `validation_error` : Certains champs sont invalides. */
             422: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
+                    "application/json": components["schemas"]["Error"];
                 };
             };
         };
@@ -6142,7 +6151,7 @@ export interface operations {
                     "application/json": components["schemas"]["ChildDetail"];
                 };
             };
-            /** @description Authentification requise */
+            /** @description `auth_required` : Authentification requise */
             401: {
                 headers: {
                     [name: string]: unknown;
@@ -6151,7 +6160,7 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description Action non autorisée pour ce rôle ; Second facteur requis */
+            /** @description `mfa_required` : Second facteur requis ; `role_refused` : Action non autorisée pour ce rôle */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -6160,7 +6169,7 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description Enfant introuvable ; Crèche introuvable */
+            /** @description `child_not_found` : Enfant introuvable ; `nursery_not_found` : Crèche introuvable */
             404: {
                 headers: {
                     [name: string]: unknown;
@@ -6169,13 +6178,13 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description Validation Error */
+            /** @description `validation_error` : Certains champs sont invalides. */
             422: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
+                    "application/json": components["schemas"]["Error"];
                 };
             };
         };
@@ -6205,7 +6214,7 @@ export interface operations {
                     "application/json": components["schemas"]["ChildOut"];
                 };
             };
-            /** @description Authentification requise */
+            /** @description `auth_required` : Authentification requise */
             401: {
                 headers: {
                     [name: string]: unknown;
@@ -6214,7 +6223,7 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description Action non autorisée pour ce rôle ; Origine de la requête refusée ; Second facteur requis ; Seule la direction peut gérer cette crèche */
+            /** @description `manager_required` : Seule la direction peut gérer cette crèche ; `mfa_required` : Second facteur requis ; `origin_refused` : Origine de la requête refusée ; `role_refused` : Action non autorisée pour ce rôle */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -6223,7 +6232,7 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description Enfant introuvable ; Crèche introuvable */
+            /** @description `child_not_found` : Enfant introuvable ; `nursery_not_found` : Crèche introuvable */
             404: {
                 headers: {
                     [name: string]: unknown;
@@ -6232,13 +6241,13 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description Le champ first_name ne peut pas être vide ; Un enfant parti a une date de sortie, et seulement lui */
+            /** @description `child_dates_incoherent` : Les dates de l'enfant ne sont pas cohérentes ; `validation_error` : Certains champs sont invalides. */
             422: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Error"] | components["schemas"]["HTTPValidationError"];
+                    "application/json": components["schemas"]["Error"];
                 };
             };
         };
@@ -6268,7 +6277,7 @@ export interface operations {
                     "application/json": components["schemas"]["GuardianOut"];
                 };
             };
-            /** @description Authentification requise */
+            /** @description `auth_required` : Authentification requise */
             401: {
                 headers: {
                     [name: string]: unknown;
@@ -6277,7 +6286,7 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description Action non autorisée pour ce rôle ; Origine de la requête refusée ; Second facteur requis ; Seule la direction peut gérer cette crèche */
+            /** @description `manager_required` : Seule la direction peut gérer cette crèche ; `mfa_required` : Second facteur requis ; `origin_refused` : Origine de la requête refusée ; `role_refused` : Action non autorisée pour ce rôle */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -6286,7 +6295,7 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description Famille introuvable ; Crèche introuvable */
+            /** @description `family_not_found` : Famille introuvable ; `nursery_not_found` : Crèche introuvable */
             404: {
                 headers: {
                     [name: string]: unknown;
@@ -6295,13 +6304,13 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description Validation Error */
+            /** @description `validation_error` : Certains champs sont invalides. */
             422: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
+                    "application/json": components["schemas"]["Error"];
                 };
             };
         };
@@ -6331,7 +6340,7 @@ export interface operations {
                     "application/json": components["schemas"]["GuardianOut"];
                 };
             };
-            /** @description Authentification requise */
+            /** @description `auth_required` : Authentification requise */
             401: {
                 headers: {
                     [name: string]: unknown;
@@ -6340,7 +6349,7 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description Action non autorisée pour ce rôle ; Origine de la requête refusée ; Second facteur requis ; Seule la direction peut gérer cette crèche */
+            /** @description `manager_required` : Seule la direction peut gérer cette crèche ; `mfa_required` : Second facteur requis ; `origin_refused` : Origine de la requête refusée ; `role_refused` : Action non autorisée pour ce rôle */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -6349,7 +6358,7 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description Responsable introuvable ; Crèche introuvable */
+            /** @description `guardian_not_found` : Responsable introuvable ; `nursery_not_found` : Crèche introuvable */
             404: {
                 headers: {
                     [name: string]: unknown;
@@ -6358,13 +6367,13 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description Le champ first_name ne peut pas être vide */
+            /** @description `validation_error` : Certains champs sont invalides. */
             422: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Error"] | components["schemas"]["HTTPValidationError"];
+                    "application/json": components["schemas"]["Error"];
                 };
             };
         };
@@ -6393,7 +6402,7 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description Authentification requise */
+            /** @description `auth_required` : Authentification requise */
             401: {
                 headers: {
                     [name: string]: unknown;
@@ -6402,7 +6411,7 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description Action non autorisée pour ce rôle ; Origine de la requête refusée ; Second facteur requis ; Seule la direction peut gérer cette crèche */
+            /** @description `manager_required` : Seule la direction peut gérer cette crèche ; `mfa_required` : Second facteur requis ; `origin_refused` : Origine de la requête refusée ; `role_refused` : Action non autorisée pour ce rôle */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -6411,7 +6420,7 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description Enfant introuvable ; Responsable introuvable ; Crèche introuvable */
+            /** @description `child_not_found` : Enfant introuvable ; `guardian_not_found` : Responsable introuvable ; `nursery_not_found` : Crèche introuvable */
             404: {
                 headers: {
                     [name: string]: unknown;
@@ -6420,13 +6429,13 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description Le responsable n'appartient pas à la famille */
+            /** @description `guardian_other_family` : Le responsable n'appartient pas à la famille ; `validation_error` : Certains champs sont invalides. */
             422: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Error"] | components["schemas"]["HTTPValidationError"];
+                    "application/json": components["schemas"]["Error"];
                 };
             };
         };
@@ -6451,7 +6460,7 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description Authentification requise */
+            /** @description `auth_required` : Authentification requise */
             401: {
                 headers: {
                     [name: string]: unknown;
@@ -6460,7 +6469,7 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description Action non autorisée pour ce rôle ; Origine de la requête refusée ; Second facteur requis ; Seule la direction peut gérer cette crèche */
+            /** @description `manager_required` : Seule la direction peut gérer cette crèche ; `mfa_required` : Second facteur requis ; `origin_refused` : Origine de la requête refusée ; `role_refused` : Action non autorisée pour ce rôle */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -6469,7 +6478,7 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description Enfant introuvable ; Crèche introuvable */
+            /** @description `child_not_found` : Enfant introuvable ; `nursery_not_found` : Crèche introuvable */
             404: {
                 headers: {
                     [name: string]: unknown;
@@ -6478,13 +6487,13 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description Validation Error */
+            /** @description `validation_error` : Certains champs sont invalides. */
             422: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
+                    "application/json": components["schemas"]["Error"];
                 };
             };
         };
@@ -6507,7 +6516,7 @@ export interface operations {
                     "application/json": components["schemas"]["TabletChild"][];
                 };
             };
-            /** @description Session de tablette absente ou expirée : saisir le PIN ; Tablette non enrôlée, expirée ou révoquée */
+            /** @description `pin_session_required` : Session de tablette absente ou expirée : saisir le PIN ; `tablet_required` : Tablette non enrôlée, expirée ou révoquée */
             401: {
                 headers: {
                     [name: string]: unknown;
@@ -6542,7 +6551,7 @@ export interface operations {
                     "application/json": components["schemas"]["AttendanceOut"];
                 };
             };
-            /** @description Session de tablette absente ou expirée : saisir le PIN ; Tablette non enrôlée, expirée ou révoquée */
+            /** @description `pin_session_required` : Session de tablette absente ou expirée : saisir le PIN ; `tablet_required` : Tablette non enrôlée, expirée ou révoquée */
             401: {
                 headers: {
                     [name: string]: unknown;
@@ -6551,7 +6560,7 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description Origine de la requête refusée */
+            /** @description `origin_refused` : Origine de la requête refusée */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -6560,7 +6569,7 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description Enfant introuvable dans cette crèche */
+            /** @description `child_not_found` : Enfant introuvable dans cette crèche */
             404: {
                 headers: {
                     [name: string]: unknown;
@@ -6569,7 +6578,7 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description Enfant non attendu (suspendu, parti ou pas encore inscrit) ; Arrivée déjà pointée */
+            /** @description `child_not_expected` : Enfant non attendu (suspendu, parti ou pas encore inscrit) ; `already_present` : Arrivée déjà pointée */
             409: {
                 headers: {
                     [name: string]: unknown;
@@ -6578,13 +6587,13 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description Cette personne n'est pas un responsable de l'enfant */
+            /** @description `unknown_guardian` : Cette personne n'est pas un responsable de l'enfant ; `validation_error` : Certains champs sont invalides. */
             422: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Error"] | components["schemas"]["HTTPValidationError"];
+                    "application/json": components["schemas"]["Error"];
                 };
             };
         };
@@ -6613,7 +6622,7 @@ export interface operations {
                     "application/json": components["schemas"]["AttendanceOut"];
                 };
             };
-            /** @description Session de tablette absente ou expirée : saisir le PIN ; Tablette non enrôlée, expirée ou révoquée */
+            /** @description `pin_session_required` : Session de tablette absente ou expirée : saisir le PIN ; `tablet_required` : Tablette non enrôlée, expirée ou révoquée */
             401: {
                 headers: {
                     [name: string]: unknown;
@@ -6622,7 +6631,7 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description Cette personne n'est pas autorisée à venir chercher l'enfant : prévenir la direction ; Origine de la requête refusée */
+            /** @description `pickup_not_authorized` : Cette personne n'est pas autorisée à venir chercher l'enfant : prévenir la direction ; `origin_refused` : Origine de la requête refusée */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -6631,7 +6640,7 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description Enfant introuvable dans cette crèche */
+            /** @description `child_not_found` : Enfant introuvable dans cette crèche */
             404: {
                 headers: {
                     [name: string]: unknown;
@@ -6640,7 +6649,7 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description Aucune arrivée pointée pour cet enfant */
+            /** @description `not_present` : Aucune arrivée pointée pour cet enfant */
             409: {
                 headers: {
                     [name: string]: unknown;
@@ -6649,13 +6658,13 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description Validation Error */
+            /** @description `validation_error` : Certains champs sont invalides. */
             422: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
+                    "application/json": components["schemas"]["Error"];
                 };
             };
         };
@@ -6682,7 +6691,7 @@ export interface operations {
                     "application/json": components["schemas"]["AttendanceOut"][];
                 };
             };
-            /** @description Authentification requise */
+            /** @description `auth_required` : Authentification requise */
             401: {
                 headers: {
                     [name: string]: unknown;
@@ -6691,7 +6700,7 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description Action non autorisée pour ce rôle ; Second facteur requis */
+            /** @description `mfa_required` : Second facteur requis ; `role_refused` : Action non autorisée pour ce rôle */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -6700,7 +6709,7 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description Crèche introuvable */
+            /** @description `nursery_not_found` : Crèche introuvable */
             404: {
                 headers: {
                     [name: string]: unknown;
@@ -6709,13 +6718,13 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description Validation Error */
+            /** @description `validation_error` : Certains champs sont invalides. */
             422: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
+                    "application/json": components["schemas"]["Error"];
                 };
             };
         };
@@ -6744,7 +6753,7 @@ export interface operations {
                     "application/json": components["schemas"]["AttendanceOut"];
                 };
             };
-            /** @description Authentification requise */
+            /** @description `auth_required` : Authentification requise */
             401: {
                 headers: {
                     [name: string]: unknown;
@@ -6753,7 +6762,7 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description Cette personne n'est pas autorisée à venir chercher l'enfant : prévenir la direction ; Action non autorisée pour ce rôle ; Origine de la requête refusée ; Second facteur requis ; Seule la direction peut gérer cette crèche */
+            /** @description `pickup_not_authorized` : Cette personne n'est pas autorisée à venir chercher l'enfant : prévenir la direction ; `manager_required` : Seule la direction peut gérer cette crèche ; `mfa_required` : Second facteur requis ; `origin_refused` : Origine de la requête refusée ; `role_refused` : Action non autorisée pour ce rôle */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -6762,7 +6771,7 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description Enfant introuvable dans cette crèche ; Crèche introuvable */
+            /** @description `child_not_found` : Enfant introuvable dans cette crèche ; `nursery_not_found` : Crèche introuvable */
             404: {
                 headers: {
                     [name: string]: unknown;
@@ -6771,7 +6780,7 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description Enfant non attendu (suspendu, parti ou pas encore inscrit) ; Arrivée déjà pointée ; Présence de plus de 31 jours : elle ne se corrige plus ; Cette présence chevauche une autre présence de l'enfant ce jour-là */
+            /** @description `child_not_expected` : Enfant non attendu (suspendu, parti ou pas encore inscrit) ; `already_present` : Arrivée déjà pointée ; `correction_too_old` : Présence de plus de 31 jours : elle ne se corrige plus ; `presence_overlap` : Cette présence chevauche une autre présence de l'enfant ce jour-là */
             409: {
                 headers: {
                     [name: string]: unknown;
@@ -6780,13 +6789,13 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description Cette personne n'est pas un responsable de l'enfant ; Une personne venue chercher l'enfant suppose une heure de départ ; L'arrivée doit rester le jour de la présence ; Le départ précède l'arrivée ; Le départ doit être le jour de l'arrivée ; Une heure corrigée ne peut pas être dans le futur ; Une présence d'un jour passé doit avoir une heure de départ */
+            /** @description `unknown_guardian` : Cette personne n'est pas un responsable de l'enfant ; `pickup_without_departure` : Une personne venue chercher l'enfant suppose une heure de départ ; `arrival_other_day` : L'arrivée doit rester le jour de la présence ; `departure_before_arrival` : Le départ précède l'arrivée ; `departure_other_day` : Le départ doit être le jour de l'arrivée ; `in_future` : Une heure corrigée ne peut pas être dans le futur ; `open_in_past` : Une présence d'un jour passé doit avoir une heure de départ ; `validation_error` : Certains champs sont invalides. */
             422: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Error"] | components["schemas"]["HTTPValidationError"];
+                    "application/json": components["schemas"]["Error"];
                 };
             };
         };
@@ -6811,7 +6820,7 @@ export interface operations {
                     "application/json": components["schemas"]["AttendanceOut"][];
                 };
             };
-            /** @description Authentification requise */
+            /** @description `auth_required` : Authentification requise */
             401: {
                 headers: {
                     [name: string]: unknown;
@@ -6820,7 +6829,7 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description Action non autorisée pour ce rôle ; Second facteur requis */
+            /** @description `mfa_required` : Second facteur requis ; `role_refused` : Action non autorisée pour ce rôle */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -6829,7 +6838,7 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description Crèche introuvable */
+            /** @description `nursery_not_found` : Crèche introuvable */
             404: {
                 headers: {
                     [name: string]: unknown;
@@ -6838,13 +6847,13 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description Validation Error */
+            /** @description `validation_error` : Certains champs sont invalides. */
             422: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
+                    "application/json": components["schemas"]["Error"];
                 };
             };
         };
@@ -6874,7 +6883,7 @@ export interface operations {
                     "application/json": components["schemas"]["AttendanceOut"][];
                 };
             };
-            /** @description Authentification requise */
+            /** @description `auth_required` : Authentification requise */
             401: {
                 headers: {
                     [name: string]: unknown;
@@ -6883,7 +6892,7 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description Action non autorisée pour ce rôle ; Second facteur requis */
+            /** @description `mfa_required` : Second facteur requis ; `role_refused` : Action non autorisée pour ce rôle */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -6892,7 +6901,7 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description Crèche introuvable */
+            /** @description `nursery_not_found` : Crèche introuvable */
             404: {
                 headers: {
                     [name: string]: unknown;
@@ -6901,13 +6910,13 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description La date de début suit la date de fin ; Période limitée à 366 jours par requête */
+            /** @description `period_inverted` : La date de début suit la date de fin ; `period_too_long` : Période limitée à 366 jours par requête ; `validation_error` : Certains champs sont invalides. */
             422: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Error"] | components["schemas"]["HTTPValidationError"];
+                    "application/json": components["schemas"]["Error"];
                 };
             };
         };
@@ -6937,7 +6946,7 @@ export interface operations {
                     "text/csv": string;
                 };
             };
-            /** @description Authentification requise */
+            /** @description `auth_required` : Authentification requise */
             401: {
                 headers: {
                     [name: string]: unknown;
@@ -6946,7 +6955,7 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description Action non autorisée pour ce rôle ; Second facteur requis */
+            /** @description `mfa_required` : Second facteur requis ; `role_refused` : Action non autorisée pour ce rôle */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -6955,7 +6964,7 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description Crèche introuvable */
+            /** @description `nursery_not_found` : Crèche introuvable */
             404: {
                 headers: {
                     [name: string]: unknown;
@@ -6964,13 +6973,13 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description La date de début suit la date de fin ; Période limitée à 366 jours par requête */
+            /** @description `period_inverted` : La date de début suit la date de fin ; `period_too_long` : Période limitée à 366 jours par requête ; `validation_error` : Certains champs sont invalides. */
             422: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Error"] | components["schemas"]["HTTPValidationError"];
+                    "application/json": components["schemas"]["Error"];
                 };
             };
         };
@@ -7000,7 +7009,7 @@ export interface operations {
                     "application/json": components["schemas"]["AttendanceOut"];
                 };
             };
-            /** @description Authentification requise */
+            /** @description `auth_required` : Authentification requise */
             401: {
                 headers: {
                     [name: string]: unknown;
@@ -7009,7 +7018,7 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description Cette personne n'est pas autorisée à venir chercher l'enfant : prévenir la direction ; Action non autorisée pour ce rôle ; Origine de la requête refusée ; Second facteur requis ; Seule la direction peut gérer cette crèche */
+            /** @description `pickup_not_authorized` : Cette personne n'est pas autorisée à venir chercher l'enfant : prévenir la direction ; `manager_required` : Seule la direction peut gérer cette crèche ; `mfa_required` : Second facteur requis ; `origin_refused` : Origine de la requête refusée ; `role_refused` : Action non autorisée pour ce rôle */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -7018,7 +7027,7 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description Présence introuvable dans cette crèche ; Crèche introuvable */
+            /** @description `presence_not_found` : Présence introuvable dans cette crèche ; `nursery_not_found` : Crèche introuvable */
             404: {
                 headers: {
                     [name: string]: unknown;
@@ -7027,7 +7036,7 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description Arrivée déjà pointée ; Présence de plus de 31 jours : elle ne se corrige plus ; Cette présence chevauche une autre présence de l'enfant ce jour-là */
+            /** @description `already_present` : Arrivée déjà pointée ; `correction_too_old` : Présence de plus de 31 jours : elle ne se corrige plus ; `presence_overlap` : Cette présence chevauche une autre présence de l'enfant ce jour-là */
             409: {
                 headers: {
                     [name: string]: unknown;
@@ -7036,13 +7045,13 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description La correction ne change rien ; L'heure d'arrivée ne peut pas être retirée ; Cette personne n'est pas un responsable de l'enfant ; Une personne venue chercher l'enfant suppose une heure de départ ; L'arrivée doit rester le jour de la présence ; Le départ précède l'arrivée ; Le départ doit être le jour de l'arrivée ; Une heure corrigée ne peut pas être dans le futur ; Une présence d'un jour passé doit avoir une heure de départ */
+            /** @description `no_change` : La correction ne change rien ; `arrival_required` : L'heure d'arrivée ne peut pas être retirée ; `unknown_guardian` : Cette personne n'est pas un responsable de l'enfant ; `pickup_without_departure` : Une personne venue chercher l'enfant suppose une heure de départ ; `arrival_other_day` : L'arrivée doit rester le jour de la présence ; `departure_before_arrival` : Le départ précède l'arrivée ; `departure_other_day` : Le départ doit être le jour de l'arrivée ; `in_future` : Une heure corrigée ne peut pas être dans le futur ; `open_in_past` : Une présence d'un jour passé doit avoir une heure de départ ; `validation_error` : Certains champs sont invalides. */
             422: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Error"] | components["schemas"]["HTTPValidationError"];
+                    "application/json": components["schemas"]["Error"];
                 };
             };
         };
@@ -7072,7 +7081,7 @@ export interface operations {
                     "application/json": components["schemas"]["CorrectionOut"];
                 };
             };
-            /** @description Authentification requise */
+            /** @description `auth_required` : Authentification requise */
             401: {
                 headers: {
                     [name: string]: unknown;
@@ -7081,7 +7090,7 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description Action non autorisée pour ce rôle ; Origine de la requête refusée ; Second facteur requis ; Seule la direction peut gérer cette crèche */
+            /** @description `manager_required` : Seule la direction peut gérer cette crèche ; `mfa_required` : Second facteur requis ; `origin_refused` : Origine de la requête refusée ; `role_refused` : Action non autorisée pour ce rôle */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -7090,7 +7099,7 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description Présence introuvable dans cette crèche ; Crèche introuvable */
+            /** @description `presence_not_found` : Présence introuvable dans cette crèche ; `nursery_not_found` : Crèche introuvable */
             404: {
                 headers: {
                     [name: string]: unknown;
@@ -7099,7 +7108,7 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description Présence de plus de 31 jours : elle ne se corrige plus */
+            /** @description `correction_too_old` : Présence de plus de 31 jours : elle ne se corrige plus */
             409: {
                 headers: {
                     [name: string]: unknown;
@@ -7108,13 +7117,13 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description Validation Error */
+            /** @description `validation_error` : Certains champs sont invalides. */
             422: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
+                    "application/json": components["schemas"]["Error"];
                 };
             };
         };
@@ -7144,7 +7153,7 @@ export interface operations {
                     "application/json": components["schemas"]["CorrectionOut"][];
                 };
             };
-            /** @description Authentification requise */
+            /** @description `auth_required` : Authentification requise */
             401: {
                 headers: {
                     [name: string]: unknown;
@@ -7153,7 +7162,7 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description Action non autorisée pour ce rôle ; Second facteur requis ; Seule la direction peut gérer cette crèche */
+            /** @description `manager_required` : Seule la direction peut gérer cette crèche ; `mfa_required` : Second facteur requis ; `role_refused` : Action non autorisée pour ce rôle */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -7162,7 +7171,7 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description Crèche introuvable */
+            /** @description `nursery_not_found` : Crèche introuvable */
             404: {
                 headers: {
                     [name: string]: unknown;
@@ -7171,13 +7180,13 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description La date de début suit la date de fin ; Période limitée à 366 jours par requête */
+            /** @description `period_inverted` : La date de début suit la date de fin ; `period_too_long` : Période limitée à 366 jours par requête ; `validation_error` : Certains champs sont invalides. */
             422: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Error"] | components["schemas"]["HTTPValidationError"];
+                    "application/json": components["schemas"]["Error"];
                 };
             };
         };
@@ -7203,7 +7212,7 @@ export interface operations {
                     "application/json": components["schemas"]["InvitationOut"];
                 };
             };
-            /** @description Authentification requise */
+            /** @description `auth_required` : Authentification requise */
             401: {
                 headers: {
                     [name: string]: unknown;
@@ -7212,7 +7221,7 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description Action non autorisée pour ce rôle ; Origine de la requête refusée ; Second facteur requis ; Seule la direction peut gérer cette crèche */
+            /** @description `manager_required` : Seule la direction peut gérer cette crèche ; `mfa_required` : Second facteur requis ; `origin_refused` : Origine de la requête refusée ; `role_refused` : Action non autorisée pour ce rôle */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -7221,7 +7230,7 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description Responsable introuvable ; Crèche introuvable */
+            /** @description `guardian_not_found` : Responsable introuvable ; `nursery_not_found` : Crèche introuvable */
             404: {
                 headers: {
                     [name: string]: unknown;
@@ -7230,13 +7239,13 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description Ce responsable n'a pas d'adresse e-mail */
+            /** @description `guardian_without_email` : Ce responsable n'a pas d'adresse e-mail ; `validation_error` : Certains champs sont invalides. */
             422: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Error"] | components["schemas"]["HTTPValidationError"];
+                    "application/json": components["schemas"]["Error"];
                 };
             };
         };
@@ -7263,7 +7272,7 @@ export interface operations {
                     "application/json": components["schemas"]["InvitationInfo"];
                 };
             };
-            /** @description Origine de la requête refusée */
+            /** @description `origin_refused` : Origine de la requête refusée */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -7272,7 +7281,7 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description Invitation inconnue, expirée ou déjà utilisée */
+            /** @description `invitation_invalid` : Invitation inconnue, expirée ou déjà utilisée */
             404: {
                 headers: {
                     [name: string]: unknown;
@@ -7281,13 +7290,13 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description Validation Error */
+            /** @description `validation_error` : Certains champs sont invalides. */
             422: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
+                    "application/json": components["schemas"]["Error"];
                 };
             };
         };
@@ -7314,7 +7323,7 @@ export interface operations {
                     "application/json": components["schemas"]["app__family__schemas__AcceptedOut"];
                 };
             };
-            /** @description Un compte existe déjà avec cette adresse : saisir son mot de passe ; Origine de la requête refusée */
+            /** @description `account_exists_password_required` : Un compte existe déjà avec cette adresse : saisir son mot de passe ; `origin_refused` : Origine de la requête refusée */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -7323,7 +7332,7 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description Invitation inconnue, expirée ou déjà utilisée */
+            /** @description `invitation_invalid` : Invitation inconnue, expirée ou déjà utilisée */
             404: {
                 headers: {
                     [name: string]: unknown;
@@ -7332,7 +7341,7 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description Cette adresse est déjà utilisée par un compte qui n'est pas un compte famille : contactez la crèche */
+            /** @description `email_taken_not_family` : Cette adresse est déjà utilisée par un compte qui n'est pas un compte famille : contactez la crèche */
             409: {
                 headers: {
                     [name: string]: unknown;
@@ -7341,13 +7350,13 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description Ce mot de passe est trop courant. */
+            /** @description `password_policy` : Ce mot de passe est trop courant. ; `validation_error` : Certains champs sont invalides. */
             422: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Error"] | components["schemas"]["HTTPValidationError"];
+                    "application/json": components["schemas"]["Error"];
                 };
             };
         };
@@ -7370,7 +7379,7 @@ export interface operations {
                     "application/json": components["schemas"]["FamilyChild"][];
                 };
             };
-            /** @description Authentification requise */
+            /** @description `auth_required` : Authentification requise */
             401: {
                 headers: {
                     [name: string]: unknown;
@@ -7379,7 +7388,7 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description Action non autorisée pour ce rôle ; Second facteur requis */
+            /** @description `mfa_required` : Second facteur requis ; `role_refused` : Action non autorisée pour ce rôle */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -7412,7 +7421,7 @@ export interface operations {
                     "application/json": components["schemas"]["FamilyChildDetail"];
                 };
             };
-            /** @description Authentification requise */
+            /** @description `auth_required` : Authentification requise */
             401: {
                 headers: {
                     [name: string]: unknown;
@@ -7421,7 +7430,7 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description Action non autorisée pour ce rôle ; Second facteur requis */
+            /** @description `mfa_required` : Second facteur requis ; `role_refused` : Action non autorisée pour ce rôle */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -7430,7 +7439,7 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description Enfant introuvable */
+            /** @description `child_not_found` : Enfant introuvable */
             404: {
                 headers: {
                     [name: string]: unknown;
@@ -7439,13 +7448,13 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description Validation Error */
+            /** @description `validation_error` : Certains champs sont invalides. */
             422: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
+                    "application/json": components["schemas"]["Error"];
                 };
             };
         };
@@ -7470,7 +7479,7 @@ export interface operations {
                     "application/json": components["schemas"]["TaskOut"][];
                 };
             };
-            /** @description Authentification requise */
+            /** @description `auth_required` : Authentification requise */
             401: {
                 headers: {
                     [name: string]: unknown;
@@ -7479,7 +7488,7 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description Action non autorisée pour ce rôle ; Second facteur requis */
+            /** @description `mfa_required` : Second facteur requis ; `role_refused` : Action non autorisée pour ce rôle */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -7488,13 +7497,13 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description Validation Error */
+            /** @description `validation_error` : Certains champs sont invalides. */
             422: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
+                    "application/json": components["schemas"]["Error"];
                 };
             };
         };
@@ -7521,7 +7530,7 @@ export interface operations {
                     "application/json": components["schemas"]["TaskOut"];
                 };
             };
-            /** @description Authentification requise */
+            /** @description `auth_required` : Authentification requise */
             401: {
                 headers: {
                     [name: string]: unknown;
@@ -7530,7 +7539,7 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description Action non autorisée pour ce rôle ; Origine de la requête refusée ; Second facteur requis */
+            /** @description `mfa_required` : Second facteur requis ; `origin_refused` : Origine de la requête refusée ; `role_refused` : Action non autorisée pour ce rôle */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -7539,7 +7548,7 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description Une tâche du catalogue porte déjà ce nom */
+            /** @description `task_name_taken` : Une tâche du catalogue porte déjà ce nom */
             409: {
                 headers: {
                     [name: string]: unknown;
@@ -7548,13 +7557,13 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description Validation Error */
+            /** @description `validation_error` : Certains champs sont invalides. */
             422: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
+                    "application/json": components["schemas"]["Error"];
                 };
             };
         };
@@ -7583,7 +7592,7 @@ export interface operations {
                     "application/json": components["schemas"]["TaskOut"];
                 };
             };
-            /** @description Authentification requise */
+            /** @description `auth_required` : Authentification requise */
             401: {
                 headers: {
                     [name: string]: unknown;
@@ -7592,7 +7601,7 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description Action non autorisée pour ce rôle ; Origine de la requête refusée ; Second facteur requis */
+            /** @description `mfa_required` : Second facteur requis ; `origin_refused` : Origine de la requête refusée ; `role_refused` : Action non autorisée pour ce rôle */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -7601,7 +7610,7 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description Tâche introuvable */
+            /** @description `task_not_found` : Tâche introuvable */
             404: {
                 headers: {
                     [name: string]: unknown;
@@ -7610,7 +7619,7 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description Une tâche du catalogue porte déjà ce nom */
+            /** @description `task_name_taken` : Une tâche du catalogue porte déjà ce nom */
             409: {
                 headers: {
                     [name: string]: unknown;
@@ -7619,13 +7628,13 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description Le champ name ne peut pas être vide */
+            /** @description `validation_error` : Certains champs sont invalides. */
             422: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Error"] | components["schemas"]["HTTPValidationError"];
+                    "application/json": components["schemas"]["Error"];
                 };
             };
         };
@@ -7652,7 +7661,7 @@ export interface operations {
                     "application/json": components["schemas"]["RoomOut"][];
                 };
             };
-            /** @description Authentification requise */
+            /** @description `auth_required` : Authentification requise */
             401: {
                 headers: {
                     [name: string]: unknown;
@@ -7661,7 +7670,7 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description Action non autorisée pour ce rôle ; Second facteur requis */
+            /** @description `mfa_required` : Second facteur requis ; `role_refused` : Action non autorisée pour ce rôle */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -7670,7 +7679,7 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description Crèche introuvable */
+            /** @description `nursery_not_found` : Crèche introuvable */
             404: {
                 headers: {
                     [name: string]: unknown;
@@ -7679,13 +7688,13 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description Validation Error */
+            /** @description `validation_error` : Certains champs sont invalides. */
             422: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
+                    "application/json": components["schemas"]["Error"];
                 };
             };
         };
@@ -7714,7 +7723,7 @@ export interface operations {
                     "application/json": components["schemas"]["RoomOut"];
                 };
             };
-            /** @description Authentification requise */
+            /** @description `auth_required` : Authentification requise */
             401: {
                 headers: {
                     [name: string]: unknown;
@@ -7723,7 +7732,7 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description Action non autorisée pour ce rôle ; Origine de la requête refusée ; Second facteur requis ; Seule la direction peut gérer cette crèche */
+            /** @description `manager_required` : Seule la direction peut gérer cette crèche ; `mfa_required` : Second facteur requis ; `origin_refused` : Origine de la requête refusée ; `role_refused` : Action non autorisée pour ce rôle */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -7732,7 +7741,7 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description Crèche introuvable */
+            /** @description `nursery_not_found` : Crèche introuvable */
             404: {
                 headers: {
                     [name: string]: unknown;
@@ -7741,7 +7750,7 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description Une pièce de cette crèche porte déjà ce nom */
+            /** @description `room_name_taken` : Une pièce de cette crèche porte déjà ce nom */
             409: {
                 headers: {
                     [name: string]: unknown;
@@ -7750,13 +7759,13 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description Validation Error */
+            /** @description `validation_error` : Certains champs sont invalides. */
             422: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
+                    "application/json": components["schemas"]["Error"];
                 };
             };
         };
@@ -7782,7 +7791,7 @@ export interface operations {
                     "application/json": components["schemas"]["RoomDetail"];
                 };
             };
-            /** @description Authentification requise */
+            /** @description `auth_required` : Authentification requise */
             401: {
                 headers: {
                     [name: string]: unknown;
@@ -7791,7 +7800,7 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description Action non autorisée pour ce rôle ; Second facteur requis */
+            /** @description `mfa_required` : Second facteur requis ; `role_refused` : Action non autorisée pour ce rôle */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -7800,7 +7809,7 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description Pièce introuvable ; Crèche introuvable */
+            /** @description `room_not_found` : Pièce introuvable ; `nursery_not_found` : Crèche introuvable */
             404: {
                 headers: {
                     [name: string]: unknown;
@@ -7809,13 +7818,13 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description Validation Error */
+            /** @description `validation_error` : Certains champs sont invalides. */
             422: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
+                    "application/json": components["schemas"]["Error"];
                 };
             };
         };
@@ -7845,7 +7854,7 @@ export interface operations {
                     "application/json": components["schemas"]["RoomOut"];
                 };
             };
-            /** @description Authentification requise */
+            /** @description `auth_required` : Authentification requise */
             401: {
                 headers: {
                     [name: string]: unknown;
@@ -7854,7 +7863,7 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description Action non autorisée pour ce rôle ; Origine de la requête refusée ; Second facteur requis ; Seule la direction peut gérer cette crèche */
+            /** @description `manager_required` : Seule la direction peut gérer cette crèche ; `mfa_required` : Second facteur requis ; `origin_refused` : Origine de la requête refusée ; `role_refused` : Action non autorisée pour ce rôle */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -7863,7 +7872,7 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description Pièce introuvable ; Crèche introuvable */
+            /** @description `room_not_found` : Pièce introuvable ; `nursery_not_found` : Crèche introuvable */
             404: {
                 headers: {
                     [name: string]: unknown;
@@ -7872,7 +7881,7 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description Une pièce de cette crèche porte déjà ce nom */
+            /** @description `room_name_taken` : Une pièce de cette crèche porte déjà ce nom */
             409: {
                 headers: {
                     [name: string]: unknown;
@@ -7881,13 +7890,13 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description Le champ name ne peut pas être vide */
+            /** @description `validation_error` : Certains champs sont invalides. */
             422: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Error"] | components["schemas"]["HTTPValidationError"];
+                    "application/json": components["schemas"]["Error"];
                 };
             };
         };
@@ -7918,7 +7927,7 @@ export interface operations {
                     "application/json": components["schemas"]["RoomTaskOut"];
                 };
             };
-            /** @description Authentification requise */
+            /** @description `auth_required` : Authentification requise */
             401: {
                 headers: {
                     [name: string]: unknown;
@@ -7927,7 +7936,7 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description Action non autorisée pour ce rôle ; Origine de la requête refusée ; Second facteur requis ; Seule la direction peut gérer cette crèche */
+            /** @description `manager_required` : Seule la direction peut gérer cette crèche ; `mfa_required` : Second facteur requis ; `origin_refused` : Origine de la requête refusée ; `role_refused` : Action non autorisée pour ce rôle */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -7936,7 +7945,7 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description Pièce introuvable ; Tâche introuvable ; Crèche introuvable */
+            /** @description `room_not_found` : Pièce introuvable ; `task_not_found` : Tâche introuvable ; `nursery_not_found` : Crèche introuvable */
             404: {
                 headers: {
                     [name: string]: unknown;
@@ -7945,7 +7954,7 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description Cette tâche vient d'être ajoutée à la pièce : recharger */
+            /** @description `room_task_taken` : Cette tâche vient d'être ajoutée à la pièce : recharger */
             409: {
                 headers: {
                     [name: string]: unknown;
@@ -7954,13 +7963,13 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description Tâche désactivée dans le catalogue */
+            /** @description `task_inactive` : Tâche désactivée dans le catalogue ; `validation_error` : Certains champs sont invalides. */
             422: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Error"] | components["schemas"]["HTTPValidationError"];
+                    "application/json": components["schemas"]["Error"];
                 };
             };
         };
@@ -7987,7 +7996,7 @@ export interface operations {
                     "application/json": components["schemas"]["DayPlan"];
                 };
             };
-            /** @description Authentification requise */
+            /** @description `auth_required` : Authentification requise */
             401: {
                 headers: {
                     [name: string]: unknown;
@@ -7996,7 +8005,7 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description Action non autorisée pour ce rôle ; Second facteur requis */
+            /** @description `mfa_required` : Second facteur requis ; `role_refused` : Action non autorisée pour ce rôle */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -8005,7 +8014,7 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description Crèche introuvable */
+            /** @description `nursery_not_found` : Crèche introuvable */
             404: {
                 headers: {
                     [name: string]: unknown;
@@ -8014,13 +8023,13 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description Validation Error */
+            /** @description `validation_error` : Certains champs sont invalides. */
             422: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
+                    "application/json": components["schemas"]["Error"];
                 };
             };
         };
@@ -8052,7 +8061,7 @@ export interface operations {
                     "application/json": components["schemas"]["CheckRecord"][];
                 };
             };
-            /** @description Authentification requise */
+            /** @description `auth_required` : Authentification requise */
             401: {
                 headers: {
                     [name: string]: unknown;
@@ -8061,7 +8070,7 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description Action non autorisée pour ce rôle ; Second facteur requis */
+            /** @description `mfa_required` : Second facteur requis ; `role_refused` : Action non autorisée pour ce rôle */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -8070,7 +8079,7 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description Pièce introuvable ; Crèche introuvable */
+            /** @description `room_not_found` : Pièce introuvable ; `nursery_not_found` : Crèche introuvable */
             404: {
                 headers: {
                     [name: string]: unknown;
@@ -8079,13 +8088,13 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description La date de début suit la date de fin ; Période limitée à 366 jours par requête */
+            /** @description `period_inverted` : La date de début suit la date de fin ; `period_too_long` : Période limitée à 366 jours par requête ; `validation_error` : Certains champs sont invalides. */
             422: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Error"] | components["schemas"]["HTTPValidationError"];
+                    "application/json": components["schemas"]["Error"];
                 };
             };
         };
@@ -8117,7 +8126,7 @@ export interface operations {
                     "text/csv": string;
                 };
             };
-            /** @description Authentification requise */
+            /** @description `auth_required` : Authentification requise */
             401: {
                 headers: {
                     [name: string]: unknown;
@@ -8126,7 +8135,7 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description Action non autorisée pour ce rôle ; Second facteur requis */
+            /** @description `mfa_required` : Second facteur requis ; `role_refused` : Action non autorisée pour ce rôle */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -8135,7 +8144,7 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description Pièce introuvable ; Crèche introuvable */
+            /** @description `room_not_found` : Pièce introuvable ; `nursery_not_found` : Crèche introuvable */
             404: {
                 headers: {
                     [name: string]: unknown;
@@ -8144,13 +8153,13 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description La date de début suit la date de fin ; Période limitée à 366 jours par requête */
+            /** @description `period_inverted` : La date de début suit la date de fin ; `period_too_long` : Période limitée à 366 jours par requête ; `validation_error` : Certains champs sont invalides. */
             422: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Error"] | components["schemas"]["HTTPValidationError"];
+                    "application/json": components["schemas"]["Error"];
                 };
             };
         };
@@ -8173,7 +8182,7 @@ export interface operations {
                     "application/json": components["schemas"]["TabletSheet"];
                 };
             };
-            /** @description Session de tablette absente ou expirée : saisir le PIN ; Tablette non enrôlée, expirée ou révoquée */
+            /** @description `pin_session_required` : Session de tablette absente ou expirée : saisir le PIN ; `tablet_required` : Tablette non enrôlée, expirée ou révoquée */
             401: {
                 headers: {
                     [name: string]: unknown;
@@ -8204,7 +8213,7 @@ export interface operations {
                     "application/json": components["schemas"]["CheckOut"];
                 };
             };
-            /** @description Session de tablette absente ou expirée : saisir le PIN ; Tablette non enrôlée, expirée ou révoquée */
+            /** @description `pin_session_required` : Session de tablette absente ou expirée : saisir le PIN ; `tablet_required` : Tablette non enrôlée, expirée ou révoquée */
             401: {
                 headers: {
                     [name: string]: unknown;
@@ -8213,7 +8222,7 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description Origine de la requête refusée */
+            /** @description `origin_refused` : Origine de la requête refusée */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -8222,7 +8231,7 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description Tâche introuvable dans cette crèche */
+            /** @description `room_task_not_found` : Tâche introuvable dans cette crèche */
             404: {
                 headers: {
                     [name: string]: unknown;
@@ -8231,7 +8240,7 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description Cette tâche n'est pas prévue aujourd'hui ; Tâche déjà cochée aujourd'hui */
+            /** @description `task_not_planned` : Cette tâche n'est pas prévue aujourd'hui ; `task_already_done` : Tâche déjà cochée aujourd'hui */
             409: {
                 headers: {
                     [name: string]: unknown;
@@ -8240,13 +8249,13 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description Validation Error */
+            /** @description `validation_error` : Certains champs sont invalides. */
             422: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
+                    "application/json": components["schemas"]["Error"];
                 };
             };
         };
@@ -8269,7 +8278,7 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description Session de tablette absente ou expirée : saisir le PIN ; Tablette non enrôlée, expirée ou révoquée */
+            /** @description `pin_session_required` : Session de tablette absente ou expirée : saisir le PIN ; `tablet_required` : Tablette non enrôlée, expirée ou révoquée */
             401: {
                 headers: {
                     [name: string]: unknown;
@@ -8278,7 +8287,7 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description Origine de la requête refusée */
+            /** @description `origin_refused` : Origine de la requête refusée */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -8287,7 +8296,7 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description Tâche introuvable dans cette crèche */
+            /** @description `room_task_not_found` : Tâche introuvable dans cette crèche */
             404: {
                 headers: {
                     [name: string]: unknown;
@@ -8296,7 +8305,7 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description Cette tâche n'est pas cochée aujourd'hui */
+            /** @description `task_not_done` : Cette tâche n'est pas cochée aujourd'hui */
             409: {
                 headers: {
                     [name: string]: unknown;
@@ -8305,13 +8314,13 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description Validation Error */
+            /** @description `validation_error` : Certains champs sont invalides. */
             422: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
+                    "application/json": components["schemas"]["Error"];
                 };
             };
         };
@@ -8336,7 +8345,7 @@ export interface operations {
                     "application/json": components["schemas"]["StaffInvitationOut"];
                 };
             };
-            /** @description Authentification requise */
+            /** @description `auth_required` : Authentification requise */
             401: {
                 headers: {
                     [name: string]: unknown;
@@ -8345,7 +8354,7 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description Action non autorisée pour ce rôle ; Origine de la requête refusée ; Second facteur requis */
+            /** @description `mfa_required` : Second facteur requis ; `origin_refused` : Origine de la requête refusée ; `role_refused` : Action non autorisée pour ce rôle */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -8354,7 +8363,7 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description Employé introuvable */
+            /** @description `employee_not_found` : Employé introuvable */
             404: {
                 headers: {
                     [name: string]: unknown;
@@ -8363,7 +8372,7 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description Ce compte a déjà son mot de passe, ou il est désactivé */
+            /** @description `account_already_active` : Ce compte a déjà son mot de passe, ou il est désactivé */
             409: {
                 headers: {
                     [name: string]: unknown;
@@ -8372,13 +8381,13 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description Validation Error */
+            /** @description `validation_error` : Certains champs sont invalides. */
             422: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
+                    "application/json": components["schemas"]["Error"];
                 };
             };
         };
@@ -8407,7 +8416,7 @@ export interface operations {
                     "application/json": components["schemas"]["StaffOut"];
                 };
             };
-            /** @description Authentification requise */
+            /** @description `auth_required` : Authentification requise */
             401: {
                 headers: {
                     [name: string]: unknown;
@@ -8416,7 +8425,7 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description Action non autorisée pour ce rôle ; Origine de la requête refusée ; Second facteur requis */
+            /** @description `mfa_required` : Second facteur requis ; `origin_refused` : Origine de la requête refusée ; `role_refused` : Action non autorisée pour ce rôle */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -8425,7 +8434,7 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description Employé introuvable */
+            /** @description `employee_not_found` : Employé introuvable */
             404: {
                 headers: {
                     [name: string]: unknown;
@@ -8434,13 +8443,13 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description Le champ first_name ne peut pas être vide */
+            /** @description `validation_error` : Certains champs sont invalides. */
             422: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Error"] | components["schemas"]["HTTPValidationError"];
+                    "application/json": components["schemas"]["Error"];
                 };
             };
         };
@@ -8467,7 +8476,7 @@ export interface operations {
                     "application/json": components["schemas"]["StaffInvitationInfo"];
                 };
             };
-            /** @description Origine de la requête refusée */
+            /** @description `origin_refused` : Origine de la requête refusée */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -8476,7 +8485,7 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description Invitation inconnue, expirée ou déjà utilisée */
+            /** @description `invitation_invalid` : Invitation inconnue, expirée ou déjà utilisée */
             404: {
                 headers: {
                     [name: string]: unknown;
@@ -8485,13 +8494,13 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description Validation Error */
+            /** @description `validation_error` : Certains champs sont invalides. */
             422: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
+                    "application/json": components["schemas"]["Error"];
                 };
             };
         };
@@ -8518,7 +8527,7 @@ export interface operations {
                     "application/json": components["schemas"]["app__accounts__schemas__AcceptedOut"];
                 };
             };
-            /** @description Origine de la requête refusée */
+            /** @description `origin_refused` : Origine de la requête refusée */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -8527,7 +8536,7 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description Invitation inconnue, expirée ou déjà utilisée */
+            /** @description `invitation_invalid` : Invitation inconnue, expirée ou déjà utilisée */
             404: {
                 headers: {
                     [name: string]: unknown;
@@ -8536,13 +8545,13 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description Ce mot de passe est trop courant. */
+            /** @description `password_policy` : Ce mot de passe est trop courant. ; `validation_error` : Certains champs sont invalides. */
             422: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Error"] | components["schemas"]["HTTPValidationError"];
+                    "application/json": components["schemas"]["Error"];
                 };
             };
         };
@@ -8569,7 +8578,7 @@ export interface operations {
                     "application/json": components["schemas"]["PasswordChangedOut"];
                 };
             };
-            /** @description Authentification requise */
+            /** @description `auth_required` : Authentification requise */
             401: {
                 headers: {
                     [name: string]: unknown;
@@ -8578,7 +8587,7 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description Mot de passe actuel incorrect ; Origine de la requête refusée ; Second facteur requis */
+            /** @description `wrong_password` : Mot de passe actuel incorrect ; `mfa_required` : Second facteur requis ; `origin_refused` : Origine de la requête refusée */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -8587,18 +8596,20 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description Ce mot de passe est trop courant. */
+            /** @description `password_policy` : Ce mot de passe est trop courant. ; `validation_error` : Certains champs sont invalides. */
             422: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Error"] | components["schemas"]["HTTPValidationError"];
+                    "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description Trop de tentatives, réessayez plus tard */
+            /** @description `too_many_attempts` : Trop de tentatives, réessayez plus tard */
             429: {
                 headers: {
+                    /** @description Secondes à attendre avant de réessayer */
+                    "Retry-After"?: number;
                     [name: string]: unknown;
                 };
                 content: {
