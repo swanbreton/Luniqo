@@ -12,10 +12,26 @@ hôte.
 | tout le reste | le front (`FRONT_ADDR`, `front:8080`) : pages et fichiers du front v2 |
 | `/healthz` | réponse fixe de nginx, pour le healthcheck |
 
-Si un service ne répond pas, la passerelle sert une page « Luniqo est
+Si le front ne répond pas, la passerelle sert une page « Luniqo est
 momentanément indisponible » (code 502) au lieu d'une erreur brute. Mesuré le
 2026-10-29 : front arrêté, les pages affichent cette page et l'API continue de
 répondre.
+
+Si l'API ne répond pas, la passerelle répond sous `/api/` en JSON, au contrat
+des erreurs que le front sait lire (LUN-139) : 503,
+`{"detail": "Le service est momentanément indisponible…", "code": "service_unavailable", "request_id": "…"}`.
+Les 503 de l'API elle-même (base injoignable sur `/api/health`, second facteur
+indisponible) passent tels quels : `proxy_intercept_errors` reste désactivé.
+Vérifié le 2026-11-19 sur une pile isolée : API arrêtée → 503 JSON avec la
+référence envoyée, `/connexion` toujours servie ; base arrêtée → 503 de l'API
+(`{"status": "degraded", …}`) inchangé.
+
+**Référence de la requête.** La passerelle reprend l'en-tête `X-Request-ID` du
+client s'il est sûr (8 à 64 caractères : lettres, chiffres, `._-`), sinon elle
+en crée un (`$request_id`). Elle le transmet à l'API, qui le renvoie dans sa
+réponse et l'écrit dans son journal JSON, et l'écrit dans son journal d'accès
+(`… request_id=<référence> request_time=<durée>`). Retrouver une requête :
+`docker compose logs web api | grep <référence>`.
 
 **Historique.** Au tag `tp-docker-v1`, la passerelle relayait vers le serveur
 Next.js de la v1. Le squelette du front v2 (LUN-107) lui avait ensuite confié
@@ -156,6 +172,7 @@ dans un bloc `location` remplacerait tous ceux du niveau supérieur
 | Aucun en-tête ajouté aux pages du front | Le front pose les siens (CSP, `X-Frame-Options: DENY`…). S'ils étaient aussi posés au niveau `http`, nginx les ajouterait aux réponses relayées : `X-Frame-Options` arriverait deux fois, avec deux valeurs contradictoires. Vérifié par la CI (un seul `X-Frame-Options` sur `/connexion`). |
 | `client_max_body_size 10m` | Borne la taille des envois. |
 | `X-Forwarded-For` remplacé, `X-Real-IP`, `X-Forwarded-Proto` | Les services connaissent l'adresse réelle du client ; un client ne peut pas choisir celle que voit l'API (limitation des tentatives de connexion, LUN-41). |
+| `X-Request-ID` filtré | Une référence envoyée par le client n'est reprise que si elle est sûre (`^[A-Za-z0-9._-]{8,64}$`) : pas d'injection de texte dans les journaux ; sinon nginx en crée une. Pas d'`add_header` sur `/api/` : l'API pose l'en-tête, il n'arrive qu'une fois (vérifié par la CI). |
 
 ## Gestion des signaux d'arrêt
 

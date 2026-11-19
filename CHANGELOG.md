@@ -35,6 +35,7 @@ Chaque ligne cite son ticket Jira `LUN-<n>`.
 
 ### Modifié
 
+- Passerelle : la référence de chaque requête (`X-Request-ID`) est créée ou reprise, transmise à l'API et écrite dans le journal d'accès ; si l'API ne répond pas, `/api/` renvoie une erreur JSON (`service_unavailable`, avec la référence) que le front sait lire, au lieu de la page HTML (LUN-139).
 - API : chaque réponse porte une référence (`X-Request-ID`, reprise de la passerelle si elle est sûre), écrite aussi dans un journal JSON, une ligne par requête, sans IP ni données saisies ; une erreur imprévue répond 500 avec un message générique et cette référence, la pile n'allant qu'au journal (LUN-140).
 - API : toute erreur renvoie `{"detail", "code", "fields"?}` ; le `code` est stable et documenté dans Swagger pour chaque route, les erreurs de saisie (422) sont traduites en français avec un message par champ, les dates incohérentes d'un enfant indiquent chaque champ fautif ; un test vérifie que toute erreur levée est documentée (LUN-137).
 - Front v2 : une saisie refusée par l'API affiche son message sous le champ concerné (connexion, second facteur, PIN, enrôlement d'une tablette, correction et ajout d'une présence), le résumé restant en haut du formulaire ; le front décide sur le code de l'erreur, plus sur son texte (second facteur, PIN bloqué ou non choisi sur la tablette) (LUN-138).
@@ -52,6 +53,7 @@ Chaque ligne cite son ticket Jira `LUN-<n>`.
 
 ### Corrigé
 
+- API : les migrations lancées dans le même processus (tests d'intégration) ne désactivent plus le journal JSON de l'API ; la CI de `develop` était rouge depuis la fusion de LUN-140 (LUN-139).
 - Front v2 : une route qui exige de nouveau le second facteur menait à son écran, qui renvoyait aussitôt à l'accueil, la session en cache se disant encore vérifiée ; la session est désormais relue (LUN-138).
 - Le test qui interdit les dépendances synchrones (régression LUN-41) ne vérifiait aucune route : FastAPI 0.143 ne les liste plus dans `app.routes`. Il parcourt désormais les routes effectives et échoue s'il n'en trouve pas (LUN-118).
 

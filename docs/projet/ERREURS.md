@@ -115,11 +115,9 @@ le statut ; le texte ne sert qu'à l'affichage (section 2).
 
 | | Écart | Repris par |
 |---|---|---|
-| E1 | Pas de code d'erreur : le front compare des textes | Story A : API faite (LUN-137), front à venir (LUN-138) |
-| E2 | Ni gestionnaire des 500, ni journal, ni identifiant de requête | Story B : API faite (LUN-140) ; passerelle à venir (LUN-139) |
 | E1 | Pas de code d'erreur : le front compare des textes | Story A : fait (API LUN-137, front LUN-138) |
-| E2 | Ni gestionnaire des 500, ni journal, ni identifiant de requête | Story B |
-| E3 | La passerelle renvoie du HTML sur `/api/` en cas de panne | Story B |
+| E2 | Ni gestionnaire des 500, ni journal, ni identifiant de requête | Story B : fait (API LUN-140, passerelle LUN-139) |
+| E3 | La passerelle renvoie du HTML sur `/api/` en cas de panne | Story B : fait (LUN-139) |
 | E4 | Deux formes de 422, validation en anglais, champs jamais affichés | Story A : fait (API LUN-137, affichage sous les champs LUN-138) |
 | E5 | Peu d'actions proposées : réessayer, attendre, hors ligne | Story C |
 | E6 | `Retry-After` absent de certaines 429 | Story A : fait (LUN-137) |
@@ -206,7 +204,7 @@ par une dépendance s'appliquent à toutes les routes qui l'utilisent.
 | 404, 405 | Adresse inconnue · Méthode non autorisée pour cette adresse | `not_found`, `method_not_allowed` | Starlette (route ou méthode inconnue) |
 | 429 | Trop de tentatives, réessayez plus tard | `too_many_attempts` | connexion, second facteur, passkeys, comptes, PIN |
 | 500 | Une erreur est survenue de notre côté. Réessayez dans un instant ; si elle revient, donnez la référence à la crèche. (avec `request_id`) | `internal_error` | toute route : exception imprévue (section 3) |
-| 502, 503, 504 | *(page HTML de nginx jusqu'à LUN-134)* | `service_unavailable` | passerelle, sous `/api/` (section 3, LUN-134) |
+| 503 | Le service est momentanément indisponible. Réessayez dans un instant. (avec `request_id`) | `service_unavailable` | passerelle, sous `/api/`, quand l'API ne répond pas (502, 503 ou 504 de nginx) ; section 3 |
 
 **Connexion** (`auth/router.py`)
 
@@ -351,7 +349,9 @@ c'est une sonde, pas une erreur affichée.
 
 **En place côté API depuis LUN-140** (`api/app/requests.py`, `api/app/errors.py`) :
 en-tête `X-Request-ID` sur chaque réponse, journal JSON, 500 `internal_error`.
-La passerelle (LUN-139) et l'affichage dans le front (LUN-141) restent à faire.
+**Passerelle depuis LUN-139** (`docker/web/nginx.conf.template`) : référence
+créée ou reprise, journal d'accès avec `request_id=`, 503 JSON sous `/api/`.
+L'affichage dans le front (LUN-141) reste à faire.
 
 **Un identifiant par requête.** La passerelle nginx crée un `X-Request-ID`
 (variable `$request_id`), ou reprend celui que le front envoie, et le transmet à
