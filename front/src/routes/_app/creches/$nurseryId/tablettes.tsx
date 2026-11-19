@@ -11,6 +11,7 @@ import { useLogout } from '@/features/auth/use-logout'
 import { EnrollForm } from '@/features/tablets/enroll-form'
 import { TabletList } from '@/features/tablets/tablet-list'
 import { formatDate } from '@/lib/dates'
+import { retryFailed } from '@/lib/retry-failed'
 
 /** Tablettes d'une crèche : enrôlement de l'appareil courant, liste, révocation. Direction seulement. */
 export const Route = createFileRoute('/_app/creches/$nurseryId/tablettes')({
@@ -93,6 +94,7 @@ function TabletsPage() {
           tablets={tablets.data}
           pending={tablets.isPending}
           error={tablets.error ?? nursery.error}
+          onRetry={retryFailed(tablets, nursery)}
           onRevoke={(tabletId) => revoke.mutate({ params: { path: { nursery_id: nurseryId, tablet_id: tabletId } } })}
           revoking={revoke.isPending ? revoke.variables.params.path.tablet_id : null}
           revokeError={revoke.isError ? errorMessage(revoke.error) : null}

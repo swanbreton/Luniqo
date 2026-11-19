@@ -4,11 +4,11 @@ import { CircleCheck } from 'lucide-react'
 import { useEffect, useState } from 'react'
 
 import { $api } from '@/api/client'
-import { ApiError, ERROR_CODES, errorCategory, errorMessage } from '@/api/errors'
+import { ApiError, ERROR_CODES, errorCategory } from '@/api/errors'
 import type { Schemas } from '@/api/types'
+import { ActionError } from '@/components/action-error'
 import { FormError } from '@/components/form-error'
 import { Alert, AlertDescription } from '@/components/ui/alert'
-import { Button } from '@/components/ui/button'
 import { ActorPanel } from '@/features/tablet-mode/actor-panel'
 import { ChildrenBoard } from '@/features/tablet-mode/children-board'
 import { PinPad } from '@/features/tablet-mode/pin-pad'
@@ -74,10 +74,7 @@ function TabletPage() {
   if (info.isError) {
     return (
       <Screen>
-        <FormError message={errorMessage(info.error)} />
-        <Button size="lg" className="h-14 justify-self-center" onClick={() => void info.refetch()}>
-          Réessayer
-        </Button>
+        <ActionError error={info.error} onRetry={() => void info.refetch()} large />
       </Screen>
     )
   }
@@ -110,7 +107,7 @@ function TabletPage() {
           onSubmit={(pin) => open.mutate({ body: { user_id: member.id, pin } })}
           onCancel={() => setMember(null)}
           pending={open.isPending}
-          error={open.isError ? errorMessage(open.error) : null}
+          error={open.error}
         />
       )}
     </Screen>
@@ -185,12 +182,12 @@ function ActorWorkspace({ actor, onEnd, ending, onSessionLost }: ActorWorkspaceP
           onSubmit={(guardianId) => submit(child, guardianId)}
           onCancel={() => setChild(null)}
           pending={sending}
-          error={refusal === null ? null : errorMessage(refusal)}
+          error={refusal}
         />
       ) : expected.isPending ? (
         <p>Chargement des enfants…</p>
       ) : expected.isError ? (
-        <FormError message={errorMessage(expected.error)} />
+        <ActionError error={expected.error} onRetry={() => void expected.refetch()} large />
       ) : (
         <ChildrenBoard expected={expected.data} onSelect={select} />
       )}

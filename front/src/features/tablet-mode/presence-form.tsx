@@ -1,7 +1,7 @@
 import { useId, useState } from 'react'
 
 import type { Schemas } from '@/api/types'
-import { FormError } from '@/components/form-error'
+import { ActionError } from '@/components/action-error'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 
@@ -14,7 +14,8 @@ type PresenceFormProps = {
   onSubmit: (guardianId: string | null) => void
   onCancel: () => void
   pending?: boolean
-  error?: string | null
+  /** Erreur du pointage : sur une panne, « Réessayer » renvoie le même choix (jamais rejoué seul). */
+  error?: unknown
 }
 
 const NOT_SPECIFIED = 'non-precise'
@@ -29,12 +30,16 @@ export function PresenceForm({ child, onSubmit, onCancel, pending = false, error
   const [choice, setChoice] = useState<string | null>(departure ? null : NOT_SPECIFIED)
   const name = `${child.first_name} ${child.last_name}`
 
+  function send() {
+    if (choice !== null) onSubmit(choice === NOT_SPECIFIED ? null : choice)
+  }
+
   return (
     <form
       className="mx-auto grid w-full max-w-xl gap-5"
       onSubmit={(event) => {
         event.preventDefault()
-        if (choice !== null) onSubmit(choice === NOT_SPECIFIED ? null : choice)
+        send()
       }}
     >
       <h3 className="text-2xl font-semibold">
@@ -72,7 +77,7 @@ export function PresenceForm({ child, onSubmit, onCancel, pending = false, error
           <p className="text-muted-foreground">Aucun responsable enregistré : prévenir la direction.</p>
         )}
       </fieldset>
-      <FormError message={error} />
+      <ActionError error={error} onRetry={send} large />
       <div className="flex flex-wrap gap-3">
         <Button type="submit" size="lg" className="h-16 flex-1 text-xl" disabled={pending || choice === null}>
           {pending ? 'Envoi…' : departure ? 'Pointer le départ' : "Pointer l'arrivée"}

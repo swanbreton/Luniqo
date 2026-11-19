@@ -30,6 +30,7 @@ function HomePage() {
             nurseries={nurseries.data}
             pending={nurseries.isPending}
             error={nurseries.error}
+            onRetry={() => void nurseries.refetch()}
             summary={(nursery) => <NurserySummary nurseryId={nursery.id} />}
             actions={(nursery) => (
               <div className="flex flex-wrap gap-x-5">

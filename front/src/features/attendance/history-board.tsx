@@ -1,8 +1,7 @@
 import type { ReactNode } from 'react'
 
-import { errorMessage } from '@/api/errors'
 import type { Schemas } from '@/api/types'
-import { FormError } from '@/components/form-error'
+import { ActionError } from '@/components/action-error'
 import { formatLongDay } from '@/lib/dates'
 
 import { Figure } from './day-board'
@@ -15,14 +14,16 @@ type HistoryBoardProps = {
   today: string
   pending: boolean
   error: unknown
+  /** Nouvel essai de la lecture (`refetch`), proposé sur une panne du serveur ou du réseau. */
+  onRetry?: (() => void) | undefined
   /** Action sur chaque présence (« Corriger », pour la direction). */
   action?: (presence: Schemas['AttendanceOut']) => ReactNode
 }
 
 /** Présences d'une période : chiffres, puis un tableau par jour, du plus ancien au plus récent. */
-export function HistoryBoard({ presences, today, pending, error, action }: HistoryBoardProps) {
+export function HistoryBoard({ presences, today, pending, error, onRetry, action }: HistoryBoardProps) {
   if (pending) return <p className="text-muted-foreground">Chargement de l&apos;historique…</p>
-  if (error !== null && error !== undefined) return <FormError message={errorMessage(error)} />
+  if (error !== null && error !== undefined) return <ActionError error={error} onRetry={onRetry} />
   if (presences === undefined || presences.length === 0) {
     return <p className="text-muted-foreground">Aucune arrivée pointée sur cette période.</p>
   }

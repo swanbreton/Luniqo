@@ -72,7 +72,7 @@ function ActivationPage() {
               submitLabel="Activer"
               onSubmit={(body) => confirm.mutate({ body })}
               pending={confirm.isPending}
-              error={confirm.isError ? errorMessage(confirm.error) : null}
+              error={confirm.error}
               fieldErrors={fieldErrorsOf(confirm.error)}
             />
           </>

@@ -3,9 +3,10 @@ import { useForm } from 'react-hook-form'
 import { z } from 'zod'
 
 import { Field } from '@/components/field'
-import { FormError } from '@/components/form-error'
+import { ActionError } from '@/components/action-error'
 import { Button } from '@/components/ui/button'
 import { type FieldMap, type ServerFieldErrors, useServerFieldErrors } from '@/lib/server-field-errors'
+import { useRetryCountdown } from '@/lib/use-retry-countdown'
 
 // Confort de saisie seulement : l'API refuse aussi les PIN trop prévisibles (ADR-002 § 6).
 const schema = z
@@ -27,7 +28,8 @@ const FIELDS: FieldMap<PinValues> = { pin: 'pin', password: 'password' }
 type PinFormProps = {
   onSubmit: (values: PinValues) => void
   pending?: boolean
-  error?: string | null
+  /** Erreur de l'envoi (ApiError, coupure réseau…) : message, et compte à rebours d'une 429. */
+  error?: unknown
   /** Erreurs par champ renvoyées par l'API (422), affichées sous chaque champ. */
   fieldErrors?: ServerFieldErrors | undefined
 }
@@ -40,11 +42,12 @@ export function PinForm({ onSubmit, pending = false, error = null, fieldErrors }
   })
   useServerFieldErrors(form, fieldErrors, FIELDS)
   const { errors } = form.formState
+  const wait = useRetryCountdown(error)
   const digits = { type: 'password', inputMode: 'numeric', maxLength: 4, autoComplete: 'off' } as const
 
   return (
     <form className="grid gap-4" noValidate onSubmit={(event) => void form.handleSubmit(onSubmit)(event)}>
-      <FormError message={error} />
+      <ActionError error={error} waitSeconds={wait} />
       <Field label="Nouveau PIN (4 chiffres)" {...digits} error={errors.pin?.message} {...form.register('pin')} />
       <Field
         label="Nouveau PIN, une seconde fois"
@@ -59,7 +62,7 @@ export function PinForm({ onSubmit, pending = false, error = null, fieldErrors }
         error={errors.password?.message}
         {...form.register('password')}
       />
-      <Button type="submit" size="lg" className="h-11 justify-self-start" disabled={pending}>
+      <Button type="submit" size="lg" className="h-11 justify-self-start" disabled={pending || wait > 0}>
         {pending ? 'Enregistrement…' : 'Enregistrer mon PIN'}
       </Button>
     </form>

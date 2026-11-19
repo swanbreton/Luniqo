@@ -1,8 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { expect, fn } from 'storybook/test'
 
-import { errorMessage } from '@/api/errors'
-
 import { apiErrors, networkFailure, raised, REQUEST_ID } from '../../../test/handlers/errors'
 import { LoginForm } from './login-form'
 
@@ -20,10 +18,17 @@ export const Vide: Story = {}
 
 export const EnCours: Story = { args: { pending: true } }
 
-export const RefusParLApi: Story = { args: { error: 'Identifiants invalides' } }
+export const RefusParLApi: Story = { args: { error: raised(apiErrors.invalidCredentials()) } }
 
+/** Trop d'essais (429) : compte à rebours tiré de `Retry-After`, connexion désactivée pendant l'attente. */
 export const TropDeTentatives: Story = {
-  args: { error: raised(apiErrors.tooManyAttempts()).message },
+  args: { error: raised(apiErrors.tooManyAttempts()) },
+  play: async ({ canvas }) => {
+    await expect(canvas.getByRole('alert')).toHaveTextContent(/^Trop de tentatives, réessayez plus tard$/)
+    // Délai de Retry-After décompté en direct, bouton désactivé jusqu'au bout (ERREURS.md § 4).
+    await expect(canvas.getByRole('timer')).toHaveTextContent(/^Nouvel essai possible dans 1[45] min \d{2} s$/)
+    await expect(canvas.getByRole('button', { name: 'Se connecter' })).toBeDisabled()
+  },
 }
 
 /** Champs vides : messages sous les champs, rien n'est envoyé. */
@@ -50,7 +55,10 @@ export const Envoi: Story = {
 
 /** Saisie refusée par l'API (422) : message sous le champ, résumé en haut du formulaire. */
 export const ErreursParChamp: Story = {
-  args: { error: 'Certains champs sont invalides.', fieldErrors: { email: 'Adresse e-mail invalide' } },
+  args: {
+    error: raised(apiErrors.validation({ email: 'Adresse e-mail invalide' })),
+    fieldErrors: { email: 'Adresse e-mail invalide' },
+  },
   play: async ({ canvas }) => {
     await expect(canvas.getByRole('alert')).toHaveTextContent('Certains champs sont invalides.')
     const field = canvas.getByLabelText('Adresse e-mail')
@@ -62,7 +70,7 @@ export const ErreursParChamp: Story = {
 
 /** Exception imprévue côté serveur (500) : message générique, rien n'est rejoué tout seul. */
 export const ErreurServeur: Story = {
-  args: { error: errorMessage(raised(apiErrors.serverError())) },
+  args: { error: raised(apiErrors.serverError()) },
   play: async ({ canvas }) => {
     await expect(canvas.getByRole('alert')).toHaveTextContent('Une erreur est survenue de notre côté.')
     // Référence à transmettre au support, retrouvée dans les journaux (LUN-141).
@@ -72,7 +80,7 @@ export const ErreurServeur: Story = {
 
 /** Coupure réseau : aucune réponse de l'API (la demande a pu partir ou non). */
 export const HorsLigne: Story = {
-  args: { error: errorMessage(networkFailure()) },
+  args: { error: networkFailure() },
   play: async ({ canvas }) => {
     await expect(canvas.getByRole('alert')).toHaveTextContent('Connexion au serveur impossible. Vérifiez le réseau.')
   },

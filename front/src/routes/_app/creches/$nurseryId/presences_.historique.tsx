@@ -15,6 +15,7 @@ import { HistoryBoard } from '@/features/attendance/history-board'
 import { lastDays, type Period, periodError } from '@/features/attendance/period'
 import { PeriodForm } from '@/features/attendance/period-form'
 import { formatDay, todayInParis } from '@/lib/dates'
+import { retryFailed } from '@/lib/retry-failed'
 
 // Période dans l'adresse : un historique se garde en favori et se partage. Une valeur mal formée est ignorée.
 const day = z
@@ -111,6 +112,7 @@ function HistoryPage() {
             today={today}
             pending={presences.isPending}
             error={presences.error ?? nursery.error}
+            onRetry={retryFailed(presences, nursery)}
             action={
               manager
                 ? (presence) =>
@@ -125,7 +127,12 @@ function HistoryPage() {
               <h2 id="journal-corrections" className="text-lg font-medium">
                 Journal des corrections
               </h2>
-              <CorrectionLog entries={corrections.data} pending={corrections.isPending} error={corrections.error} />
+              <CorrectionLog
+                entries={corrections.data}
+                pending={corrections.isPending}
+                error={corrections.error}
+                onRetry={retryFailed(corrections)}
+              />
             </section>
           )}
         </>

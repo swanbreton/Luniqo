@@ -5,6 +5,7 @@ import { $api } from '@/api/client'
 import { Button } from '@/components/ui/button'
 import { DayBoard } from '@/features/attendance/day-board'
 import { formatTime } from '@/lib/dates'
+import { retryFailed } from '@/lib/retry-failed'
 
 /** Présences du jour d'une crèche, pour la direction et les employés qui y ont accès. */
 export const Route = createFileRoute('/_app/creches/$nurseryId/presences')({
@@ -58,7 +59,12 @@ function PresencesPage() {
           Historique et export
         </Link>
       </div>
-      <DayBoard presences={presences.data} pending={presences.isPending} error={presences.error ?? nursery.error} />
+      <DayBoard
+        presences={presences.data}
+        pending={presences.isPending}
+        error={presences.error ?? nursery.error}
+        onRetry={retryFailed(presences, nursery)}
+      />
     </div>
   )
 }

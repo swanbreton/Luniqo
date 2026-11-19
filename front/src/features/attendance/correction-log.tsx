@@ -1,6 +1,5 @@
-import { errorMessage } from '@/api/errors'
 import type { Schemas } from '@/api/types'
-import { FormError } from '@/components/form-error'
+import { ActionError } from '@/components/action-error'
 import { formatDateTime, formatDay } from '@/lib/dates'
 
 import { describeChanges, KIND_LABELS } from './correction'
@@ -9,15 +8,17 @@ type CorrectionLogProps = {
   entries: Schemas['CorrectionOut'][] | undefined
   pending: boolean
   error: unknown
+  /** Nouvel essai de la lecture (`refetch`), proposé sur une panne du serveur ou du réseau. */
+  onRetry?: (() => void) | undefined
 }
 
 /**
  * Journal des corrections de la période (jour de la présence corrigée) : qui,
  * quand, pourquoi, et ce qui a changé. Il ne s'efface pas, même quand la présence est retirée.
  */
-export function CorrectionLog({ entries, pending, error }: CorrectionLogProps) {
+export function CorrectionLog({ entries, pending, error, onRetry }: CorrectionLogProps) {
   if (pending) return <p className="text-muted-foreground">Chargement du journal…</p>
-  if (error !== null && error !== undefined) return <FormError message={errorMessage(error)} />
+  if (error !== null && error !== undefined) return <ActionError error={error} onRetry={onRetry} />
   if (entries === undefined || entries.length === 0) {
     return <p className="text-muted-foreground">Aucune correction sur cette période.</p>
   }
