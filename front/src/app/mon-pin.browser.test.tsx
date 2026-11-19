@@ -44,7 +44,10 @@ describe('PIN de tablette', () => {
     worker.use(
       http.get('/api/v2/auth/me', () => HttpResponse.json(employee)),
       http.put('/api/v2/auth/me/pin', () =>
-        HttpResponse.json({ detail: 'Ce PIN est trop prévisible (suite de chiffres).' }, { status: 422 }),
+        HttpResponse.json(
+          { detail: 'Ce PIN est trop prévisible (suite de chiffres).', code: 'pin_policy' },
+          { status: 422 },
+        ),
       ),
     )
     const { screen } = await start('/mon-pin')
@@ -53,6 +56,34 @@ describe('PIN de tablette', () => {
     await screen.getByLabelText('Mot de passe actuel').fill('mot de passe')
     await screen.getByRole('button', { name: 'Enregistrer mon PIN' }).click()
     await expect.element(screen.getByText('Ce PIN est trop prévisible (suite de chiffres).')).toBeVisible()
+  })
+
+  test("erreur par champ de l'API : sous le champ concerné, résumé en haut du formulaire", async ({ worker }) => {
+    worker.use(
+      http.get('/api/v2/auth/me', () => HttpResponse.json(employee)),
+      http.put('/api/v2/auth/me/pin', () =>
+        HttpResponse.json(
+          {
+            detail: 'Certains champs sont invalides.',
+            code: 'validation_error',
+            fields: { password: 'Au plus 128 caractères', nursery_id: 'Identifiant invalide' },
+          },
+          { status: 422 },
+        ),
+      ),
+    )
+    const { screen } = await start('/mon-pin')
+    await screen.getByLabelText('Nouveau PIN (4 chiffres)').fill('4826')
+    await screen.getByLabelText('Nouveau PIN, une seconde fois').fill('4826')
+    await screen.getByLabelText('Mot de passe actuel').fill('mot de passe')
+    await screen.getByRole('button', { name: 'Enregistrer mon PIN' }).click()
+
+    await expect.element(screen.getByRole('alert')).toHaveTextContent('Certains champs sont invalides.')
+    const password = screen.getByLabelText('Mot de passe actuel')
+    await expect.element(password).toHaveAttribute('aria-invalid', 'true')
+    await expect.element(password).toHaveAccessibleDescription('Au plus 128 caractères')
+    // Un champ que le formulaire n'affiche pas reste dans le résumé, sans erreur ailleurs.
+    await expect.element(screen.getByLabelText('Nouveau PIN (4 chiffres)')).toHaveAttribute('aria-invalid', 'false')
   })
 
   test("direction : pas de lien, et l'adresse directe renvoie à l'accueil", async ({ worker }) => {

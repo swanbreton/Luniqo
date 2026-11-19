@@ -16,6 +16,35 @@ function start() {
   return render(<App instance={createApp(createMemoryHistory({ initialEntries: ['/accueil'] }))} />)
 }
 
+describe('second facteur exigé par l’API', () => {
+  test('le code mfa_required mène à l’écran du second facteur, quel que soit le message', async ({ worker }) => {
+    // La session était vérifiée au chargement ; entre-temps, l'API exige de nouveau le second facteur.
+    let sessions = 0
+    worker.use(
+      http.get('/api/v2/auth/me', () =>
+        HttpResponse.json({ ...owner, mfa: sessions++ === 0 ? 'verified' : 'required' }),
+      ),
+      http.get('/api/v2/nurseries', () =>
+        HttpResponse.json({ detail: 'Message reformulé par l’API', code: 'mfa_required' }, { status: 403 }),
+      ),
+    )
+    const screen = await start()
+    await expect.element(screen.getByRole('heading', { name: 'Second facteur' })).toBeVisible()
+  })
+
+  test('un autre refus au même texte ne redirige pas : seul le code compte', async ({ worker }) => {
+    worker.use(
+      http.get('/api/v2/auth/me', () => HttpResponse.json({ ...owner, mfa: 'verified' })),
+      http.get('/api/v2/nurseries', () =>
+        HttpResponse.json({ detail: 'Second facteur requis', code: 'role_refused' }, { status: 403 }),
+      ),
+    )
+    const screen = await start()
+    await expect.element(screen.getByText('Second facteur requis')).toBeVisible()
+    await expect.element(screen.getByRole('heading', { name: 'Second facteur' })).not.toBeInTheDocument()
+  })
+})
+
 describe('résumés sur l’accueil', () => {
   test('la direction voit les chiffres de chaque crèche, lisibles en 800 × 600', async ({ worker }) => {
     worker.use(

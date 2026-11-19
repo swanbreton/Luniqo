@@ -24,6 +24,8 @@ export function createApp(history?: RouterHistory) {
       queryClient.removeQueries({ queryKey: ['session'] })
       void router.navigate({ to: '/connexion', search: { redirect: href } })
     } else if (error.code === ERROR_CODES.mfaRequired) {
+      // Session relue : en cache (30 s), elle se dirait encore vérifiée et l'écran renverrait à l'accueil.
+      queryClient.removeQueries({ queryKey: ['session'] })
       void router.navigate({ to: '/connexion/second-facteur' })
     }
   }
