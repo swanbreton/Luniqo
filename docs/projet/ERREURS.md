@@ -457,9 +457,9 @@ autres. Chaque story renvoie aux sections de ce document.
 
 | | Story | Sous-tâches | Écarts | Sections |
 |---|---|---|---|---|
-| A | Erreurs de l'API au contrat unique : message, code stable, champs en erreur | [Back] champ `code` tiré des raisons, 422 unifiées et traduites, `Retry-After` sur toute 429, test « erreur levée = erreur documentée » · [Front] `ApiError.code`, redirections sur le code, 422 affichées sous les champs | E1, E4, E6 | 2, 6 |
-| B | Retrouver une erreur serveur à partir de sa référence | [Infra] `X-Request-ID` dans nginx, JSON pour 502, 503 et 504 sous `/api/` · [Back] gestionnaire des 500, identifiant dans les réponses, journal JSON · [Front] référence affichée sur une 5xx | E2, E3, E7 | 3 |
-| C | Savoir quoi faire quand une action échoue | [Front] classement par catégorie, bouton « Réessayer », compte à rebours sur 429, bannière hors ligne | E5, E7 | 4 |
-| D | Couvrir chaque état d'erreur dans Storybook et les tests | [Front] réponses MSW partagées, story par état, tests 5xx, réseau et 422 avec champs | E8 | 5 |
+| A | **LUN-133** Erreurs de l'API au contrat unique : message, code stable, champs en erreur | LUN-137 [Back] champ `code` tiré des raisons, 422 unifiées et traduites, `Retry-After` sur toute 429, test « erreur levée = erreur documentée » · LUN-138 [Front] `ApiError.code`, redirections sur le code, 422 affichées sous les champs | E1, E4, E6 | 2, 6 |
+| B | **LUN-134** Retrouver une erreur serveur à partir de sa référence | LUN-139 [Infra] `X-Request-ID` dans nginx, JSON pour 502, 503 et 504 sous `/api/` · LUN-140 [Back] gestionnaire des 500, identifiant dans les réponses, journal JSON · LUN-141 [Front] référence affichée sur une 5xx | E2, E3, E7 | 3 |
+| C | **LUN-135** Savoir quoi faire quand une action échoue | LUN-142 [Front] classement par catégorie, bouton « Réessayer », compte à rebours sur 429, bannière hors ligne | E5, E7 | 4 |
+| D | **LUN-136** Couvrir chaque état d'erreur dans Storybook et les tests | LUN-143 [Front] réponses MSW partagées, story par état, tests 5xx, réseau et 422 avec champs | E8 | 5 |
 
-Clés Jira : **à créer** (création des tickets en attente).
+Tickets créés dans Jira le 2026-11-19, estimés à 5, 5, 3 et 3 points (dans leur description, le champ Story Points n'existant pas dans le projet). Chaque story porte son user story, ses critères d'acceptation en Gherkin, sa définition de « fini » et son hors périmètre.
