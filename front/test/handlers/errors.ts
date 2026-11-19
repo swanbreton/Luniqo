@@ -9,7 +9,7 @@ import type { Schemas } from '@/api/types'
  * Un cas d'erreur est écrit une fois, à la forme exacte de l'API, et sert à deux endroits :
  * - tests d'intégration : `reply(apiErrors.serverError())` est la réponse MSW ;
  * - stories : `raised(apiErrors.serverError())` est l'erreur que le client lèverait
- *   (`toApiError`, comme `src/api/client.ts`), message d'attente d'une 429 compris.
+ *   (`toApiError`, comme `src/api/client.ts`), avec le délai d'une 429 (`retryAfter`).
  *
  * Messages et codes recopiés de l'API (`api/app/`) : si l'API en reformule un, le changer ici.
  */

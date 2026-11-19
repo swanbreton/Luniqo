@@ -1,6 +1,7 @@
 import { createMemoryHistory } from '@tanstack/react-router'
 import { http, HttpResponse } from 'msw'
 import { describe, expect } from 'vitest'
+import { page } from 'vitest/browser'
 import { render } from 'vitest-browser-react'
 
 import { errorMessage } from '@/api/errors'
@@ -193,6 +194,11 @@ describe('mode tablette', () => {
 
     test.for([
       {
+        cas: 'API arrêtée, réponse de la passerelle (503)',
+        failure: () => reply(apiErrors.unavailable()),
+        message: errorMessage(raised(apiErrors.unavailable())),
+      },
+      {
         cas: 'erreur serveur',
         failure: () => reply(apiErrors.serverError()),
         // Message de l'API suivi de la référence à transmettre au support (LUN-141).
@@ -204,7 +210,7 @@ describe('mode tablette', () => {
         message: 'Connexion au serveur impossible. Vérifiez le réseau.',
       },
     ])(
-      '$cas pendant un pointage : message affiché, pointage jamais rejoué tout seul',
+      '$cas pendant un pointage, en 800 × 600 : jamais rejoué tout seul, « Réessayer » à portée de main',
       async ({ failure, message }, { worker }) => {
         let attempts = 0
         worker.use(
@@ -216,6 +222,8 @@ describe('mode tablette', () => {
             return failure()
           }),
         )
+        // Tablette de la crèche : petit écran, mains occupées.
+        await page.viewport(800, 600)
         const { screen } = await start()
         await screen.getByRole('button', { name: /Léo Garnier/ }).click()
         await screen.getByRole('button', { name: "Pointer l'arrivée" }).click()
@@ -224,8 +232,14 @@ describe('mode tablette', () => {
         // Une écriture n'est jamais rejouée sans l'employée : elle pourrait être enregistrée deux fois.
         await new Promise((resolve) => setTimeout(resolve, 1_500))
         expect(attempts).toBe(1)
-        // Le formulaire reste ouvert : l'employée peut réessayer d'elle-même.
+        // Le formulaire reste ouvert et propose « Réessayer », visible sans défiler.
         await expect.element(screen.getByRole('button', { name: "Pointer l'arrivée" })).toBeEnabled()
+        const retry = screen.getByRole('button', { name: 'Réessayer' })
+        await expect.element(retry).toBeInViewport()
+        expect(document.documentElement.scrollWidth).toBeLessThanOrEqual(document.documentElement.clientWidth)
+        // À la demande de l'employée : le même choix est renvoyé, une fois.
+        await retry.click()
+        await expect.poll(() => attempts).toBe(2)
       },
     )
 
