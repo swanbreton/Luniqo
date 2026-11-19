@@ -43,6 +43,37 @@ describe('présences du jour', () => {
     await expect.element(screen.getByText('Crèche introuvable')).toBeVisible()
   })
 
+  test.for([
+    { cas: 'exception imprévue de l’API (500)', failure: apiErrors.serverError('reference-500-presences') },
+    { cas: 'API arrêtée, réponse de la passerelle (503)', failure: apiErrors.unavailable('reference-503-passerelle') },
+  ])('$cas : message et référence à transmettre au support', async ({ failure }, { worker }) => {
+    worker.use(
+      http.get('/api/v2/auth/me', () => HttpResponse.json(employee)),
+      http.get(`/api/v2/nurseries/${nursery.id}`, () => HttpResponse.json(nursery)),
+      http.get(`/api/v2/nurseries/${nursery.id}/attendance`, () => reply(failure)),
+    )
+    const { screen } = await start(`/creches/${nursery.id}/presences`)
+    // Lecture rejouée deux fois sur une 5xx (attente croissante) avant d'afficher l'erreur.
+    // getByText sur le texte complet : toHaveTextContent échoue sur un texte identique (front/README.md).
+    const shown = `${failure.body.detail} Référence : ${failure.body.request_id ?? ''}`
+    await expect.element(screen.getByText(shown), { timeout: 10_000 }).toBeVisible()
+  })
+
+  test('refus (4xx) : pas de référence affichée, même si l’API en envoie une', async ({ worker }) => {
+    worker.use(
+      http.get('/api/v2/auth/me', () => HttpResponse.json(employee)),
+      http.get(`/api/v2/nurseries/${nursery.id}`, () =>
+        HttpResponse.json(apiErrors.nurseryNotFound().body, { status: 404, headers: { 'X-Request-ID': 'ref-404' } }),
+      ),
+      http.get(`/api/v2/nurseries/${nursery.id}/attendance`, () =>
+        HttpResponse.json(apiErrors.nurseryNotFound().body, { status: 404, headers: { 'X-Request-ID': 'ref-404' } }),
+      ),
+    )
+    const { screen } = await start(`/creches/${nursery.id}/presences`)
+    // Texte complet du message : aucune référence ajoutée à un refus.
+    await expect.element(screen.getByText('Crèche introuvable', { exact: true })).toBeVisible()
+  })
+
   test("famille : l'adresse directe renvoie à l'accueil", async ({ worker }) => {
     worker.use(http.get('/api/v2/auth/me', () => HttpResponse.json({ ...employee, role: 'guardian' })))
     const { app, screen } = await start(`/creches/${nursery.id}/presences`)

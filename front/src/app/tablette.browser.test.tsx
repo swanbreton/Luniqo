@@ -3,10 +3,11 @@ import { http, HttpResponse } from 'msw'
 import { describe, expect } from 'vitest'
 import { render } from 'vitest-browser-react'
 
+import { errorMessage } from '@/api/errors'
 import type { Schemas } from '@/api/types'
 
 import { employee, tabletActor, tabletChildren, tabletInfo } from '../../test/fixtures'
-import { apiErrors, networkError, reply } from '../../test/handlers/errors'
+import { apiErrors, networkError, raised, reply } from '../../test/handlers/errors'
 import { test } from '../../test/msw'
 import { App, createApp } from './app'
 
@@ -194,7 +195,8 @@ describe('mode tablette', () => {
       {
         cas: 'erreur serveur',
         failure: () => reply(apiErrors.serverError()),
-        message: apiErrors.serverError().body.detail,
+        // Message de l'API suivi de la référence à transmettre au support (LUN-141).
+        message: errorMessage(raised(apiErrors.serverError())),
       },
       {
         cas: 'coupure réseau',
@@ -218,7 +220,7 @@ describe('mode tablette', () => {
         await screen.getByRole('button', { name: /Léo Garnier/ }).click()
         await screen.getByRole('button', { name: "Pointer l'arrivée" }).click()
 
-        await expect.element(screen.getByRole('alert')).toHaveTextContent(message)
+        await expect.element(screen.getByText(message)).toBeVisible()
         // Une écriture n'est jamais rejouée sans l'employée : elle pourrait être enregistrée deux fois.
         await new Promise((resolve) => setTimeout(resolve, 1_500))
         expect(attempts).toBe(1)
