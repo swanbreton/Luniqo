@@ -189,6 +189,19 @@ jobs:
           [ "$(curl -sI http://localhost:8080/connexion | grep -ci '^x-frame-options')" = 1 ]
           # L'API a ses propres en-têtes, sans la CSP du front (Swagger UI).
           ! curl -sI http://localhost:8080/api/health | grep -qi '^content-security-policy'
+          # Référence de la requête (LUN-139, ERREURS.md § 3) : une seule fois dans la
+          # réponse ; celle du client reprise si elle est sûre, remplacée sinon ;
+          # écrite dans le journal de la passerelle et dans celui de l'API.
+          request_id() { curl -s -o /dev/null -D - "$@" | tr -d '\r' | sed -n 's/^[Xx]-[Rr]equest-[Ii][Dd]: //p'; }
+          [ "$(request_id http://localhost:8080/api/health | wc -l)" = 1 ]
+          sent=$(request_id -H 'X-Request-ID: essai-ci-12345678' http://localhost:8080/api/health)
+          echo "X-Request-ID renvoyé : $sent"
+          [ "$sent" = essai-ci-12345678 ]
+          replaced=$(request_id -H 'X-Request-ID: x' http://localhost:8080/api/health)
+          echo "X-Request-ID douteux remplacé par : $replaced"
+          [ "${#replaced}" = 32 ]
+          docker compose logs web | grep -q 'request_id=essai-ci-12345678'
+          docker compose logs api | grep -q '"request_id": "essai-ci-12345678"'
 
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
@@ -208,6 +221,20 @@ jobs:
           pnpm install --frozen-lockfile
           pnpm exec playwright install --with-deps chromium
           pnpm test:e2e
+
+      - name: Panne de l'API (JSON sous /api/, front toujours servi)
+        run: |
+          docker compose stop api
+          code=$(curl -s -o panne.json -D panne.headers -w '%{http_code}' \
+                 -H 'X-Request-ID: panne-ci-12345678' http://localhost:8080/api/v2/nurseries)
+          cat panne.headers panne.json
+          [ "$code" = 503 ]
+          grep -qi '^content-type: application/json' panne.headers
+          grep -qi '^x-request-id: panne-ci-12345678' panne.headers
+          [ "$(jq -r .code panne.json)" = service_unavailable ]
+          [ "$(jq -r .request_id panne.json)" = panne-ci-12345678 ]
+          # Les pages du front ne passent pas par l'API : toujours servies.
+          [ "$(curl -s -o /dev/null -w '%{http_code}' http://localhost:8080/connexion)" = 200 ]
 
       - name: Rapport Playwright en cas d'échec
         if: failure()
