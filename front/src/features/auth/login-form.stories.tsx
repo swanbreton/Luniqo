@@ -44,3 +44,15 @@ export const Envoi: Story = {
     )
   },
 }
+
+/** Saisie refusée par l'API (422) : message sous le champ, résumé en haut du formulaire. */
+export const ErreursParChamp: Story = {
+  args: { error: 'Certains champs sont invalides.', fieldErrors: { email: 'Adresse e-mail invalide' } },
+  play: async ({ canvas }) => {
+    await expect(canvas.getByRole('alert')).toHaveTextContent('Certains champs sont invalides.')
+    const field = canvas.getByLabelText('Adresse e-mail')
+    await expect(await canvas.findByText('Adresse e-mail invalide')).toBeVisible()
+    await expect(field).toHaveAttribute('aria-invalid', 'true')
+    await expect(field).toHaveAccessibleDescription('Adresse e-mail invalide')
+  },
+}
