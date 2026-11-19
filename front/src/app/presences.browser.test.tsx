@@ -1,10 +1,10 @@
 import { createMemoryHistory } from '@tanstack/react-router'
 import { http, HttpResponse } from 'msw'
-import { describe, expect } from 'vitest'
+import { describe, expect, vi } from 'vitest'
 import { render } from 'vitest-browser-react'
 
 import { dayAttendance, employee, nursery, nurserySummary } from '../../test/fixtures'
-import { apiErrors, reply } from '../../test/handlers/errors'
+import { apiErrors, networkError, reply } from '../../test/handlers/errors'
 import { test } from '../../test/msw'
 import { App, createApp } from './app'
 
@@ -46,17 +46,73 @@ describe('présences du jour', () => {
   test.for([
     { cas: 'exception imprévue de l’API (500)', failure: apiErrors.serverError('reference-500-presences') },
     { cas: 'API arrêtée, réponse de la passerelle (503)', failure: apiErrors.unavailable('reference-503-passerelle') },
-  ])('$cas : message et référence à transmettre au support', async ({ failure }, { worker }) => {
+  ])('$cas : 2 nouveaux essais, puis message, référence et « Réessayer »', async ({ failure }, { worker }) => {
+    let attempts = 0
+    let down = true
     worker.use(
       http.get('/api/v2/auth/me', () => HttpResponse.json(employee)),
       http.get(`/api/v2/nurseries/${nursery.id}`, () => HttpResponse.json(nursery)),
-      http.get(`/api/v2/nurseries/${nursery.id}/attendance`, () => reply(failure)),
+      http.get(`/api/v2/nurseries/${nursery.id}/attendance`, () => {
+        attempts += 1
+        return down ? reply(failure) : HttpResponse.json(dayAttendance)
+      }),
     )
     const { screen } = await start(`/creches/${nursery.id}/presences`)
-    // Lecture rejouée deux fois sur une 5xx (attente croissante) avant d'afficher l'erreur.
+    // Lecture rejouée deux fois sur une 5xx (après 1 s puis 2 s) avant d'afficher l'erreur.
     // getByText sur le texte complet : toHaveTextContent échoue sur un texte identique (front/README.md).
     const shown = `${failure.body.detail} Référence : ${failure.body.request_id ?? ''}`
     await expect.element(screen.getByText(shown), { timeout: 10_000 }).toBeVisible()
+    expect(attempts).toBe(3)
+
+    // L'API revient : « Réessayer » recharge la liste.
+    down = false
+    await screen.getByRole('button', { name: 'Réessayer' }).click()
+    await expect.element(screen.getByRole('row', { name: /Emma Lambert/ })).toBeVisible()
+    expect(attempts).toBe(4)
+  })
+
+  test('coupure réseau : bannière hors ligne, retirée dès que le serveur répond', async ({ worker }) => {
+    let reachable = false
+    worker.use(
+      http.get('/api/v2/auth/me', () => HttpResponse.json(employee)),
+      http.get(`/api/v2/nurseries/${nursery.id}`, () => HttpResponse.json(nursery)),
+      http.get(`/api/v2/nurseries/${nursery.id}/attendance`, () =>
+        reachable ? HttpResponse.json(dayAttendance) : networkError(),
+      ),
+    )
+    const { screen } = await start(`/creches/${nursery.id}/presences`)
+    const banner = screen.getByText('Hors ligne : connexion au serveur impossible. Vérifiez le réseau.')
+    await expect.element(banner, { timeout: 10_000 }).toBeVisible()
+    await expect
+      .element(screen.getByText('Connexion au serveur impossible. Vérifiez le réseau.', { exact: true }))
+      .toBeVisible()
+
+    reachable = true
+    await screen.getByRole('button', { name: 'Réessayer' }).click()
+    await expect.element(screen.getByRole('row', { name: /Emma Lambert/ })).toBeVisible()
+    await expect.element(banner).not.toBeInTheDocument()
+  })
+
+  test('le navigateur perd puis retrouve le réseau : bannière affichée puis retirée', async ({ worker }) => {
+    worker.use(
+      http.get('/api/v2/auth/me', () => HttpResponse.json(employee)),
+      http.get(`/api/v2/nurseries/${nursery.id}`, () => HttpResponse.json(nursery)),
+      http.get(`/api/v2/nurseries/${nursery.id}/attendance`, () => HttpResponse.json(dayAttendance)),
+    )
+    const { screen } = await start(`/creches/${nursery.id}/presences`)
+    await expect.element(screen.getByRole('row', { name: /Emma Lambert/ })).toBeVisible()
+    const banner = screen.getByText('Hors ligne : connexion au serveur impossible. Vérifiez le réseau.')
+
+    const onLine = vi.spyOn(navigator, 'onLine', 'get').mockReturnValue(false)
+    try {
+      window.dispatchEvent(new Event('offline'))
+      await expect.element(banner).toBeVisible()
+      onLine.mockReturnValue(true)
+      window.dispatchEvent(new Event('online'))
+      await expect.element(banner).not.toBeInTheDocument()
+    } finally {
+      onLine.mockRestore()
+    }
   })
 
   test('refus (4xx) : pas de référence affichée, même si l’API en envoie une', async ({ worker }) => {

@@ -1,7 +1,7 @@
 import { useState } from 'react'
 
-import { errorMessage } from '@/api/errors'
 import type { Schemas } from '@/api/types'
+import { ActionError } from '@/components/action-error'
 import { FormError } from '@/components/form-error'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -14,6 +14,8 @@ type TabletListProps = {
   tablets: Schemas['TabletOut'][] | undefined
   pending: boolean
   error: unknown
+  /** Nouvel essai de la lecture (`refetch`), proposé sur une panne du serveur ou du réseau. */
+  onRetry?: (() => void) | undefined
   onRevoke: (tabletId: string) => void
   /** Tablette dont la révocation est en cours d'envoi. */
   revoking?: string | null
@@ -32,6 +34,7 @@ export function TabletList({
   tablets,
   pending,
   error,
+  onRetry,
   onRevoke,
   revoking = null,
   revokeError = null,
@@ -41,7 +44,7 @@ export function TabletList({
   const [confirming, setConfirming] = useState<string | null>(null)
 
   if (pending) return <p className="text-muted-foreground">Chargement des tablettes…</p>
-  if (error !== null && error !== undefined) return <FormError message={errorMessage(error)} />
+  if (error !== null && error !== undefined) return <ActionError error={error} onRetry={onRetry} />
   if (tablets === undefined || tablets.length === 0) {
     return <p className="text-muted-foreground">Aucune tablette enrôlée pour cette crèche.</p>
   }

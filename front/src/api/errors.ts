@@ -11,7 +11,7 @@ export class ApiError extends Error {
   readonly status: number
   /** Erreurs par champ d'une saisie refusée (422), clé = nom du champ côté API. */
   readonly fields: Record<string, string>
-  /** Secondes à attendre (en-tête Retry-After d'un 429). */
+  /** Secondes à attendre (en-tête Retry-After d'un 429), décomptées à l'écran (`useRetryCountdown`). */
   readonly retryAfter: number | null
   /** Code stable de l'API (`mfa_required`…) ; null sans corps lisible (panne, réponse inattendue). */
   readonly code: string | null
@@ -53,7 +53,7 @@ export function toApiError(
   if (typeof detail === 'string') {
     return new ApiError(
       status,
-      withDelay(detail, retryAfter),
+      detail,
       parseFields(fields),
       retryAfter,
       typeof code === 'string' ? code : null,
@@ -84,10 +84,44 @@ function parseRetryAfter(header: string | null): number | null {
   return Number(header)
 }
 
-function withDelay(message: string, retryAfter: number | null): string {
-  if (retryAfter === null) return message
-  const minutes = Math.ceil(retryAfter / 60)
-  return `${message} (dans ${minutes} minute${minutes > 1 ? 's' : ''})`
+/**
+ * Catégorie d'une erreur, qui décide de l'action proposée (docs/projet/ERREURS.md § 4) :
+ * corriger la saisie, attendre, réessayer… Une seule fonction classe, les écrans s'y fient.
+ */
+export type ErrorCategory =
+  | 'validation'
+  | 'conflict'
+  | 'authentication'
+  | 'forbidden'
+  | 'not_found'
+  | 'locked'
+  | 'too_many_attempts'
+  | 'network'
+  | 'server'
+  | 'unexpected'
+
+const BY_STATUS: Readonly<Record<number, ErrorCategory>> = {
+  400: 'validation',
+  401: 'authentication',
+  403: 'forbidden',
+  404: 'not_found',
+  409: 'conflict',
+  422: 'validation',
+  423: 'locked',
+  429: 'too_many_attempts',
+}
+
+export function errorCategory(error: unknown): ErrorCategory {
+  if (error instanceof ApiError) return error.status >= 500 ? 'server' : (BY_STATUS[error.status] ?? 'unexpected')
+  // fetch lève une TypeError quand aucune réponse n'arrive (réseau coupé, serveur injoignable).
+  if (error instanceof TypeError) return 'network'
+  return 'unexpected'
+}
+
+/** Une nouvelle tentative peut réussir : panne du serveur ou du réseau. Une 4xx ne se corrige pas en réessayant. */
+export function isRetryable(error: unknown): boolean {
+  const category = errorCategory(error)
+  return category === 'server' || category === 'network'
 }
 
 /**
@@ -116,6 +150,6 @@ export function errorMessage(error: unknown): string {
       ? `${error.message} Référence : ${error.requestId}`
       : error.message
   }
-  if (error instanceof TypeError) return 'Connexion au serveur impossible. Vérifiez le réseau.'
+  if (errorCategory(error) === 'network') return 'Connexion au serveur impossible. Vérifiez le réseau.'
   return UNEXPECTED
 }

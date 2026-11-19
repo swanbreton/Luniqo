@@ -119,7 +119,7 @@ le statut ; le texte ne sert qu'à l'affichage (section 2).
 | E2 | Ni gestionnaire des 500, ni journal, ni identifiant de requête | Story B : fait (API LUN-140, passerelle LUN-139) |
 | E3 | La passerelle renvoie du HTML sur `/api/` en cas de panne | Story B : fait (LUN-139) |
 | E4 | Deux formes de 422, validation en anglais, champs jamais affichés | Story A : fait (API LUN-137, affichage sous les champs LUN-138) |
-| E5 | Peu d'actions proposées : réessayer, attendre, hors ligne | Story C |
+| E5 | Peu d'actions proposées : réessayer, attendre, hors ligne | Story C : fait (LUN-142) |
 | E6 | `Retry-After` absent de certaines 429 | Story A : fait (LUN-137) |
 | E7 | Pas de référence à donner au support pour une erreur serveur | Story B : fait (API LUN-140, passerelle LUN-139, affichage LUN-141) |
 | E8 | 5xx, réseau et 422 avec champs non testés ; réponses MSW non partagées | Story D |
@@ -392,6 +392,30 @@ Une seule fonction classe chaque `ApiError` dans une catégorie. Le traitement
 **global** (`app/app.tsx`) ne prend que ce qui vaut pour toute l'application ;
 le reste est affiché par l'écran, dans `FormError`.
 
+**En place depuis LUN-142** (`front/`) :
+
+- **Classement** : `errorCategory()` et `isRetryable()` dans `src/api/errors.ts`
+  (`validation`, `conflict`, `authentication`, `forbidden`, `not_found`,
+  `locked`, `too_many_attempts`, `network`, `server`, `unexpected`).
+- **Affichage** : `ActionError` (`src/components/action-error.tsx`) montre le
+  message (référence comprise), « Réessayer » sur une panne du serveur ou du
+  réseau seulement, et le compte à rebours d'une 429 hors de l'alerte
+  (`role="timer"`, non relu à chaque seconde). `FormError` reste pour les
+  messages propres à un écran.
+- **429** : `useRetryCountdown()` (`src/lib/use-retry-countdown.ts`) décompte
+  `Retry-After` ; connexion, second facteur, choix du PIN et pavé de la
+  tablette restent désactivés jusqu'au bout. Le délai n'est plus écrit dans le
+  message (un texte figé « dans 15 minutes » devenait faux).
+- **« Réessayer »** : sur les lectures (présences du jour, historique et
+  corrections, crèches, tablettes, enfants attendus sur la tablette), il relance
+  les lectures en échec (`src/lib/retry-failed.ts`). Sur le pointage de la
+  tablette, il renvoie le même choix. Dans les autres formulaires, le bouton
+  d'envoi tient ce rôle.
+- **Hors ligne** : `createConnectivity()` (`src/lib/connectivity.ts`), alimenté
+  par `navigator.onLine` et par les échecs réseau des caches de TanStack Query,
+  effacé par la première réponse reçue ; bannière `OfflineBanner` en haut de
+  toutes les pages (`role="status"`), tablette et connexion comprises.
+
 | Catégorie | Traité | Ce que voit l'utilisateur | Action proposée | Nouvel essai automatique |
 |---|---|---|---|---|
 | 422 avec `fields` | écran (formulaire) | message sous chaque champ (`setError` de React Hook Form), résumé en haut du formulaire | corriger la saisie | non |
@@ -407,9 +431,13 @@ le reste est affiché par l'écran, dans `FormError`.
 | Erreur de rendu | routeur (`RootError`) | « Un problème est survenu » | bouton « Recharger la page » | non |
 
 **Nouvel essai.** Seules les **lectures** sont rejouées automatiquement
-(TanStack Query, 2 fois avec attente croissante, sur 5xx et réseau). Une
+(TanStack Query, 2 fois, après 1 s puis 2 s, sur 5xx et réseau seulement). Une
 écriture n'est jamais rejouée sans l'utilisateur : rejouer un pointage ou une
 coche pourrait l'enregistrer deux fois. L'écran propose alors « Réessayer ».
+Les écritures ne sont pas non plus **mises en pause hors ligne**
+(`networkMode: 'always'`) : par défaut, TanStack Query les garde et les envoie
+au retour du réseau, sans l'utilisateur et à une autre heure ; elles échouent
+donc tout de suite, et l'écran le dit.
 
 **Décider sur le code, afficher le message.** Les redirections et les cas
 particuliers testent `error.code` (`mfa_required`, `pin_locked`…), plus jamais

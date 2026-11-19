@@ -1,6 +1,5 @@
-import { errorMessage } from '@/api/errors'
 import type { Schemas } from '@/api/types'
-import { FormError } from '@/components/form-error'
+import { ActionError } from '@/components/action-error'
 
 import { PresenceTable } from './presence-table'
 import { summarize } from './summary'
@@ -11,15 +10,17 @@ type DayBoardProps = {
   presences: Presence[] | undefined
   pending: boolean
   error: unknown
+  /** Nouvel essai de la lecture (`refetch`), proposé sur une panne du serveur ou du réseau. */
+  onRetry?: (() => void) | undefined
 }
 
 /**
  * Présences du jour d'une crèche : chiffres, puis une ligne par arrivée, avec
  * qui a pointé et qui a amené ou cherché l'enfant (traçabilité du pointage).
  */
-export function DayBoard({ presences, pending, error }: DayBoardProps) {
+export function DayBoard({ presences, pending, error, onRetry }: DayBoardProps) {
   if (pending) return <p className="text-muted-foreground">Chargement des présences…</p>
-  if (error !== null && error !== undefined) return <FormError message={errorMessage(error)} />
+  if (error !== null && error !== undefined) return <ActionError error={error} onRetry={onRetry} />
   if (presences === undefined || presences.length === 0) {
     return <p className="text-muted-foreground">Aucune arrivée pointée aujourd&apos;hui.</p>
   }

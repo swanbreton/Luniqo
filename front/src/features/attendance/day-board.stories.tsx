@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
-import { expect } from 'storybook/test'
+import { expect, fn } from 'storybook/test'
 
 import { dayAttendance } from '../../../test/fixtures'
 import { apiErrors, networkFailure, raised, REQUEST_ID } from '../../../test/handlers/errors'
@@ -30,17 +30,24 @@ export const Chargement: Story = { args: { presences: undefined, pending: true }
 
 export const AucunPointage: Story = { args: { presences: [] } }
 
+/** Refus (404) : réessayer ne changerait rien, pas de bouton « Réessayer ». */
 export const Erreur: Story = {
-  args: { presences: undefined, error: raised(apiErrors.nurseryNotFound()) },
+  args: { presences: undefined, error: raised(apiErrors.nurseryNotFound()), onRetry: fn() },
+  play: async ({ canvas }) => {
+    await expect(canvas.getByRole('alert')).toHaveTextContent('Crèche introuvable')
+    await expect(canvas.queryByRole('button', { name: 'Réessayer' })).toBeNull()
+  },
 }
 
 /** Exception imprévue côté serveur (500), après les nouveaux essais automatiques de la lecture. */
 export const ErreurServeur: Story = {
   args: { ...Erreur.args, error: raised(apiErrors.serverError()) },
-  play: async ({ canvas }) => {
+  play: async ({ args, canvas, userEvent }) => {
     await expect(canvas.getByRole('alert')).toHaveTextContent('Une erreur est survenue de notre côté.')
     // Référence à transmettre au support, retrouvée dans les journaux (LUN-141).
     await expect(canvas.getByRole('alert')).toHaveTextContent(`Référence : ${REQUEST_ID}`)
+    await userEvent.click(canvas.getByRole('button', { name: 'Réessayer' }))
+    await expect(args.onRetry).toHaveBeenCalledOnce()
   },
 }
 
@@ -49,5 +56,6 @@ export const HorsLigne: Story = {
   args: { ...Erreur.args, error: networkFailure() },
   play: async ({ canvas }) => {
     await expect(canvas.getByRole('alert')).toHaveTextContent('Connexion au serveur impossible. Vérifiez le réseau.')
+    await expect(canvas.getByRole('button', { name: 'Réessayer' })).toBeEnabled()
   },
 }

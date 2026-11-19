@@ -35,6 +35,7 @@ Chaque ligne cite son ticket Jira `LUN-<n>`.
 
 ### Modifié
 
+- Front v2 : une action qui échoue dit quoi faire. Après une panne du serveur ou du réseau, « Réessayer » sur les listes et sur le pointage de la tablette (renvoie le même choix, jamais tout seul) ; après trop de tentatives, un compte à rebours remplace le délai écrit dans le message, et le bouton reste désactivé jusqu'au bout (connexion, second facteur, PIN, pavé de la tablette) ; une bannière « Hors ligne » en haut de chaque page quand le réseau ou le serveur ne répond plus, retirée dès qu'il répond. Les lectures sont redemandées 2 fois sur une panne seulement ; un envoi n'est jamais rejoué ni gardé pour plus tard (LUN-142).
 - Front v2 : une erreur serveur affiche, avec son message, la référence à transmettre au support (« Référence : … »), retrouvée dans les journaux ; les refus (4xx) n'en affichent pas (LUN-141).
 - Passerelle : la référence de chaque requête (`X-Request-ID`) est créée ou reprise, transmise à l'API et écrite dans le journal d'accès ; si l'API ne répond pas, `/api/` renvoie une erreur JSON (`service_unavailable`, avec la référence) que le front sait lire, au lieu de la page HTML (LUN-139).
 - API : chaque réponse porte une référence (`X-Request-ID`, reprise de la passerelle si elle est sûre), écrite aussi dans un journal JSON, une ligne par requête, sans IP ni données saisies ; une erreur imprévue répond 500 avec un message générique et cette référence, la pile n'allant qu'au journal (LUN-140).

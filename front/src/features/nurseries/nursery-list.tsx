@@ -1,14 +1,15 @@
 import type { ReactNode } from 'react'
 
-import { errorMessage } from '@/api/errors'
 import type { Schemas } from '@/api/types'
-import { FormError } from '@/components/form-error'
+import { ActionError } from '@/components/action-error'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 
 type NurseryListProps = {
   nurseries: Schemas['NurseryOut'][] | undefined
   pending: boolean
   error: unknown
+  /** Nouvel essai de la lecture (`refetch`), proposé sur une panne du serveur ou du réseau. */
+  onRetry?: (() => void) | undefined
   /** Résumé propre à chaque crèche, chargé indépendamment des autres cartes. */
   summary?: ((nursery: Schemas['NurseryOut']) => ReactNode) | undefined
   /** Liens propres à chaque crèche (gestion par la direction), fournis par la route. */
@@ -16,9 +17,9 @@ type NurseryListProps = {
 }
 
 /** Crèches accessibles, avec états de chargement, d'erreur et vide (CLAUDE.md, règle 5). */
-export function NurseryList({ nurseries, pending, error, summary, actions }: NurseryListProps) {
+export function NurseryList({ nurseries, pending, error, onRetry, summary, actions }: NurseryListProps) {
   if (pending) return <p className="text-muted-foreground">Chargement des crèches…</p>
-  if (error !== null && error !== undefined) return <FormError message={errorMessage(error)} />
+  if (error !== null && error !== undefined) return <ActionError error={error} onRetry={onRetry} />
   if (nurseries === undefined || nurseries.length === 0) {
     return <p className="text-muted-foreground">Aucune crèche accessible pour le moment.</p>
   }

@@ -1,7 +1,8 @@
 import { MutationCache, QueryCache, QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { createRouter, type RouterHistory, RouterProvider } from '@tanstack/react-router'
 
-import { ApiError, ERROR_CODES } from '@/api/errors'
+import { ApiError, ERROR_CODES, errorCategory, isRetryable } from '@/api/errors'
+import { createConnectivity } from '@/lib/connectivity'
 import { routeTree } from '@/routeTree.gen'
 
 /**
@@ -20,7 +21,7 @@ export function createApp(history?: RouterHistory) {
     const { pathname, href } = router.state.location
     // La tablette a sa propre authentification (appareil, puis PIN) : ses 401 restent à l'écran.
     if (pathname.startsWith('/connexion') || pathname.startsWith('/tablette')) return
-    if (error.status === 401) {
+    if (errorCategory(error) === 'authentication') {
       queryClient.removeQueries({ queryKey: ['session'] })
       void router.navigate({ to: '/connexion', search: { redirect: href } })
     } else if (error.code === ERROR_CODES.mfaRequired) {
@@ -30,22 +31,45 @@ export function createApp(history?: RouterHistory) {
     }
   }
 
+  // Bannière hors ligne : toute réponse reçue prouve que le serveur est joignable.
+  const connectivity = createConnectivity(window)
+  function onFailure(error: Error) {
+    if (errorCategory(error) === 'network') connectivity.reportFailure()
+    else if (error instanceof ApiError) connectivity.reportSuccess()
+  }
+
   const queryClient = new QueryClient({
-    queryCache: new QueryCache({ onError: (error, query) => onApiError(error, query.meta) }),
+    queryCache: new QueryCache({
+      onError: (error, query) => {
+        onFailure(error)
+        onApiError(error, query.meta)
+      },
+      onSuccess: () => connectivity.reportSuccess(),
+    }),
     mutationCache: new MutationCache({
-      onError: (error, _variables, _context, mutation) => onApiError(error, mutation.meta),
+      onError: (error, _variables, _context, mutation) => {
+        onFailure(error)
+        onApiError(error, mutation.meta)
+      },
+      onSuccess: () => connectivity.reportSuccess(),
     }),
     defaultOptions: {
+      // Nouveaux essais automatiques (docs/projet/ERREURS.md § 4) : lectures seulement, 2 fois,
+      // après 1 s puis 2 s, et seulement sur une panne (serveur, réseau) : une 4xx ne se corrige pas.
       queries: {
-        // Une erreur 4xx ne se corrige pas en réessayant.
-        retry: (failures, error) => !(error instanceof ApiError && error.status < 500) && failures < 2,
+        retry: (failures, error) => isRetryable(error) && failures < 2,
+        retryDelay: (attempt) => 1000 * 2 ** attempt,
       },
+      // Une écriture n'est jamais rejouée sans l'utilisateur : rejouer un pointage l'enregistrerait
+      // deux fois. Ni mise en pause hors ligne (« online » par défaut) : elle partirait plus tard,
+      // seule, à une autre heure. Elle échoue tout de suite et l'écran propose « Réessayer ».
+      mutations: { retry: false, networkMode: 'always' },
     },
   })
 
   const router = createRouter({
     routeTree,
-    context: { queryClient },
+    context: { queryClient, connectivity },
     ...(history === undefined ? {} : { history }),
     defaultPreload: 'intent',
     // Le cache des données est celui de TanStack Query, pas celui du routeur.
@@ -53,7 +77,7 @@ export function createApp(history?: RouterHistory) {
     scrollRestoration: true,
   })
 
-  return { queryClient, router }
+  return { queryClient, router, connectivity }
 }
 
 type AppRouter = ReturnType<typeof createApp>['router']

@@ -1,7 +1,7 @@
 import { queryOptions } from '@tanstack/react-query'
 
 import { fetchClient } from '@/api/client'
-import { ApiError } from '@/api/errors'
+import { errorCategory } from '@/api/errors'
 import type { Schemas } from '@/api/types'
 
 /**
@@ -15,7 +15,7 @@ export const actorQuery = queryOptions({
       const { data } = await fetchClient.GET('/api/v2/tablet/session')
       return data ?? null
     } catch (error) {
-      if (error instanceof ApiError && error.status === 401) return null
+      if (errorCategory(error) === 'authentication') return null
       throw error
     }
   },

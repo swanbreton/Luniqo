@@ -1,8 +1,9 @@
 import { Delete } from 'lucide-react'
 import { useId, useState } from 'react'
 
-import { FormError } from '@/components/form-error'
+import { ActionError } from '@/components/action-error'
 import { Button } from '@/components/ui/button'
+import { useRetryCountdown } from '@/lib/use-retry-countdown'
 
 export const PIN_LENGTH = 4
 
@@ -14,7 +15,8 @@ type PinPadProps = {
   onSubmit: (pin: string) => void
   onCancel: () => void
   pending?: boolean
-  error?: string | null
+  /** Erreur de l'envoi : message, et compte à rebours d'une 429 (trop d'erreurs sur la tablette). */
+  error?: unknown
 }
 
 /**
@@ -24,6 +26,9 @@ type PinPadProps = {
 export function PinPad({ name, onSubmit, onCancel, pending = false, error = null }: PinPadProps) {
   const [pin, setPin] = useState('')
   const id = useId()
+  // Après une 429, pavé désactivé jusqu'à la fin du délai : chaque essai serait refusé.
+  const wait = useRetryCountdown(error)
+  const locked = pending || wait > 0
 
   function change(next: string) {
     const digits = next.replace(/\D/g, '').slice(0, PIN_LENGTH)
@@ -43,25 +48,25 @@ export function PinPad({ name, onSubmit, onCancel, pending = false, error = null
         autoComplete="off"
         maxLength={PIN_LENGTH}
         value={pin}
-        disabled={pending}
-        aria-invalid={error !== null}
+        disabled={locked}
+        aria-invalid={error !== null && error !== undefined}
         onChange={(event) => change(event.target.value)}
         className="h-16 rounded-md border bg-card text-center text-4xl tracking-[0.5em] outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50"
       />
-      <FormError message={error} />
+      <ActionError error={error} waitSeconds={wait} />
       <div className="grid grid-cols-3 gap-3">
         {DIGITS.map((digit) => (
-          <PadKey key={digit} label={digit} disabled={pending} onPress={() => change(pin + digit)} />
+          <PadKey key={digit} label={digit} disabled={locked} onPress={() => change(pin + digit)} />
         ))}
         <Button variant="ghost" className="h-16 text-lg" disabled={pending} onClick={onCancel}>
           Retour
         </Button>
-        <PadKey label="0" disabled={pending} onPress={() => change(`${pin}0`)} />
+        <PadKey label="0" disabled={locked} onPress={() => change(`${pin}0`)} />
         <Button
           variant="ghost"
           className="h-16"
           aria-label="Effacer le dernier chiffre"
-          disabled={pending || pin === ''}
+          disabled={locked || pin === ''}
           onClick={() => setPin(pin.slice(0, -1))}
         >
           <Delete aria-hidden="true" className="size-7" />

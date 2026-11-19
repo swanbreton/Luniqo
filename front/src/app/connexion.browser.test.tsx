@@ -33,18 +33,23 @@ describe('connexion', () => {
     await expect.element(screen.getByRole('alert')).toHaveTextContent('Identifiants invalides')
   })
 
-  test('indique le délai après trop de tentatives', async ({ worker }) => {
+  test('trop de tentatives : compte à rebours, connexion désactivée jusqu’au bout', async ({ worker }) => {
     worker.use(
       noSession,
-      http.post('/api/v2/auth/login', () => reply(apiErrors.tooManyAttempts(900))),
+      http.post('/api/v2/auth/login', () => reply(apiErrors.tooManyAttempts(2))),
     )
     const screen = await start('/connexion')
     await screen.getByLabelText('Adresse e-mail').fill('employe@demo.test')
     await screen.getByLabelText('Mot de passe').fill('x')
-    await screen.getByRole('button', { name: 'Se connecter' }).click()
-    await expect
-      .element(screen.getByRole('alert'))
-      .toHaveTextContent('Trop de tentatives, réessayez plus tard (dans 15 minutes)')
+    const submit = screen.getByRole('button', { name: 'Se connecter' })
+    await submit.click()
+
+    await expect.element(screen.getByText('Trop de tentatives, réessayez plus tard', { exact: true })).toBeVisible()
+    await expect.element(screen.getByRole('timer')).toBeVisible()
+    await expect.element(submit).toBeDisabled()
+    // Fin du délai de Retry-After (2 s) : le compte à rebours disparaît, la connexion est de nouveau possible.
+    await expect.element(screen.getByRole('timer'), { timeout: 5_000 }).not.toBeInTheDocument()
+    await expect.element(submit).toBeEnabled()
   })
 
   test("valide la saisie avant d'appeler l'API", async ({ worker }) => {

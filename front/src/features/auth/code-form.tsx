@@ -3,9 +3,10 @@ import { useForm } from 'react-hook-form'
 import { z } from 'zod'
 
 import { Field } from '@/components/field'
-import { FormError } from '@/components/form-error'
+import { ActionError } from '@/components/action-error'
 import { Button } from '@/components/ui/button'
 import { type FieldMap, type ServerFieldErrors, useServerFieldErrors } from '@/lib/server-field-errors'
+import { useRetryCountdown } from '@/lib/use-retry-countdown'
 
 const schema = z.object({
   code: z.string().trim().min(1, 'Saisissez le code.').max(32, 'Code trop long.'),
@@ -20,7 +21,8 @@ type CodeFormProps = {
   label?: string
   submitLabel?: string
   pending?: boolean
-  error?: string | null
+  /** Erreur de l'envoi (ApiError, coupure réseau…) : message, et compte à rebours d'une 429. */
+  error?: unknown
   /** Erreurs par champ renvoyées par l'API (422), affichées sous chaque champ. */
   fieldErrors?: ServerFieldErrors | undefined
 }
@@ -36,10 +38,11 @@ export function CodeForm({
 }: CodeFormProps) {
   const form = useForm<CodeValues>({ resolver: zodResolver(schema), defaultValues: { code: '' } })
   useServerFieldErrors(form, fieldErrors, FIELDS)
+  const wait = useRetryCountdown(error)
 
   return (
     <form className="grid gap-4" noValidate onSubmit={(event) => void form.handleSubmit(onSubmit)(event)}>
-      <FormError message={error} />
+      <ActionError error={error} waitSeconds={wait} />
       <Field
         label={label}
         autoComplete="one-time-code"
@@ -47,7 +50,7 @@ export function CodeForm({
         error={form.formState.errors.code?.message}
         {...form.register('code')}
       />
-      <Button type="submit" size="lg" className="h-11" disabled={pending}>
+      <Button type="submit" size="lg" className="h-11" disabled={pending || wait > 0}>
         {pending ? 'Vérification…' : submitLabel}
       </Button>
     </form>
