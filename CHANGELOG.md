@@ -36,6 +36,7 @@ Chaque ligne cite son ticket Jira `LUN-<n>`.
 ### Modifié
 
 - API : toute erreur renvoie `{"detail", "code", "fields"?}` ; le `code` est stable et documenté dans Swagger pour chaque route, les erreurs de saisie (422) sont traduites en français avec un message par champ, les dates incohérentes d'un enfant indiquent chaque champ fautif ; un test vérifie que toute erreur levée est documentée (LUN-137).
+- Front v2 : une saisie refusée par l'API affiche son message sous le champ concerné (connexion, second facteur, PIN, enrôlement d'une tablette, correction et ajout d'une présence), le résumé restant en haut du formulaire ; le front décide sur le code de l'erreur, plus sur son texte (second facteur, PIN bloqué ou non choisi sur la tablette) (LUN-138).
 - API : toute réponse 429 indique le délai à attendre (`Retry-After`), y compris au changement de mot de passe, au choix du PIN et sur une tablette après trop d'erreurs de PIN (LUN-137).
 
 - Onboarding mis à jour pour le stage du TD « Road to MVP » : matrice des droits, contribution par fork, front v2 (installation, tests, Storybook, contrat de l'API), design system du front v2 ; mission du stage et modèles de rapport (stagiaire, maître de stage) dans `docs/stage/` (LUN-123).
@@ -50,6 +51,7 @@ Chaque ligne cite son ticket Jira `LUN-<n>`.
 
 ### Corrigé
 
+- Front v2 : une route qui exige de nouveau le second facteur menait à son écran, qui renvoyait aussitôt à l'accueil, la session en cache se disant encore vérifiée ; la session est désormais relue (LUN-138).
 - Le test qui interdit les dépendances synchrones (régression LUN-41) ne vérifiait aucune route : FastAPI 0.143 ne les liste plus dans `app.routes`. Il parcourt désormais les routes effectives et échoue s'il n'en trouve pas (LUN-118).
 
 ## [0.1.0] - 2026-10-10
