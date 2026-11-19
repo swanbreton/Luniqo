@@ -160,6 +160,30 @@ def documented_codes(response: dict[str, Any]) -> set[str]:
     return {example["value"]["code"] for example in examples.values()}
 
 
+def _template(path: str) -> re.Pattern[str]:
+    return re.compile(re.sub(r"\\\{[^}]+\\\}", "[^/]+", re.escape(path)))
+
+
+def undocumented_errors(schema: dict[str, Any],
+                        observed: Iterable[tuple[str, str, int, str]]) -> set[tuple[str, str, int, str]]:
+    """Erreurs rendues par l'API (méthode, chemin, statut, code) absentes du schéma de leur route.
+
+    Une requête qui ne correspond à aucune opération du schéma (route ou méthode
+    inconnue, application de test) est ignorée : c'est Starlette qui répond.
+    """
+    templates = sorted(schema["paths"], key=lambda path: (path.count("{"), -len(path)))
+    patterns = [(path, _template(path)) for path in templates]
+    missing = set()
+    for method, path, status, code in observed:
+        template = next((name for name, pattern in patterns if pattern.fullmatch(path)), None)
+        operation = schema["paths"].get(template, {}).get(method.lower()) if template else None
+        if operation is None:
+            continue
+        if code not in documented_codes(operation["responses"].get(str(status), {})):
+            missing.add((method, template, status, code))
+    return missing
+
+
 def api_routes(app: FastAPI) -> Iterator[RouteContext]:
     """Routes de l'API telles que servies, préfixes compris.
 
@@ -169,6 +193,13 @@ def api_routes(app: FastAPI) -> Iterator[RouteContext]:
     for route in iter_route_contexts(app.routes):
         if isinstance(route.original_route, APIRoute):
             yield route
+
+
+def _reads_parameters(dependant: Dependant) -> bool:
+    """Vrai si la route ou l'une de ses dépendances lit un paramètre validé (chemin, requête, en-tête)."""
+    if dependant.path_params or dependant.query_params or dependant.header_params:
+        return True
+    return any(_reads_parameters(dependency) for dependency in dependant.dependencies)
 
 
 def dependency_calls(dependant: Dependant) -> Iterator[Callable[..., Any]]:
@@ -248,7 +279,7 @@ def complete_schema(app: FastAPI) -> dict[str, Any]:
             continue
         calls = set(dependency_calls(route.dependant))
         derived = [error for call in calls for error in getattr(call, "__openapi_errors__", ())]
-        if route.dependant.path_params or route.dependant.query_params or route.body_field:
+        if route.body_field or _reads_parameters(route.dependant):
             derived.append(VALIDATION_ERROR)
         for method in route.methods:
             operation = schema["paths"][route.path_format][method.lower()]
