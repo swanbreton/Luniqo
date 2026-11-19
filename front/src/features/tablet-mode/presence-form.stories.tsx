@@ -57,7 +57,7 @@ export const DepartSansResponsable: Story = { args: { child: { ...present, guard
 
 /** Exception imprévue côté serveur (500) : message générique, rien n'est rejoué tout seul. */
 export const ErreurServeur: Story = {
-  args: { error: raised(apiErrors.serverError()).message },
+  args: { error: errorMessage(raised(apiErrors.serverError())) },
   play: async ({ canvas }) => {
     await expect(canvas.getByRole('alert')).toHaveTextContent('Une erreur est survenue de notre côté.')
   },

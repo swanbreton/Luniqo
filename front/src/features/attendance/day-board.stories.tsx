@@ -2,7 +2,7 @@ import type { Meta, StoryObj } from '@storybook/react-vite'
 import { expect } from 'storybook/test'
 
 import { dayAttendance } from '../../../test/fixtures'
-import { apiErrors, networkFailure, raised } from '../../../test/handlers/errors'
+import { apiErrors, networkFailure, raised, REQUEST_ID } from '../../../test/handlers/errors'
 import { DayBoard } from './day-board'
 
 const meta = {
@@ -39,6 +39,8 @@ export const ErreurServeur: Story = {
   args: { ...Erreur.args, error: raised(apiErrors.serverError()) },
   play: async ({ canvas }) => {
     await expect(canvas.getByRole('alert')).toHaveTextContent('Une erreur est survenue de notre côté.')
+    // Référence à transmettre au support, retrouvée dans les journaux (LUN-141).
+    await expect(canvas.getByRole('alert')).toHaveTextContent(`Référence : ${REQUEST_ID}`)
   },
 }
 

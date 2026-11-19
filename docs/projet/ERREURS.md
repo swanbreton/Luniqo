@@ -121,7 +121,7 @@ le statut ; le texte ne sert qu'à l'affichage (section 2).
 | E4 | Deux formes de 422, validation en anglais, champs jamais affichés | Story A : fait (API LUN-137, affichage sous les champs LUN-138) |
 | E5 | Peu d'actions proposées : réessayer, attendre, hors ligne | Story C |
 | E6 | `Retry-After` absent de certaines 429 | Story A : fait (LUN-137) |
-| E7 | Pas de référence à donner au support pour une erreur serveur | Stories B, C : référence renvoyée par l'API (LUN-140) ; affichage à venir (LUN-141) |
+| E7 | Pas de référence à donner au support pour une erreur serveur | Story B : fait (API LUN-140, passerelle LUN-139, affichage LUN-141) |
 | E8 | 5xx, réseau et 422 avec champs non testés ; réponses MSW non partagées | Story D |
 
 ## 2. Contrat de l'API
@@ -351,7 +351,9 @@ c'est une sonde, pas une erreur affichée.
 en-tête `X-Request-ID` sur chaque réponse, journal JSON, 500 `internal_error`.
 **Passerelle depuis LUN-139** (`docker/web/nginx.conf.template`) : référence
 créée ou reprise, journal d'accès avec `request_id=`, 503 JSON sous `/api/`.
-L'affichage dans le front (LUN-141) reste à faire.
+**Front depuis LUN-141** : `ApiError.requestId` (corps, sinon en-tête) et
+`errorMessage()` qui ajoute « Référence : … » à toute erreur serveur (5xx),
+jamais à un refus (4xx).
 
 **Un identifiant par requête.** La passerelle nginx crée un `X-Request-ID`
 (variable `$request_id`), ou reprend celui que le front envoie, et le transmet à

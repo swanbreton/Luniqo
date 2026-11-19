@@ -118,7 +118,7 @@ export function networkError() {
 
 /** Erreur que le client du front lève pour ce cas (`src/api/client.ts`), pour les stories. */
 export function raised({ status, body, retryAfter }: ErrorCase): ApiError {
-  return toApiError(status, body, retryAfter === undefined ? null : String(retryAfter))
+  return toApiError(status, body, retryAfter === undefined ? null : String(retryAfter), body.request_id ?? null)
 }
 
 /** Erreur que `fetch` lève sur une coupure réseau, pour les stories. */

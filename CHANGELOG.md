@@ -35,6 +35,7 @@ Chaque ligne cite son ticket Jira `LUN-<n>`.
 
 ### Modifié
 
+- Front v2 : une erreur serveur affiche, avec son message, la référence à transmettre au support (« Référence : … »), retrouvée dans les journaux ; les refus (4xx) n'en affichent pas (LUN-141).
 - Passerelle : la référence de chaque requête (`X-Request-ID`) est créée ou reprise, transmise à l'API et écrite dans le journal d'accès ; si l'API ne répond pas, `/api/` renvoie une erreur JSON (`service_unavailable`, avec la référence) que le front sait lire, au lieu de la page HTML (LUN-139).
 - API : chaque réponse porte une référence (`X-Request-ID`, reprise de la passerelle si elle est sûre), écrite aussi dans un journal JSON, une ligne par requête, sans IP ni données saisies ; une erreur imprévue répond 500 avec un message générique et cette référence, la pile n'allant qu'au journal (LUN-140).
 - API : toute erreur renvoie `{"detail", "code", "fields"?}` ; le `code` est stable et documenté dans Swagger pour chaque route, les erreurs de saisie (422) sont traduites en français avec un message par champ, les dates incohérentes d'un enfant indiquent chaque champ fautif ; un test vérifie que toute erreur levée est documentée (LUN-137).
