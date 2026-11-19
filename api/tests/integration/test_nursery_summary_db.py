@@ -108,7 +108,7 @@ async def test_resume_inaccessible_et_inexistant_repondent_le_meme_404(http, wor
     response = await http.get(f"/api/v2/nurseries/{world[key].id}/summary")
     missing = await http.get(f"/api/v2/nurseries/{uuid.uuid4()}/summary")
     assert response.status_code == missing.status_code == 404
-    assert response.json() == missing.json() == {"detail": "Crèche introuvable"}
+    assert response.json() == missing.json() == {"detail": "Crèche introuvable", "code": "nursery_not_found"}
 
 
 async def test_employe_peut_lire_le_resume_de_sa_creche(http, world, clock):

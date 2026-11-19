@@ -13,6 +13,7 @@ from fastapi import APIRouter, Query, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.children import policy
 from app.children.models import Child, ChildGuardian, ChildStatus, Family, Guardian
 from app.children.schemas import (
     ChildCreate,
@@ -41,8 +42,9 @@ _CHILD = ErrorSpec(status.HTTP_404_NOT_FOUND, "child_not_found", "Enfant introuv
 _GUARDIAN = ErrorSpec(status.HTTP_404_NOT_FOUND, "guardian_not_found", "Responsable introuvable")
 _OTHER_FAMILY = ErrorSpec(status.HTTP_422_UNPROCESSABLE_CONTENT, "guardian_other_family",
                           "Le responsable n'appartient pas à la famille")
+# Un message par champ fautif dans `fields` (children/policy.py).
 _INCOHERENT_DATES = ErrorSpec(status.HTTP_422_UNPROCESSABLE_CONTENT, "child_dates_incoherent",
-                              "Un enfant parti a une date de sortie, et seulement lui")
+                              "Les dates de l'enfant ne sont pas cohérentes")
 
 
 def guardian_out(guardian: Guardian) -> GuardianOut:
@@ -161,15 +163,8 @@ async def update_child(child_id: uuid.UUID, body: ChildUpdate, context: ManagedN
             raise required_field(field)
     merged = {field: changes.get(field, getattr(child, field))
               for field in ("birth_date", "enrollment_date", "exit_date", "status")}
-    errors = []
-    if merged["enrollment_date"] < merged["birth_date"]:
-        errors.append("la date d'entrée ne peut pas précéder la naissance")
-    if merged["exit_date"] is not None and merged["exit_date"] < merged["enrollment_date"]:
-        errors.append("la date de sortie ne peut pas précéder l'entrée")
-    if (merged["status"] == ChildStatus.DEPARTED) != (merged["exit_date"] is not None):
-        errors.append("un enfant parti a une date de sortie, et seulement lui")
-    if errors:
-        raise ApiError(_INCOHERENT_DATES, detail=" ; ".join(errors).capitalize())
+    if errors := policy.date_errors(**merged):
+        raise ApiError(_INCOHERENT_DATES, fields=errors)
     for field, value in changes.items():
         setattr(child, field, value)
     await db.commit()

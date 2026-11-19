@@ -37,9 +37,10 @@ TOO_MANY_ATTEMPTS = ErrorSpec(status.HTTP_429_TOO_MANY_REQUESTS, "too_many_attem
                               "Trop de tentatives, réessayez plus tard")
 
 # Erreurs que Starlette lève seul (route ou méthode inconnue) : leur code se déduit du statut.
-_STATUS_CODES = {
-    status.HTTP_404_NOT_FOUND: "not_found",
-    status.HTTP_405_METHOD_NOT_ALLOWED: "method_not_allowed",
+_STATUS_ERRORS = {
+    status.HTTP_404_NOT_FOUND: ErrorSpec(status.HTTP_404_NOT_FOUND, "not_found", "Adresse inconnue"),
+    status.HTTP_405_METHOD_NOT_ALLOWED: ErrorSpec(status.HTTP_405_METHOD_NOT_ALLOWED, "method_not_allowed",
+                                                  "Méthode non autorisée pour cette adresse"),
 }
 
 
@@ -83,9 +84,13 @@ def body(detail: str, code: str, fields: dict[str, str] | None = None) -> dict[s
 async def _http_error(request: Request, exc: Exception) -> JSONResponse:
     if not isinstance(exc, StarletteHTTPException):  # enregistré pour cette seule classe
         raise exc
-    code = getattr(exc, "code", None) or _STATUS_CODES.get(exc.status_code, f"http_{exc.status_code}")
-    detail = exc.detail if isinstance(exc.detail, str) else "Une erreur inattendue est survenue."
-    return _respond(request, exc.status_code, body(detail, code, getattr(exc, "fields", None)), exc.headers)
+    if isinstance(exc, ApiError):
+        return _respond(request, exc.status_code, body(exc.detail, exc.code, exc.fields), exc.headers)
+    # Levée par Starlette (route ou méthode inconnue) : message anglais, sans code.
+    spec = _STATUS_ERRORS.get(exc.status_code)
+    if spec is None:
+        spec = ErrorSpec(exc.status_code, f"http_{exc.status_code}", "Une erreur inattendue est survenue.")
+    return _respond(request, spec.status, body(spec.message, spec.code), exc.headers)
 
 
 async def _validation_error(request: Request, exc: Exception) -> JSONResponse:
