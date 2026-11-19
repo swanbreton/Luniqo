@@ -1916,6 +1916,11 @@ export interface components {
          *         "name": "Ne peut pas être vide"
          *       }
          *     }
+         * @example {
+         *       "code": "internal_error",
+         *       "detail": "Une erreur est survenue de notre côté. Réessayez dans un instant ; si elle revient, donnez la référence à la crèche.",
+         *       "request_id": "6f1c0b0e9d2a4c5183e7a1b2c3d4e5f6"
+         *     }
          */
         Error: {
             /**
@@ -1936,6 +1941,12 @@ export interface components {
             fields: {
                 [key: string]: string;
             } | null;
+            /**
+             * Request Id
+             * @description Erreur serveur (5xx) : référence de la requête, à donner au support ; aussi dans l'en-tête X-Request-ID
+             * @default null
+             */
+            request_id: string | null;
         };
         /** FamilyChild */
         FamilyChild: {
@@ -3342,6 +3353,15 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
+            /** @description `internal_error` : Une erreur est survenue de notre côté. Réessayez dans un instant ; si elle revient, donnez la référence à la crèche. */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
         };
     };
     logout_api_v2_auth_logout_post: {
@@ -3362,6 +3382,15 @@ export interface operations {
             };
             /** @description `origin_refused` : Origine de la requête refusée */
             403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description `internal_error` : Une erreur est survenue de notre côté. Réessayez dans un instant ; si elle revient, donnez la référence à la crèche. */
+            500: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -3391,6 +3420,15 @@ export interface operations {
             };
             /** @description `auth_required` : Authentification requise */
             401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description `internal_error` : Une erreur est survenue de notre côté. Réessayez dans un instant ; si elle revient, donnez la référence à la crèche. */
+            500: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -3459,6 +3497,15 @@ export interface operations {
                 headers: {
                     /** @description Secondes à attendre avant de réessayer */
                     "Retry-After"?: number;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description `internal_error` : Une erreur est survenue de notre côté. Réessayez dans un instant ; si elle revient, donnez la référence à la crèche. */
+            500: {
+                headers: {
                     [name: string]: unknown;
                 };
                 content: {
@@ -3541,6 +3588,15 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
+            /** @description `internal_error` : Une erreur est survenue de notre côté. Réessayez dans un instant ; si elle revient, donnez la référence à la crèche. */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
             /** @description `mfa_unavailable` : Second facteur momentanément indisponible */
             503: {
                 headers: {
@@ -3609,6 +3665,15 @@ export interface operations {
                 headers: {
                     /** @description Secondes à attendre avant de réessayer */
                     "Retry-After"?: number;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description `internal_error` : Une erreur est survenue de notre côté. Réessayez dans un instant ; si elle revient, donnez la référence à la crèche. */
+            500: {
+                headers: {
                     [name: string]: unknown;
                 };
                 content: {
@@ -3704,6 +3769,15 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
+            /** @description `internal_error` : Une erreur est survenue de notre côté. Réessayez dans un instant ; si elle revient, donnez la référence à la crèche. */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
             /** @description `mfa_unavailable` : Second facteur momentanément indisponible */
             503: {
                 headers: {
@@ -3793,6 +3867,15 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
+            /** @description `internal_error` : Une erreur est survenue de notre côté. Réessayez dans un instant ; si elle revient, donnez la référence à la crèche. */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
             /** @description `mfa_unavailable` : Second facteur momentanément indisponible */
             503: {
                 headers: {
@@ -3863,6 +3946,15 @@ export interface operations {
                 headers: {
                     /** @description Secondes à attendre avant de réessayer */
                     "Retry-After"?: number;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description `internal_error` : Une erreur est survenue de notre côté. Réessayez dans un instant ; si elle revient, donnez la référence à la crèche. */
+            500: {
+                headers: {
                     [name: string]: unknown;
                 };
                 content: {
@@ -3957,6 +4049,15 @@ export interface operations {
                 headers: {
                     /** @description Secondes à attendre avant de réessayer */
                     "Retry-After"?: number;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description `internal_error` : Une erreur est survenue de notre côté. Réessayez dans un instant ; si elle revient, donnez la référence à la crèche. */
+            500: {
+                headers: {
                     [name: string]: unknown;
                 };
                 content: {
@@ -4061,6 +4162,15 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
+            /** @description `internal_error` : Une erreur est survenue de notre côté. Réessayez dans un instant ; si elle revient, donnez la référence à la crèche. */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
             /** @description `passkeys_unavailable` : Passkeys momentanément indisponibles */
             503: {
                 headers: {
@@ -4157,6 +4267,15 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
+            /** @description `internal_error` : Une erreur est survenue de notre côté. Réessayez dans un instant ; si elle revient, donnez la référence à la crèche. */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
             /** @description `passkeys_unavailable` : Passkeys momentanément indisponibles */
             503: {
                 headers: {
@@ -4245,6 +4364,15 @@ export interface operations {
                 headers: {
                     /** @description Secondes à attendre avant de réessayer */
                     "Retry-After"?: number;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description `internal_error` : Une erreur est survenue de notre côté. Réessayez dans un instant ; si elle revient, donnez la référence à la crèche. */
+            500: {
+                headers: {
                     [name: string]: unknown;
                 };
                 content: {
@@ -4351,6 +4479,15 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
+            /** @description `internal_error` : Une erreur est survenue de notre côté. Réessayez dans un instant ; si elle revient, donnez la référence à la crèche. */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
             /** @description `passkeys_unavailable` : Passkeys momentanément indisponibles */
             503: {
                 headers: {
@@ -4441,6 +4578,15 @@ export interface operations {
                 headers: {
                     /** @description Secondes à attendre avant de réessayer */
                     "Retry-After"?: number;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description `internal_error` : Une erreur est survenue de notre côté. Réessayez dans un instant ; si elle revient, donnez la référence à la crèche. */
+            500: {
+                headers: {
                     [name: string]: unknown;
                 };
                 content: {
@@ -4545,6 +4691,15 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
+            /** @description `internal_error` : Une erreur est survenue de notre côté. Réessayez dans un instant ; si elle revient, donnez la référence à la crèche. */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
             /** @description `passkeys_unavailable` : Passkeys momentanément indisponibles */
             503: {
                 headers: {
@@ -4635,6 +4790,15 @@ export interface operations {
                 headers: {
                     /** @description Secondes à attendre avant de réessayer */
                     "Retry-After"?: number;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description `internal_error` : Une erreur est survenue de notre côté. Réessayez dans un instant ; si elle revient, donnez la référence à la crèche. */
+            500: {
+                headers: {
                     [name: string]: unknown;
                 };
                 content: {
@@ -4739,6 +4903,15 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
+            /** @description `internal_error` : Une erreur est survenue de notre côté. Réessayez dans un instant ; si elle revient, donnez la référence à la crèche. */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
             /** @description `passkeys_unavailable` : Passkeys momentanément indisponibles */
             503: {
                 headers: {
@@ -4797,6 +4970,15 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
+            /** @description `internal_error` : Une erreur est survenue de notre côté. Réessayez dans un instant ; si elle revient, donnez la référence à la crèche. */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
         };
     };
     create_nursery_api_v2_nurseries_post: {
@@ -4841,6 +5023,15 @@ export interface operations {
             };
             /** @description `validation_error` : Certains champs sont invalides. */
             422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description `internal_error` : Une erreur est survenue de notre côté. Réessayez dans un instant ; si elle revient, donnez la référence à la crèche. */
+            500: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -4899,6 +5090,15 @@ export interface operations {
             };
             /** @description `validation_error` : Certains champs sont invalides. */
             422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description `internal_error` : Une erreur est survenue de notre côté. Réessayez dans un instant ; si elle revient, donnez la référence à la crèche. */
+            500: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -4968,6 +5168,15 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
+            /** @description `internal_error` : Une erreur est survenue de notre côté. Réessayez dans un instant ; si elle revient, donnez la référence à la crèche. */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
         };
     };
     get_nursery_summary_api_v2_nurseries__nursery_id__summary_get: {
@@ -5019,6 +5228,15 @@ export interface operations {
             };
             /** @description `validation_error` : Certains champs sont invalides. */
             422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description `internal_error` : Une erreur est survenue de notre côté. Réessayez dans un instant ; si elle revient, donnez la référence à la crèche. */
+            500: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -5084,6 +5302,15 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
+            /** @description `internal_error` : Une erreur est survenue de notre côté. Réessayez dans un instant ; si elle revient, donnez la référence à la crèche. */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
         };
     };
     grant_access_api_v2_nurseries__nursery_id__staff__user_id__put: {
@@ -5134,6 +5361,15 @@ export interface operations {
             };
             /** @description `validation_error` : Certains champs sont invalides. */
             422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description `internal_error` : Une erreur est survenue de notre côté. Réessayez dans un instant ; si elle revient, donnez la référence à la crèche. */
+            500: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -5198,6 +5434,15 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
+            /** @description `internal_error` : Une erreur est survenue de notre côté. Réessayez dans un instant ; si elle revient, donnez la référence à la crèche. */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
         };
     };
     list_employees_api_v2_staff_get: {
@@ -5229,6 +5474,15 @@ export interface operations {
             };
             /** @description `mfa_required` : Second facteur requis ; `role_refused` : Action non autorisée pour ce rôle */
             403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description `internal_error` : Une erreur est survenue de notre côté. Réessayez dans un instant ; si elle revient, donnez la référence à la crèche. */
+            500: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -5296,6 +5550,15 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
+            /** @description `internal_error` : Une erreur est survenue de notre côté. Réessayez dans un instant ; si elle revient, donnez la référence à la crèche. */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
         };
     };
     list_tablets_api_v2_nurseries__nursery_id__tablets_get: {
@@ -5347,6 +5610,15 @@ export interface operations {
             };
             /** @description `validation_error` : Certains champs sont invalides. */
             422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description `internal_error` : Une erreur est survenue de notre côté. Réessayez dans un instant ; si elle revient, donnez la référence à la crèche. */
+            500: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -5416,6 +5688,15 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
+            /** @description `internal_error` : Une erreur est survenue de notre côté. Réessayez dans un instant ; si elle revient, donnez la référence à la crèche. */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
         };
     };
     revoke_tablet_api_v2_nurseries__nursery_id__tablets__tablet_id__delete: {
@@ -5466,6 +5747,15 @@ export interface operations {
             };
             /** @description `validation_error` : Certains champs sont invalides. */
             422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description `internal_error` : Une erreur est survenue de notre côté. Réessayez dans un instant ; si elle revient, donnez la référence à la crèche. */
+            500: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -5533,6 +5823,15 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
+            /** @description `internal_error` : Une erreur est survenue de notre côté. Réessayez dans un instant ; si elle revient, donnez la référence à la crèche. */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
         };
     };
     unlock_pin_api_v2_staff__user_id__pin_unlock_post: {
@@ -5589,6 +5888,15 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
+            /** @description `internal_error` : Une erreur est survenue de notre côté. Réessayez dans un instant ; si elle revient, donnez la référence à la crèche. */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
         };
     };
     tablet_info_api_v2_tablet_get: {
@@ -5618,6 +5926,15 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
+            /** @description `internal_error` : Une erreur est survenue de notre côté. Réessayez dans un instant ; si elle revient, donnez la référence à la crèche. */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
         };
     };
     tablet_session_api_v2_tablet_session_get: {
@@ -5640,6 +5957,15 @@ export interface operations {
             };
             /** @description `pin_session_required` : Session de tablette absente ou expirée : saisir le PIN ; `tablet_required` : Tablette non enrôlée, expirée ou révoquée */
             401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description `internal_error` : Une erreur est survenue de notre côté. Réessayez dans un instant ; si elle revient, donnez la référence à la crèche. */
+            500: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -5727,6 +6053,15 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
+            /** @description `internal_error` : Une erreur est survenue de notre côté. Réessayez dans un instant ; si elle revient, donnez la référence à la crèche. */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
         };
     };
     end_tablet_session_api_v2_tablet_session_delete: {
@@ -5756,6 +6091,15 @@ export interface operations {
             };
             /** @description `origin_refused` : Origine de la requête refusée */
             403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description `internal_error` : Une erreur est survenue de notre côté. Réessayez dans un instant ; si elle revient, donnez la référence à la crèche. */
+            500: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -5814,6 +6158,15 @@ export interface operations {
             };
             /** @description `validation_error` : Certains champs sont invalides. */
             422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description `internal_error` : Une erreur est survenue de notre côté. Réessayez dans un instant ; si elle revient, donnez la référence à la crèche. */
+            500: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -5883,6 +6236,15 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
+            /** @description `internal_error` : Une erreur est survenue de notre côté. Réessayez dans un instant ; si elle revient, donnez la référence à la crèche. */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
         };
     };
     get_family_api_v2_nurseries__nursery_id__families__family_id__get: {
@@ -5935,6 +6297,15 @@ export interface operations {
             };
             /** @description `validation_error` : Certains champs sont invalides. */
             422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description `internal_error` : Une erreur est survenue de notre côté. Réessayez dans un instant ; si elle revient, donnez la référence à la crèche. */
+            500: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -6005,6 +6376,15 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
+            /** @description `internal_error` : Une erreur est survenue de notre côté. Réessayez dans un instant ; si elle revient, donnez la référence à la crèche. */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
         };
     };
     list_children_api_v2_nurseries__nursery_id__children_get: {
@@ -6058,6 +6438,15 @@ export interface operations {
             };
             /** @description `validation_error` : Certains champs sont invalides. */
             422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description `internal_error` : Une erreur est survenue de notre côté. Réessayez dans un instant ; si elle revient, donnez la référence à la crèche. */
+            500: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -6128,6 +6517,15 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
+            /** @description `internal_error` : Une erreur est survenue de notre côté. Réessayez dans un instant ; si elle revient, donnez la référence à la crèche. */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
         };
     };
     get_child_api_v2_nurseries__nursery_id__children__child_id__get: {
@@ -6180,6 +6578,15 @@ export interface operations {
             };
             /** @description `validation_error` : Certains champs sont invalides. */
             422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description `internal_error` : Une erreur est survenue de notre côté. Réessayez dans un instant ; si elle revient, donnez la référence à la crèche. */
+            500: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -6250,6 +6657,15 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
+            /** @description `internal_error` : Une erreur est survenue de notre côté. Réessayez dans un instant ; si elle revient, donnez la référence à la crèche. */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
         };
     };
     create_guardian_api_v2_nurseries__nursery_id__families__family_id__guardians_post: {
@@ -6306,6 +6722,15 @@ export interface operations {
             };
             /** @description `validation_error` : Certains champs sont invalides. */
             422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description `internal_error` : Une erreur est survenue de notre côté. Réessayez dans un instant ; si elle revient, donnez la référence à la crèche. */
+            500: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -6376,6 +6801,15 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
+            /** @description `internal_error` : Une erreur est survenue de notre côté. Réessayez dans un instant ; si elle revient, donnez la référence à la crèche. */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
         };
     };
     link_guardian_api_v2_nurseries__nursery_id__children__child_id__guardians__guardian_id__put: {
@@ -6431,6 +6865,15 @@ export interface operations {
             };
             /** @description `guardian_other_family` : Le responsable n'appartient pas à la famille ; `validation_error` : Certains champs sont invalides. */
             422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description `internal_error` : Une erreur est survenue de notre côté. Réessayez dans un instant ; si elle revient, donnez la référence à la crèche. */
+            500: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -6496,6 +6939,15 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
+            /** @description `internal_error` : Une erreur est survenue de notre côté. Réessayez dans un instant ; si elle revient, donnez la référence à la crèche. */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
         };
     };
     tablet_children_api_v2_tablet_children_get: {
@@ -6518,6 +6970,15 @@ export interface operations {
             };
             /** @description `pin_session_required` : Session de tablette absente ou expirée : saisir le PIN ; `tablet_required` : Tablette non enrôlée, expirée ou révoquée */
             401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description `internal_error` : Une erreur est survenue de notre côté. Réessayez dans un instant ; si elle revient, donnez la référence à la crèche. */
+            500: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -6596,6 +7057,15 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
+            /** @description `internal_error` : Une erreur est survenue de notre côté. Réessayez dans un instant ; si elle revient, donnez la référence à la crèche. */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
         };
     };
     tablet_departure_api_v2_tablet_children__child_id__departure_post: {
@@ -6667,6 +7137,15 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
+            /** @description `internal_error` : Une erreur est survenue de notre côté. Réessayez dans un instant ; si elle revient, donnez la référence à la crèche. */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
         };
     };
     day_attendance_api_v2_nurseries__nursery_id__attendance_get: {
@@ -6720,6 +7199,15 @@ export interface operations {
             };
             /** @description `validation_error` : Certains champs sont invalides. */
             422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description `internal_error` : Une erreur est survenue de notre côté. Réessayez dans un instant ; si elle revient, donnez la référence à la crèche. */
+            500: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -6798,6 +7286,15 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
+            /** @description `internal_error` : Une erreur est survenue de notre côté. Réessayez dans un instant ; si elle revient, donnez la référence à la crèche. */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
         };
     };
     present_children_api_v2_nurseries__nursery_id__attendance_present_get: {
@@ -6849,6 +7346,15 @@ export interface operations {
             };
             /** @description `validation_error` : Certains champs sont invalides. */
             422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description `internal_error` : Une erreur est survenue de notre côté. Réessayez dans un instant ; si elle revient, donnez la référence à la crèche. */
+            500: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -6919,6 +7425,15 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
+            /** @description `internal_error` : Une erreur est survenue de notre côté. Réessayez dans un instant ; si elle revient, donnez la référence à la crèche. */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
         };
     };
     attendance_history_csv_api_v2_nurseries__nursery_id__attendance_history_csv_get: {
@@ -6975,6 +7490,15 @@ export interface operations {
             };
             /** @description `period_inverted` : La date de début suit la date de fin ; `period_too_long` : Période limitée à 366 jours par requête ; `validation_error` : Certains champs sont invalides. */
             422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description `internal_error` : Une erreur est survenue de notre côté. Réessayez dans un instant ; si elle revient, donnez la référence à la crèche. */
+            500: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -7054,6 +7578,15 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
+            /** @description `internal_error` : Une erreur est survenue de notre côté. Réessayez dans un instant ; si elle revient, donnez la référence à la crèche. */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
         };
     };
     cancel_presence_api_v2_nurseries__nursery_id__attendance__attendance_id__cancel_post: {
@@ -7126,6 +7659,15 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
+            /** @description `internal_error` : Une erreur est survenue de notre côté. Réessayez dans un instant ; si elle revient, donnez la référence à la crèche. */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
         };
     };
     attendance_corrections_api_v2_nurseries__nursery_id__attendance_corrections_get: {
@@ -7182,6 +7724,15 @@ export interface operations {
             };
             /** @description `period_inverted` : La date de début suit la date de fin ; `period_too_long` : Période limitée à 366 jours par requête ; `validation_error` : Certains champs sont invalides. */
             422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description `internal_error` : Une erreur est survenue de notre côté. Réessayez dans un instant ; si elle revient, donnez la référence à la crèche. */
+            500: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -7248,6 +7799,15 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
+            /** @description `internal_error` : Une erreur est survenue de notre côté. Réessayez dans un instant ; si elle revient, donnez la référence à la crèche. */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
         };
     };
     lookup_invitation_api_v2_invitations_lookup_post: {
@@ -7292,6 +7852,15 @@ export interface operations {
             };
             /** @description `validation_error` : Certains champs sont invalides. */
             422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description `internal_error` : Une erreur est survenue de notre côté. Réessayez dans un instant ; si elle revient, donnez la référence à la crèche. */
+            500: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -7359,6 +7928,15 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
+            /** @description `internal_error` : Une erreur est survenue de notre côté. Réessayez dans un instant ; si elle revient, donnez la référence à la crèche. */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
         };
     };
     my_children_api_v2_family_children_get: {
@@ -7390,6 +7968,15 @@ export interface operations {
             };
             /** @description `mfa_required` : Second facteur requis ; `role_refused` : Action non autorisée pour ce rôle */
             403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description `internal_error` : Une erreur est survenue de notre côté. Réessayez dans un instant ; si elle revient, donnez la référence à la crèche. */
+            500: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -7457,6 +8044,15 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
+            /** @description `internal_error` : Une erreur est survenue de notre côté. Réessayez dans un instant ; si elle revient, donnez la référence à la crèche. */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
         };
     };
     list_tasks_api_v2_cleaning_tasks_get: {
@@ -7499,6 +8095,15 @@ export interface operations {
             };
             /** @description `validation_error` : Certains champs sont invalides. */
             422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description `internal_error` : Une erreur est survenue de notre côté. Réessayez dans un instant ; si elle revient, donnez la référence à la crèche. */
+            500: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -7559,6 +8164,15 @@ export interface operations {
             };
             /** @description `validation_error` : Certains champs sont invalides. */
             422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description `internal_error` : Une erreur est survenue de notre côté. Réessayez dans un instant ; si elle revient, donnez la référence à la crèche. */
+            500: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -7637,6 +8251,15 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
+            /** @description `internal_error` : Une erreur est survenue de notre côté. Réessayez dans un instant ; si elle revient, donnez la référence à la crèche. */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
         };
     };
     list_rooms_api_v2_nurseries__nursery_id__rooms_get: {
@@ -7690,6 +8313,15 @@ export interface operations {
             };
             /** @description `validation_error` : Certains champs sont invalides. */
             422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description `internal_error` : Une erreur est survenue de notre côté. Réessayez dans un instant ; si elle revient, donnez la référence à la crèche. */
+            500: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -7768,6 +8400,15 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
+            /** @description `internal_error` : Une erreur est survenue de notre côté. Réessayez dans un instant ; si elle revient, donnez la référence à la crèche. */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
         };
     };
     get_room_api_v2_nurseries__nursery_id__rooms__room_id__get: {
@@ -7820,6 +8461,15 @@ export interface operations {
             };
             /** @description `validation_error` : Certains champs sont invalides. */
             422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description `internal_error` : Une erreur est survenue de notre côté. Réessayez dans un instant ; si elle revient, donnez la référence à la crèche. */
+            500: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -7892,6 +8542,15 @@ export interface operations {
             };
             /** @description `validation_error` : Certains champs sont invalides. */
             422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description `internal_error` : Une erreur est survenue de notre côté. Réessayez dans un instant ; si elle revient, donnez la référence à la crèche. */
+            500: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -7972,6 +8631,15 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
+            /** @description `internal_error` : Une erreur est survenue de notre côté. Réessayez dans un instant ; si elle revient, donnez la référence à la crèche. */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
         };
     };
     day_plan_api_v2_nurseries__nursery_id__cleaning_plan_get: {
@@ -8025,6 +8693,15 @@ export interface operations {
             };
             /** @description `validation_error` : Certains champs sont invalides. */
             422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description `internal_error` : Une erreur est survenue de notre côté. Réessayez dans un instant ; si elle revient, donnez la référence à la crèche. */
+            500: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -8097,6 +8774,15 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
+            /** @description `internal_error` : Une erreur est survenue de notre côté. Réessayez dans un instant ; si elle revient, donnez la référence à la crèche. */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
         };
     };
     cleaning_history_csv_api_v2_nurseries__nursery_id__cleaning_history_csv_get: {
@@ -8162,6 +8848,15 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
+            /** @description `internal_error` : Une erreur est survenue de notre côté. Réessayez dans un instant ; si elle revient, donnez la référence à la crèche. */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
         };
     };
     tablet_sheet_api_v2_tablet_cleaning_get: {
@@ -8184,6 +8879,15 @@ export interface operations {
             };
             /** @description `pin_session_required` : Session de tablette absente ou expirée : saisir le PIN ; `tablet_required` : Tablette non enrôlée, expirée ou révoquée */
             401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description `internal_error` : Une erreur est survenue de notre côté. Réessayez dans un instant ; si elle revient, donnez la référence à la crèche. */
+            500: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -8258,6 +8962,15 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
+            /** @description `internal_error` : Une erreur est survenue de notre côté. Réessayez dans un instant ; si elle revient, donnez la référence à la crèche. */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
         };
     };
     tablet_uncheck_api_v2_tablet_cleaning__room_task_id__check_delete: {
@@ -8316,6 +9029,15 @@ export interface operations {
             };
             /** @description `validation_error` : Certains champs sont invalides. */
             422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description `internal_error` : Une erreur est survenue de notre côté. Réessayez dans un instant ; si elle revient, donnez la référence à la crèche. */
+            500: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -8390,6 +9112,15 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
+            /** @description `internal_error` : Une erreur est survenue de notre côté. Réessayez dans un instant ; si elle revient, donnez la référence à la crèche. */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
         };
     };
     update_employee_api_v2_staff__user_id__patch: {
@@ -8452,6 +9183,15 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
+            /** @description `internal_error` : Une erreur est survenue de notre côté. Réessayez dans un instant ; si elle revient, donnez la référence à la crèche. */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
         };
     };
     lookup_invitation_api_v2_staff_invitations_lookup_post: {
@@ -8503,6 +9243,15 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
+            /** @description `internal_error` : Une erreur est survenue de notre côté. Réessayez dans un instant ; si elle revient, donnez la référence à la crèche. */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
         };
     };
     accept_invitation_api_v2_staff_invitations_accept_post: {
@@ -8547,6 +9296,15 @@ export interface operations {
             };
             /** @description `password_policy` : Ce mot de passe est trop courant. ; `validation_error` : Certains champs sont invalides. */
             422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description `internal_error` : Une erreur est survenue de notre côté. Réessayez dans un instant ; si elle revient, donnez la référence à la crèche. */
+            500: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -8610,6 +9368,15 @@ export interface operations {
                 headers: {
                     /** @description Secondes à attendre avant de réessayer */
                     "Retry-After"?: number;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description `internal_error` : Une erreur est survenue de notre côté. Réessayez dans un instant ; si elle revient, donnez la référence à la crèche. */
+            500: {
+                headers: {
                     [name: string]: unknown;
                 };
                 content: {

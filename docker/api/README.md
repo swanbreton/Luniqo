@@ -63,6 +63,7 @@ installé.
 | `ENV PATH=/opt/venv/bin:$PATH` | `uvicorn`, `alembic` et `python` sont ceux du venv. |
 | `ENV PYTHONDONTWRITEBYTECODE=1` | Pas de fichiers `.pyc` : le système de fichiers est en lecture seule. |
 | `ENV PYTHONUNBUFFERED=1` | Les logs partent immédiatement vers `docker logs`. |
+| `--no-access-log` | Le journal d'accès texte d'uvicorn (avec l'IP) est remplacé par le journal JSON de l'API : une ligne par requête avec sa référence `X-Request-ID` (`app/requests.py`). |
 | `USER app` | L'API ne tourne pas en root. |
 
 ### Port
