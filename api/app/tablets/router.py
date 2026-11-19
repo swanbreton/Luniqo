@@ -10,7 +10,7 @@ from app.config import get_settings
 from app.db import SessionDep
 from app.errors import TOO_MANY_ATTEMPTS, ApiError, ErrorSpec
 from app.nurseries.dependencies import ManagedNursery, OwnerUser
-from app.openapi import error_responses
+from app.openapi import error_responses, retry_after
 from app.tablets import policy, service
 from app.tablets.dependencies import CurrentActor, CurrentTablet, action_cookie_name, device_cookie_name
 from app.tablets.schemas import (
@@ -89,15 +89,15 @@ async def revoke_tablet(tablet_id: uuid.UUID, context: ManagedNursery, db: Sessi
 # --- PIN : employé et direction -----------------------------------------------
 
 @router.put("/auth/me/pin", status_code=status.HTTP_204_NO_CONTENT, tags=["authentification"],
-            responses=error_responses(_PIN_FOR_EMPLOYEES, _WRONG_PASSWORD, *_WEAK_PIN, TOO_MANY_ATTEMPTS))
+            responses=retry_after(error_responses(_PIN_FOR_EMPLOYEES, _WRONG_PASSWORD, *_WEAK_PIN, TOO_MANY_ATTEMPTS)))
 async def set_my_pin(body: PinIn, user: CurrentUser, db: SessionDep, client: ClientDep, now: NowDep) -> None:
     """L'employé choisit ou change son PIN de tablette, en confirmant son mot de passe. Débloque le PIN."""
     if user.role != UserRole.EMPLOYEE:
         raise ApiError(_PIN_FOR_EMPLOYEES)
     try:
         await service.set_pin(db, user, body.password, body.pin, client, now)
-    except service.TooManyAttempts:
-        raise ApiError(TOO_MANY_ATTEMPTS) from None
+    except service.TooManyAttempts as exc:
+        raise ApiError(TOO_MANY_ATTEMPTS, retry_after=exc.retry_after) from None
     except service.WrongPassword:
         raise ApiError(_WRONG_PASSWORD) from None
     except policy.PinPolicyError as error:
@@ -122,14 +122,15 @@ async def tablet_info(tablet: CurrentTablet, db: SessionDep) -> TabletInfo:
                       nursery_name=tablet.nursery.name, staff=[TabletStaffMember.of(user) for user in members])
 
 
-@router.post("/tablet/session", status_code=status.HTTP_201_CREATED, responses=error_responses(*_PIN_ERRORS.values()))
+@router.post("/tablet/session", status_code=status.HTTP_201_CREATED,
+             responses=retry_after(error_responses(*_PIN_ERRORS.values())))
 async def open_tablet_session(body: TabletLoginIn, tablet: CurrentTablet, db: SessionDep, client: ClientDep,
                               now: NowDep, response: Response) -> TabletActorOut:
     """Ouvre une session d'action de 2 minutes par PIN, pour la crèche de la tablette."""
     try:
         user, token = await service.open_action_session(db, tablet, body.user_id, body.pin, client, now)
     except service.PinRefused as refused:
-        raise ApiError(_PIN_ERRORS[refused.reason]) from None
+        raise ApiError(_PIN_ERRORS[refused.reason], retry_after=refused.retry_after) from None
     _set_cookie(response, action_cookie_name(), token, int(policy.ACTION_SESSION_LIFETIME.total_seconds()))
     return TabletActorOut(user_id=user.id, display_name=display_name(user), nursery_id=tablet.nursery.id,
                           nursery_name=tablet.nursery.name, expires_at=now + policy.ACTION_SESSION_LIFETIME)

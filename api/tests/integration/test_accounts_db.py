@@ -222,7 +222,10 @@ async def test_mot_de_passe_actuel_exige_et_essais_limites(clients, world, clock
         response = await client.put(url, json={"current_password": "ce n'est pas le bon", "new_password": NEW_PASSWORD})
         assert response.status_code == 403
     # Bloqué, même avec le bon mot de passe, jusqu'à la fin de la fenêtre de 15 minutes.
-    assert (await client.put(url, json={"current_password": PASSWORD, "new_password": NEW_PASSWORD})).status_code == 429
+    response = await client.put(url, json={"current_password": PASSWORD, "new_password": NEW_PASSWORD})
+    # Le plus ancien des 5 échecs sort de la fenêtre dans 15 minutes : c'est le délai annoncé.
+    assert response.status_code == 429 and response.json()["code"] == "too_many_attempts"
+    assert 0 < int(response.headers["retry-after"]) <= 15 * 60
     clock.advance(minutes=15, seconds=1)
     client = await signed_in(clients, "lea@a.test")
     assert (await client.put(url, json={"current_password": PASSWORD, "new_password": NEW_PASSWORD})).status_code == 200

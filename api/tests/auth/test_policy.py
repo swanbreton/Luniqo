@@ -10,6 +10,7 @@ from app.auth.policy import (
     needs_touch,
     retry_after,
     session_expired,
+    window_retry_after,
 )
 
 T0 = datetime(2026, 10, 8, 9, 0, tzinfo=UTC)
@@ -71,3 +72,29 @@ def test_blocage_atteignable_dans_la_fenetre(throttle):
     waits = sum(retry_after(FailureStats(count, T0), throttle, T0)
                 for count in range(throttle.delay_from, throttle.block_from))
     assert waits < FAILURE_WINDOW.total_seconds()
+
+
+WINDOW = timedelta(minutes=15)
+T0 = datetime(2026, 11, 19, 9, 0, tzinfo=UTC)
+
+
+def test_fenetre_sous_le_seuil_aucune_attente():
+    assert window_retry_after([T0, T0 + timedelta(minutes=1)], 5, WINDOW, T0 + timedelta(minutes=2)) == 0
+
+
+def test_fenetre_attente_jusqu_a_la_sortie_du_plus_ancien_echec():
+    failures = [T0 + timedelta(minutes=minute) for minute in range(5)]  # 9 h 00 à 9 h 04
+    # Le 5e échec bloque ; le blocage cesse quand l'échec de 9 h 00 sort de la fenêtre, à 9 h 15.
+    assert window_retry_after(failures, 5, WINDOW, T0 + timedelta(minutes=5)) == 10 * 60
+
+
+def test_fenetre_avec_plus_d_echecs_que_le_seuil():
+    failures = [T0 + timedelta(minutes=minute) for minute in range(7)]  # 7 échecs, seuil 5
+    # Il faut que 3 échecs sortent : celui de 9 h 02 sort à 9 h 17.
+    assert window_retry_after(failures, 5, WINDOW, T0 + timedelta(minutes=7)) == 10 * 60
+
+
+def test_fenetre_au_moins_une_seconde_pendant_le_blocage():
+    failures = [T0] * 5
+    assert window_retry_after(failures, 5, WINDOW, T0 + WINDOW - timedelta(milliseconds=10)) == 1
+    assert window_retry_after(failures, 5, WINDOW, T0 + WINDOW) == 1

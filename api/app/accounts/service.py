@@ -4,7 +4,7 @@ import uuid
 from dataclasses import dataclass
 from datetime import datetime
 
-from sqlalchemy import delete, func, select, update
+from sqlalchemy import delete, select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -12,20 +12,21 @@ from app.accounts import policy
 from app.accounts.models import StaffInvitation
 from app.auth import passwords
 from app.auth.models import AppUser, AuthEvent, AuthEventType, UserRole, UserSession
-from app.auth.policy import FAILURE_WINDOW
+from app.auth.policy import FAILURE_WINDOW, window_retry_after
 from app.auth.service import Client, normalize_email
 from app.auth.tokens import new_token, token_digest
 from app.nurseries.models import Enterprise
 
 
 class AccountRefused(Exception):
-    """`reason` : email_taken, not_found, already_active, invalid, wrong_password, too_many_attempts,
-    weak_password (avec `detail`)."""
+    """`reason` : email_taken, not_found, already_active, invalid, wrong_password, too_many_attempts
+    (avec `retry_after`), weak_password (avec `detail`)."""
 
-    def __init__(self, reason: str, detail: str | None = None) -> None:
+    def __init__(self, reason: str, detail: str | None = None, retry_after: int | None = None) -> None:
         super().__init__(reason)
         self.reason = reason
         self.detail = detail
+        self.retry_after = retry_after
 
 
 @dataclass(frozen=True)
@@ -162,11 +163,11 @@ async def accept(db: AsyncSession, token: str, password: str, client: Client, no
 async def change_password(db: AsyncSession, user: AppUser, current_session: UserSession, current: str, new: str,
                           client: Client, now: datetime) -> int:
     """Remplace le mot de passe et ferme toutes les **autres** sessions du compte (ADR-003). Renvoie leur nombre."""
-    failures = await db.scalar(select(func.count()).select_from(AuthEvent).where(
+    failures = list(await db.scalars(select(AuthEvent.occurred_at).where(
         AuthEvent.user_id == user.id, AuthEvent.event == AuthEventType.PASSWORD_CHANGE_FAILED.value,
-        AuthEvent.occurred_at >= now - FAILURE_WINDOW))
-    if failures >= policy.PASSWORD_CHANGE_MAX_FAILURES:
-        raise AccountRefused("too_many_attempts")
+        AuthEvent.occurred_at >= now - FAILURE_WINDOW).order_by(AuthEvent.occurred_at)))
+    if wait := window_retry_after(failures, policy.PASSWORD_CHANGE_MAX_FAILURES, FAILURE_WINDOW, now):
+        raise AccountRefused("too_many_attempts", retry_after=wait)
     valid, _ = await passwords.verify_password(user.password_hash, current)
     if not valid:
         _event(db, AuthEventType.PASSWORD_CHANGE_FAILED, client, now, user_id=user.id, detail="bad_password")

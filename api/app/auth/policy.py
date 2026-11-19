@@ -4,6 +4,8 @@ Fonctions pures, sans base ni horloge : l'heure courante est passée en
 paramètre, ce qui rend chaque règle testable directement.
 """
 
+import math
+from collections.abc import Sequence
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 
@@ -61,3 +63,16 @@ def retry_after(stats: FailureStats, throttle: Throttle, now: datetime) -> int:
         wait = min(timedelta(seconds=2 ** (stats.count - throttle.delay_from)), throttle.max_delay)
     remaining = stats.last + wait - now
     return max(0, int(remaining.total_seconds() + 0.999))
+
+
+def window_retry_after(occurred: Sequence[datetime], max_failures: int, window: timedelta, now: datetime) -> int:
+    """Secondes avant que le nombre d'échecs de la fenêtre glissante repasse sous `max_failures`.
+
+    `occurred` : dates des échecs de la fenêtre, de la plus ancienne à la plus récente.
+    Avec n ≥ max échecs, le blocage cesse quand l'échec de rang n - max sort de la
+    fenêtre. Au moins 1 seconde quand le blocage est en cours ; 0 sinon.
+    """
+    if len(occurred) < max_failures:
+        return 0
+    release = occurred[len(occurred) - max_failures] + window
+    return max(1, math.ceil((release - now).total_seconds()))

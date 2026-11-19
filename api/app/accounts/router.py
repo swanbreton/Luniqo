@@ -28,7 +28,7 @@ from app.db import SessionDep
 from app.errors import TOO_MANY_ATTEMPTS, ApiError, ErrorSpec, required_field
 from app.nurseries.dependencies import OwnerUser
 from app.nurseries.schemas import StaffOut
-from app.openapi import error_responses
+from app.openapi import error_responses, retry_after
 
 router = APIRouter(prefix="/api/v2", tags=["personnel"])
 
@@ -55,7 +55,7 @@ def _errors(*reasons: str, weak_password: bool = False) -> dict:
 def _refused(refusal: service.AccountRefused) -> ApiError:
     if refusal.reason == "weak_password":
         return ApiError(_WEAK_PASSWORD, detail=refusal.detail)
-    return ApiError(_REFUSALS[refusal.reason])
+    return ApiError(_REFUSALS[refusal.reason], retry_after=refusal.retry_after)
 
 
 def _invitation_out(employee, invitation, token: str) -> StaffInvitationOut:
@@ -142,7 +142,7 @@ async def accept_invitation(body: AcceptIn, db: SessionDep, client: ClientDep, n
 # --- Mot de passe ----------------------------------------------------------------------
 
 @router.put("/auth/me/password", tags=["authentification"],
-            responses=_errors("wrong_password", "too_many_attempts", weak_password=True))
+            responses=retry_after(_errors("wrong_password", "too_many_attempts", weak_password=True)))
 async def change_password(body: PasswordChangeIn, user: CurrentUser, web: CurrentWebSession, db: SessionDep,
                           client: ClientDep, now: NowDep) -> PasswordChangedOut:
     """Change son mot de passe (l'actuel est exigé) ; les autres sessions du compte, tablette comprise, sont fermées."""
