@@ -5,6 +5,7 @@ import { z } from 'zod'
 import { Field } from '@/components/field'
 import { FormError } from '@/components/form-error'
 import { Button } from '@/components/ui/button'
+import { type FieldMap, type ServerFieldErrors, useServerFieldErrors } from '@/lib/server-field-errors'
 
 // Confort de saisie seulement : l'API reste la référence (ADR-002 § 6).
 const schema = z.object({
@@ -16,14 +17,19 @@ const schema = z.object({
 
 export type LoginValues = z.infer<typeof schema>
 
+const FIELDS: FieldMap<LoginValues> = { email: 'email', password: 'password' }
+
 type LoginFormProps = {
   onSubmit: (values: LoginValues) => void
   pending?: boolean
   error?: string | null
+  /** Erreurs par champ renvoyées par l'API (422), affichées sous chaque champ. */
+  fieldErrors?: ServerFieldErrors | undefined
 }
 
-export function LoginForm({ onSubmit, pending = false, error = null }: LoginFormProps) {
+export function LoginForm({ onSubmit, pending = false, error = null, fieldErrors }: LoginFormProps) {
   const form = useForm<LoginValues>({ resolver: zodResolver(schema), defaultValues: { email: '', password: '' } })
+  useServerFieldErrors(form, fieldErrors, FIELDS)
   const { errors } = form.formState
 
   return (

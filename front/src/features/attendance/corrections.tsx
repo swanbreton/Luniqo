@@ -3,7 +3,7 @@ import { Plus } from 'lucide-react'
 import { useState } from 'react'
 
 import { $api } from '@/api/client'
-import { errorMessage } from '@/api/errors'
+import { errorMessage, fieldErrorsOf } from '@/api/errors'
 import type { Schemas } from '@/api/types'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
@@ -79,6 +79,7 @@ export function CorrectPresence({ nurseryId, presence }: CorrectPresenceProps) {
           onRemove={(reason) => remove.mutate({ ...target, body: { reason } })}
           pending={correct.isPending || remove.isPending}
           error={failure === null ? null : errorMessage(failure)}
+          fieldErrors={fieldErrorsOf(failure)}
         />
       </DialogContent>
     </Dialog>
@@ -142,6 +143,7 @@ export function AddPresence({ nurseryId, today, defaultDay }: AddPresenceProps) 
           onSubmit={(body) => add.mutate({ params: { path }, body })}
           pending={add.isPending}
           error={failure === null ? null : errorMessage(failure)}
+          fieldErrors={fieldErrorsOf(failure)}
         />
       </DialogContent>
     </Dialog>

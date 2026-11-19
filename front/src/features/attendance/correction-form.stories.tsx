@@ -76,3 +76,15 @@ export const ChargementDesResponsables: Story = { args: { guardians: undefined }
 export const RefusParLApi: Story = {
   args: { error: 'Présence de plus de 31 jours : elle ne se corrige plus' },
 }
+
+/** Saisie refusée par l'API (422) : message sous le champ, résumé en haut du formulaire. */
+export const ErreursParChamp: Story = {
+  args: { error: 'Certains champs sont invalides.', fieldErrors: { departed_at: 'Date et heure invalides' } },
+  play: async ({ canvas }) => {
+    await expect(canvas.getByRole('alert')).toHaveTextContent('Certains champs sont invalides.')
+    const field = canvas.getByLabelText("Départ (vide si l'enfant est encore là)")
+    await expect(await canvas.findByText('Date et heure invalides')).toBeVisible()
+    await expect(field).toHaveAttribute('aria-invalid', 'true')
+    await expect(field).toHaveAccessibleDescription('Date et heure invalides')
+  },
+}

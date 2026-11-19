@@ -115,10 +115,10 @@ le statut ; le texte ne sert qu'à l'affichage (section 2).
 
 | | Écart | Repris par |
 |---|---|---|
-| E1 | Pas de code d'erreur : le front compare des textes | Story A : API faite (LUN-137), front à venir (LUN-138) |
+| E1 | Pas de code d'erreur : le front compare des textes | Story A : fait (API LUN-137, front LUN-138) |
 | E2 | Ni gestionnaire des 500, ni journal, ni identifiant de requête | Story B |
 | E3 | La passerelle renvoie du HTML sur `/api/` en cas de panne | Story B |
-| E4 | Deux formes de 422, validation en anglais, champs jamais affichés | Story A : API faite (LUN-137), affichage à venir (LUN-138) |
+| E4 | Deux formes de 422, validation en anglais, champs jamais affichés | Story A : fait (API LUN-137, affichage sous les champs LUN-138) |
 | E5 | Peu d'actions proposées : réessayer, attendre, hors ligne | Story C |
 | E6 | `Retry-After` absent de certaines 429 | Story A : fait (LUN-137) |
 | E7 | Pas de référence à donner au support pour une erreur serveur | Stories B, C |
@@ -406,6 +406,10 @@ coche pourrait l'enregistrer deux fois. L'écran propose alors « Réessayer ».
 **Décider sur le code, afficher le message.** Les redirections et les cas
 particuliers testent `error.code` (`mfa_required`, `pin_locked`…), plus jamais
 le texte. `errorMessage()` reste la seule façon d'obtenir le texte à afficher.
+En place depuis LUN-138 : `ERROR_CODES` (`front/src/api/errors.ts`) ; erreurs
+par champ posées sous les champs par `useServerFieldErrors`
+(`front/src/lib/server-field-errors.ts`), avec une correspondance explicite
+entre les noms de l'API et ceux du formulaire.
 
 **Pas de notification flottante (toast) pour une erreur.** Une erreur
 s'affiche **à l'endroit de l'action**, avec `role="alert"` pour les lecteurs

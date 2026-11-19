@@ -92,9 +92,17 @@ route.
   reste dans l'API.
 - **Adresse de retour (`?redirect=`) limitée aux chemins de Luniqo**
   (`lib/safe-redirect.ts`), contre les redirections ouvertes.
-- **Erreurs** : `ApiError` porte le message de l'API, le délai de
-  `Retry-After` et les erreurs par champ des 422. Stratégie, traitement par
-  catégorie et cible : [docs/projet/ERREURS.md](../docs/projet/ERREURS.md).
+- **Erreurs** : `ApiError` porte le message de l'API (`message`, à afficher
+  par `errorMessage()`), son **code stable** (`code`), le délai de `Retry-After`
+  et les erreurs par champ des 422 (`fields`). On décide **sur le code**
+  (`ERROR_CODES` dans `api/errors.ts`), jamais sur le texte.
+  Pour afficher les erreurs de l'API sous les champs d'un formulaire : la route
+  passe `fieldErrors={fieldErrorsOf(mutation.error)}`, et le formulaire appelle
+  `useServerFieldErrors(form, fieldErrors, FIELDS)` (`lib/server-field-errors.ts`)
+  avec la correspondance explicite champ de l'API → champ du formulaire
+  (`arrived_at` → `arrival`) ; chaque formulaire a sa story `ErreursParChamp`.
+  Stratégie, traitement par catégorie et cible :
+  [docs/projet/ERREURS.md](../docs/projet/ERREURS.md).
 - **Accessibilité (WCAG 2.2 AA visée)** : libellés reliés aux champs, erreurs
   annoncées, cibles de 44 px ; `jsx-a11y` au lint et axe sur chaque story.
 - **Données de test fictives uniquement** (règle 5 d'AGENTS.md).

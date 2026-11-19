@@ -17,14 +17,20 @@ async function start() {
 const childrenOfDay = http.get('/api/v2/tablet/children', () => HttpResponse.json(tabletChildren))
 
 const noActionSession = http.get('/api/v2/tablet/session', () =>
-  HttpResponse.json({ detail: 'Session de tablette absente ou expirée : saisir le PIN' }, { status: 401 }),
+  HttpResponse.json(
+    { detail: 'Session de tablette absente ou expirée : saisir le PIN', code: 'pin_session_required' },
+    { status: 401 },
+  ),
 )
 
 describe('mode tablette', () => {
   test("tablette non enrôlée : explication, et pas de renvoi vers l'écran de connexion", async ({ worker }) => {
     worker.use(
       http.get('/api/v2/tablet', () =>
-        HttpResponse.json({ detail: 'Tablette non enrôlée, expirée ou révoquée' }, { status: 401 }),
+        HttpResponse.json(
+          { detail: 'Tablette non enrôlée, expirée ou révoquée', code: 'tablet_required' },
+          { status: 401 },
+        ),
       ),
       noActionSession,
     )
@@ -44,7 +50,8 @@ describe('mode tablette', () => {
       http.post('/api/v2/tablet/session', async ({ request }) => {
         const body = (await request.json()) as { pin: string }
         sent.push(body)
-        if (body.pin !== '4826') return HttpResponse.json({ detail: 'PIN incorrect' }, { status: 401 })
+        if (body.pin !== '4826')
+          return HttpResponse.json({ detail: 'PIN incorrect', code: 'pin_invalid' }, { status: 401 })
         actor = { ...tabletActor, expires_at: new Date(Date.now() + 120_000).toISOString() }
         return HttpResponse.json(actor, { status: 201 })
       }),
@@ -88,7 +95,7 @@ describe('mode tablette', () => {
           ),
         }
         return HttpResponse.json(
-          { detail: 'PIN bloqué après 3 erreurs : demandez à la direction de le débloquer' },
+          { detail: 'PIN bloqué après 3 erreurs : demandez à la direction de le débloquer', code: 'pin_locked' },
           { status: 423 },
         )
       }),
@@ -179,7 +186,10 @@ describe('mode tablette', () => {
         http.post(`/api/v2/tablet/children/${emma.id}/departure`, async ({ request }) => {
           sent.push(await request.json())
           return HttpResponse.json(
-            { detail: "Cette personne n'est pas autorisée à venir chercher l'enfant : prévenir la direction" },
+            {
+              detail: "Cette personne n'est pas autorisée à venir chercher l'enfant : prévenir la direction",
+              code: 'pickup_not_authorized',
+            },
             { status: 403 },
           )
         }),
@@ -205,7 +215,10 @@ describe('mode tablette', () => {
         session,
         childrenOfDay,
         http.post(`/api/v2/tablet/children/${leo.id}/arrival`, () =>
-          HttpResponse.json({ detail: 'Session de tablette absente ou expirée : saisir le PIN' }, { status: 401 }),
+          HttpResponse.json(
+            { detail: 'Session de tablette absente ou expirée : saisir le PIN', code: 'pin_session_required' },
+            { status: 401 },
+          ),
         ),
       )
       const { screen } = await start()
