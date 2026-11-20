@@ -1,4 +1,4 @@
-<!-- Titre : Conventional Commit terminé par la clé Jira de la branche, par exemple « feat(api): pointage groupé (LUN-65) ». Vérifié par la CI, comme ce modèle (« LUN-<n> » remplacé, « Ce qui change » rempli). -->
+<!-- Titre : Conventional Commit terminé par la clé Jira de la branche, par exemple « feat(api): pointage groupé (LUN-65) ». Vérifié par la CI, comme ce modèle : clé et lien du ticket renseignés, « Ce qui change » rempli. -->
 
 ## Ticket
 
