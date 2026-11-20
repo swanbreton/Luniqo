@@ -8,12 +8,12 @@ retour est versionné.
 |---|---|
 | Date | AAAA-MM-JJ |
 | Maître de stage | Florent |
-| US | LUN-124 « Voir l'état de chaque crèche depuis l'accueil » |
+| US | LUN-<n> « titre de l'US » |
 | PR | lien, état (fusionnée, en relecture, abandonnée) |
 
 ## 1. Résultat
 
-- Critères d'acceptation tenus : n sur 6, lesquels manquent.
+- Critères d'acceptation tenus : n sur N, lesquels manquent.
 - Definition of Done : cases cochées honnêtement ? Écarts constatés.
 
 ## 2. Grille
@@ -24,11 +24,12 @@ un fait vérifiable (un commit, un commentaire de relecture, un test).
 | Critère | Niveau | Fait observé |
 |---|---|---|
 | Conventions : branche, commits, titre et modèle de PR | | |
-| Isolation des données : `ReadableNursery`, 403 et 404 testés | | |
+| Isolation des données : dépendance d'accès (`ReadableNursery`, `ManagedNursery`), 403 et 404 testés | | |
+| Erreurs : déclarées (`ErrorSpec`, `@raises`, visibles dans Swagger), affichées avec `ActionError`, réponses `apiErrors` dans les tests | | |
 | Tests de l'API : unitaires et intégration, cas d'erreur compris | | |
 | Tests du front : stories des états, test avec MSW | | |
 | Design system : composants de `front/src/components/ui`, jetons, pas de couleur en dur | | |
-| Accessibilité et petit écran (800 × 600) | | |
+| Accessibilité et petit écran (800 × 600, vérifié avec les styles réels) | | |
 | Contrat de l'API régénéré, erreurs déclarées dans Swagger | | |
 | Qualité de la PR : taille, description, réponses à la relecture | | |
 | Autonomie : questions posées au bon moment, au bon endroit (issue) | | |

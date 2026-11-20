@@ -7,7 +7,7 @@ partagé). Pas de nom ni de donnée personnelle si le rapport est versionné.
 | | |
 |---|---|
 | Date | AAAA-MM-JJ |
-| US | LUN-124 « Voir l'état de chaque crèche depuis l'accueil » |
+| US | LUN-<n> « titre de l'US » |
 | PR | lien |
 | Temps passé | heures, dont onboarding : heures |
 

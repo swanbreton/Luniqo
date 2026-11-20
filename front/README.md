@@ -158,6 +158,18 @@ navigateur peuvent dépasser leur délai, et ce n'est jamais le même qui échou
 requête lue juste après un changement d'adresse doit être attendue
 (`expect.poll`), pas lue tout de suite.
 
+Les tests du navigateur chargent les styles réels de l'application
+(`test/browser-setup.ts`, `setupFiles` du projet `browser`) : une vérification
+de mise en page (`page.viewport(800, 600)`, `toBeInViewport`) porte sur le vrai
+rendu. Sans styles, le pointage de la tablette passait le test alors que
+« Réessayer » sortait de l'écran (LUN-142). Les stories les chargent par
+`.storybook/preview.ts`.
+
+Vite reçoit une configuration PostCSS en ligne (`vite.config.ts`) : il ne
+cherche plus de fichier dans les dossiers parents, où il trouvait celui de la
+v1. `pnpm api:types` force l'UTF-8 de Python (`PYTHONUTF8=1`) : sous Windows,
+les accents du contrat étaient abîmés (LUN-145).
+
 Si Playwright ne trouve plus son Chromium (`Executable doesn't exist`), le
 réinstaller : `corepack pnpm exec playwright install chromium`.
 

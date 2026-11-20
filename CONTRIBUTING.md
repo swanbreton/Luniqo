@@ -303,12 +303,21 @@ Types : `feat`, `fix`, `docs`, `refactor`, `test`, `chore`, `ci`. Portée
 facultative : `api`, `front`, `tablette`, `docker`…
 
 **Pull requests** : le [modèle](.github/pull_request_template.md) est rempli
-automatiquement. Titre au format d'un commit, avec la clé. Une PR = un ticket.
+automatiquement. Titre au format d'un commit, terminé par la clé de la branche :
+`feat(api): pointage groupé (LUN-65)`. Une PR = un ticket. La CI
+([pr-conventions.yml](.github/workflows/pr-conventions.yml)) refuse un titre
+réduit à la clé, une clé différente de celle de la branche, et un modèle laissé
+tel quel (« LUN-<n> » non remplacé, « Ce qui change » vide). Pour mettre sa
+branche à jour : `git rebase` sur `develop`, plutôt qu'une fusion de `develop`
+dans la branche.
 On ne fait jamais partir une branche d'une autre branche de travail (PR
 empilées) : toujours de `develop`.
 
 **Relecture** : au moins une personne pour `develop` et `staging`, deux pour `main`, imposé
-par GitHub ([Protections des branches](#protections-des-branches-rulesets-github)). Une
+par GitHub ([Protections des branches](#protections-des-branches-rulesets-github)).
+L'approbation est **enregistrée sur GitHub** avant la fusion ; le contournement
+administrateur est réservé aux urgences (une PR de stage a été fusionnée sans
+approbation, LUN-145). Une
 modification du front est relue de préférence par Pauline ou Thomas, une du
 back par Julien ou Thomas.
 
@@ -317,7 +326,8 @@ back par Julien ou Thomas.
 Un contributeur sans droit d'écriture (un stagiaire, par exemple) travaille
 dans son fork et ouvre sa PR vers `develop` de `zharrow/Luniqo`. Les règles
 sont les mêmes : branche `<préfixe>/LUN-<n>-…` (dans le fork, jamais `main`),
-titre avec la clé, modèle rempli. Ce qui change, décidé le 2026-11-17 :
+titre avec la clé, modèle rempli, et la ligne `Closes #<issue>` qui ferme
+l'issue du stage à la fusion. Ce qui change, décidé le 2026-11-17 :
 
 - **la CI attend l'accord d'un membre de l'équipe** à chaque exécution
   (Settings → Actions → « Require approval for all external contributors ») :
@@ -325,9 +335,11 @@ titre avec la clé, modèle rempli. Ce qui change, décidé le 2026-11-17 :
   Le relecteur lit le diff, puis clique sur *Approve and run* ;
 - l'étiquetage automatique est sauté (jeton en lecture seule pour un fork) :
   le relecteur pose les étiquettes à la main ;
-- la branche du fork ne fait pas passer le ticket « En cours » dans Jira :
-  le chef de projet le passe à la main ; la PR, qui porte la clé, le fait
-  avancer ensuite.
+- la branche du fork ne fait pas passer le ticket « En cours » dans Jira, et
+  le stagiaire n'a pas de compte Jira : le maître de stage passe la story et
+  ses sous-tâches « En cours » à la main. La PR, qui porte la clé de la story,
+  fait avancer la story, pas ses sous-tâches : le maître de stage les passe
+  « Intégré » à la fusion.
 
 Le parcours pas à pas est dans [ONBOARDING.md](ONBOARDING.md#5-premier-ticket--de-la-branche-à-la-pr-fusionnée).
 

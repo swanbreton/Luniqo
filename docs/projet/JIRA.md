@@ -250,6 +250,14 @@ manuel (modification groupée des tickets `status = Intégré AND fixVersion = v
 au moment de la promotion `develop` → `staging`, car la PR de promotion ne
 porte pas de clé de ticket.
 
+**Contribution depuis un fork (stage).** R1 ne se déclenche pas : la branche
+vit dans le fork, que Jira ne voit pas. La PR porte la clé de la story, donc R2
+et R3 font avancer **la story seule** ; R5 ne remonte que des sous-tâches vers
+leur story, jamais l'inverse. Le maître de stage passe donc la story et ses
+sous-tâches « En cours » au début du stage, puis les sous-tâches « Intégré » à
+la fusion. Au premier stage, LUN-84 et LUN-125 étaient restées « À faire »
+alors que LUN-124 était « Intégré » (corrigé le 2026-11-20, LUN-145).
+
 Après création, tester chaque règle sur un ticket : l'onglet **Journal d'audit**
 de la règle montre si elle s'est déclenchée et pourquoi elle a échoué.
 

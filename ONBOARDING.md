@@ -45,7 +45,8 @@ Pourquoi le stagiaire n'a ni droit d'écriture ni compte Jira : un dépôt GitHu
 personnel n'a pas de rôle intermédiaire (un collaborateur peut pousser,
 supprimer des branches, approuver les PR des autres), et sur l'offre gratuite
 de Jira tout compte administre tous les projets. Le fork et l'issue donnent tout
-ce qu'il faut pour livrer, sans ces risques (décision du 2026-11-17).
+ce qu'il faut pour livrer, sans ces risques (décision du 2026-11-17, reconduite
+le 2026-11-20 pour le stage suivant : toujours aucun compte Jira).
 
 | Outil | Pour | Comment l'obtenir | Vérifier |
 |---|---|---|---|
@@ -99,6 +100,11 @@ docker compose --env-file .env --env-file ../.env up -d --build --wait
 docker compose ps
 ```
 
+**Sous Windows** : lancer ces commandes dans Git Bash (installé avec Git) ou
+WSL. Le dépôt impose des fins de ligne LF ([.gitattributes](.gitattributes)) : un
+clone neuf fonctionne tel quel. Un clone fait avant le 2026-11-20 se remet à
+niveau, sans travail en cours, par `git rm -r --cached -q . && git reset --hard`.
+
 **Vérifier** :
 
 - [ ] `docker compose ps` montre `db`, `api`, `front` et `web` à l'état `healthy` ;
@@ -119,6 +125,7 @@ d'authentification (TOTP) à sa première connexion.
 | La connexion refuse le mot de passe de démonstration | mot de passe de moins de 15 caractères, ou contenant un `$` (Compose le lit comme une variable) : l'API n'a créé aucun compte | corriger `.env`, puis `docker compose down -v` et relancer ; le journal de l'API dit « SEED_DEMO_PASSWORD refusé » |
 | Le port 8080 est déjà pris | un autre programme l'utilise | l'arrêter, ou lancer avec un autre port : `WEB_PUBLISHED_PORT=8081 docker compose …` |
 | `--env-file ../.env` introuvable | le `.env` de la racine n'existe pas | le créer (commande ci-dessus) |
+| Un conteneur s'arrête au démarrage (`/bin/sh^M`, secret refusé) | fichiers en CRLF : clone Windows fait avant `.gitattributes` | remise à niveau ci-dessus, puis `docker compose build` |
 
 Le détail de la conteneurisation (images, limites, ordre de démarrage) est dans
 [docker/README.md](docker/README.md).
@@ -138,6 +145,12 @@ pytest                      # unitaires et intégration
 scripts/test-db.sh down
 ```
 
+**Sous Windows**, les tests d'intégration ne tournent pas directement : le pilote
+asynchrone de PostgreSQL refuse la boucle d'évènements de Windows, et
+`scripts/test-db.sh` passe à Docker des chemins de Git Bash. Lancer à la place
+`docker/pipeline.sh --no-deploy` depuis la racine : lint puis tests unitaires et
+d'intégration, dans des conteneurs, comme la CI.
+
 Lire ensuite [api/README.md](api/README.md) : structure de l'API, routes, qui
 accède à quoi.
 
@@ -151,6 +164,11 @@ corepack pnpm lint && corepack pnpm typecheck && corepack pnpm test
 corepack pnpm storybook                     # http://127.0.0.1:6006
 corepack pnpm dev                           # http://localhost:5173, l'API passe par la pile de l'étape 2
 ```
+
+Si des tests du navigateur dépassent leur délai (machine chargée, jamais le même
+test), relancer avec `corepack pnpm test --no-file-parallelism`. Ces tests
+chargent les styles réels de l'application ([test/browser-setup.ts](front/test/browser-setup.ts)) :
+une vérification en 800 × 600 porte sur le vrai rendu.
 
 `pnpm install` refuse les versions publiées depuis moins de 24 heures et les
 scripts d'installation non autorisés : c'est une protection contre les paquets
@@ -178,14 +196,20 @@ Lire [CONTRIBUTING.md](CONTRIBUTING.md) en entier. L'essentiel :
 | Ticket | Tout travail part d'un ticket `LUN-<n>` dans Jira (pour le stagiaire : son issue GitHub, qui porte la clé) |
 | Branche | `<préfixe>/LUN-<n>-description-courte`, depuis `develop` ; préfixes `feat/`, `fix/`, `docs/`, `infra/`, `chore/` |
 | Commit | [Conventional Commits](https://www.conventionalcommits.org/fr/v1.0.0/) en français, clé en fin de ligne : `feat(api): pointage groupé (LUN-65)` |
-| PR | vers `develop`, titre au format d'un commit, [modèle](.github/pull_request_template.md) rempli, une PR par ticket |
-| Relecture | au moins une personne ; front par Pauline ou Thomas, back par Julien ou Thomas |
+| PR | vers `develop`, titre `type(portée): description (LUN-<n>)` avec la clé de la branche, [modèle](.github/pull_request_template.md) rempli, une PR par ticket ; la CI le vérifie |
+| Relecture | au moins une approbation enregistrée sur GitHub ; front par Pauline ou Thomas, back par Julien ou Thomas |
+| Erreurs | une erreur de l'API se déclare (code stable, message, Swagger) et s'affiche à l'endroit de l'action, avec ce qu'on peut faire : [ERREURS.md](docs/projet/ERREURS.md), § 4 à 6 |
+| Petit écran | chaque écran se vérifie en 800 × 600 (tablette, petit portable) |
 | Fini | la [Definition of Done](CONTRIBUTING.md#5-definition-of-done) est cochée |
 
 Les statuts Jira **avancent seuls** pour l'équipe : créer la branche passe le
 ticket « En cours », ouvrir la PR le passe « En revue », la fusion le passe
-« Intégré ». Pour le stagiaire, la branche vit dans son fork : le maître de
-stage passe le ticket « En cours » à la main, la PR fait le reste. Le
+« Intégré ». Pour le stagiaire, la branche vit dans son fork et il n'a pas de
+compte Jira : le maître de stage passe la story **et ses sous-tâches**
+« En cours » à la main. La PR, qui porte la clé de la story, fait avancer la
+story, **pas ses sous-tâches** : le maître de stage les passe « Intégré » à la
+fusion (au premier stage, elles étaient restées « À faire »). L'issue se ferme
+par la ligne `Closes #<n>` de la PR. Le
 fonctionnement complet est dans [docs/projet/JIRA.md](docs/projet/JIRA.md).
 
 **Le design system du front v2** :
@@ -235,24 +259,40 @@ story fullstack : une partie API, une partie interface, des tests.
 3. **Coder côté API** en suivant la structure décrite dans [api/README.md](api/README.md).
    Toute route d'une crèche passe par les dépendances d'accès (`ReadableNursery`,
    `ManagedNursery`) : c'est ce qui isole les données d'une crèche à l'autre.
-   Déclarer les erreurs de la route dans le schéma OpenAPI (elles apparaissent
-   dans Swagger), puis régénérer le contrat du front (`corepack pnpm api:types`).
+   Une erreur se déclare une fois : `ErrorSpec` (statut, code stable, message
+   en français) et `@raises` sur la route. Elle apparaît alors dans Swagger, et
+   le test « erreur levée = erreur documentée » échoue si on l'oublie (marche à
+   suivre : [ERREURS.md § 6](docs/projet/ERREURS.md#6-ajouter-une-erreur--la-marche-à-suivre)).
+   Régénérer ensuite le contrat du front (`corepack pnpm api:types`).
 4. **Coder côté interface** dans `front/src/features/<domaine>/`, avec les
    composants du design system (étape 4) ; la route va dans `front/src/routes/`.
    Chaque état d'un composant (chargement, vide, valeurs, erreur) a sa story.
+   Une erreur s'affiche à l'endroit de l'action avec `ActionError`
+   (`front/src/components/action-error.tsx`) : message de l'API, « Réessayer »
+   sur une panne, compte à rebours sur une 429 ; jamais de notification
+   flottante.
 5. **Écrire les tests** qui prouvent la nouvelle règle, y compris les cas
    d'erreur (accès refusé, donnée invalide) : pytest pour l'API (unitaires et
-   intégration), Vitest avec MSW pour le front.
+   intégration), Vitest avec MSW pour le front. Les réponses d'erreur viennent
+   de `front/test/handlers/errors.ts` (`apiErrors`, `reply`, `raised`), jamais
+   écrites à la main ; un composant qui appelle l'API a ses stories
+   `ErreurServeur` et `HorsLigne`. Le petit écran se vérifie dans un test du
+   navigateur avec `page.viewport(800, 600)` (styles réels chargés).
 6. **Mettre à jour la documentation** : README de l'API si une route change,
    ligne dans [CHANGELOG.md](CHANGELOG.md) section « Non publié ».
 7. **Ouvrir la PR** vers `develop` de `zharrow/Luniqo`, avec le titre
-   `feat(…): … (LUN-<n>)` et le modèle rempli. Le ticket passe « En revue ».
+   `feat(…): … (LUN-<n>)` (clé de la branche) et le modèle rempli : la CI
+   refuse un titre réduit à la clé ou un modèle laissé tel quel. Depuis un
+   fork, ajouter `Closes #<numéro de l'issue>`. Le ticket passe « En revue ».
+   Pour mettre sa branche à jour : `git fetch upstream && git rebase
+   upstream/develop`, puis `git push --force-with-lease`, plutôt qu'une fusion
+   de `develop` dans la branche.
    Depuis un fork : la PR part de la branche du ticket, **jamais de `main`** ;
    la CI attend qu'un membre de l'équipe l'autorise (*Approve and run*), le
    signaler en commentaire si elle attend.
 8. **Traiter la relecture** : répondre à chaque commentaire, pousser les
-   corrections sur la même branche. Une fois approuvée et la CI verte, la PR est
-   fusionnée ; le ticket passe « Intégré ».
+   corrections sur la même branche. Une fois **approuvée sur GitHub** et la CI
+   verte, la PR est fusionnée ; le ticket passe « Intégré ».
 
 **Checklist avant de demander une relecture** :
 
@@ -260,10 +300,12 @@ story fullstack : une partie API, une partie interface, des tests.
 - [ ] `pytest` et `ruff check .` sont verts en local ;
 - [ ] `lint`, `typecheck` et `test` du front sont verts, le contrat est régénéré si l'API a changé ;
 - [ ] le parcours touché a été rejoué sur la pile Docker ;
-- [ ] les cas d'erreur sont gérés et testés, avec un message utile à l'utilisateur ;
+- [ ] les cas d'erreur sont gérés et testés, avec un message utile à l'utilisateur : erreurs déclarées (`ErrorSpec`, `@raises`), affichées avec `ActionError`, stories `ErreurServeur` et `HorsLigne` ;
+- [ ] l'écran a été vérifié en 800 × 600 ;
 - [ ] l'interface utilise les composants et les jetons du design system ;
 - [ ] la documentation et le CHANGELOG sont à jour ;
-- [ ] le modèle de PR est rempli, cases cochées honnêtement.
+- [ ] le titre suit `type(portée): description (LUN-<n>)`, le modèle de PR est rempli, cases cochées honnêtement ;
+- [ ] depuis un fork : `Closes #<issue>` dans la PR.
 
 ## 6. Bilan de fin de stage
 
@@ -275,8 +317,11 @@ Le stage se termine par deux retours écrits, à partir des modèles de
 | Le stagiaire | un rapport de stage : ce qui a été livré, ce qui a aidé, ce qui a bloqué, les étapes de ce parcours à améliorer | [RAPPORT-STAGIAIRE.md](docs/stage/RAPPORT-STAGIAIRE.md) |
 | Le maître de stage | un retour sur le stage : respect des pratiques, qualité de la PR et des tests, autonomie, points à travailler | [RETOUR-MAITRE-DE-STAGE.md](docs/stage/RETOUR-MAITRE-DE-STAGE.md) |
 
-Chaque blocage relevé dans le rapport devient un ticket pour améliorer ce
-fichier ou la documentation qu'il cite.
+Les deux retours sont rendus **dans la semaine qui suit la fin du stage** ; le
+maître de stage relance. Chaque blocage relevé dans le rapport devient un ticket
+pour améliorer ce fichier ou la documentation qu'il cite. Sans rapport, les
+blocages ne se lisent que dans les traces : c'est ce qui est arrivé au premier
+stage (constats et corrections : LUN-145).
 
 ## Où trouver quoi
 
