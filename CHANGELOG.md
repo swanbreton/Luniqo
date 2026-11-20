@@ -9,6 +9,7 @@ Chaque ligne cite son ticket Jira `LUN-<n>`.
 
 ### Ajouté
 
+- Front v2 : depuis les présences du jour, la direction peut corriger un pointage ou ajouter une présence oubliée, avec un motif obligatoire et actualisation immédiate du tableau après enregistrement (LUN-122).
 - API : résumé de chaque crèche (`GET /api/v2/nurseries/{id}/summary`) avec les enfants accueillis (actifs et en adaptation), présents du jour à Paris et employés actifs ayant accès ; mêmes contrôles d'accès que la lecture d'une crèche (LUN-124).
 - Front v2 : chaque carte de l'accueil affiche les enfants accueillis, présents et le personnel de la crèche, avec actualisation toutes les 30 secondes ; chargement, valeurs nulles et erreur locale avec possibilité de réessayer, sans bloquer les autres cartes ni leurs liens ; présentation adaptée à 800 × 600 (LUN-124).
 - Historique des fiches de ménage : tâches cochées sur une période, annulées comprises, filtrables par pièce, et export CSV pour un contrôle (tableur en français, formules neutralisées) (LUN-71).
