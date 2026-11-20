@@ -160,7 +160,7 @@
     <span class="note" style="display:inline;padding:0;box-shadow:none;margin:0"><span class="api">API ✓</span></span><span>partie back faite</span>
     <span class="note" style="display:inline;padding:0;box-shadow:none;margin:0"><span class="screen">Écran ✓</span> <span class="screen partial">Écran en partie</span></span><span>écrans du front v2 livrés</span>
     <span class="note" style="display:inline;padding:0;box-shadow:none;margin:0"><span class="done">✓ fait</span></span><span>tous les tickets du post-it sont « Intégré » ou « Terminé » dans Jira</span>
-    <span class="note" style="display:inline;padding:0;box-shadow:none;margin:0"><span class="owner intern">US du stagiaire</span> <span class="owner team">US de l'équipe</span></span><span>les deux US fullstack imposées par le TD</span>
+    <span class="note" style="display:inline;padding:0;box-shadow:none;margin:0"><span class="owner intern">US du stagiaire</span></span><span>US fullstack des stages du TD : LUN-124 (stage 1), LUN-128 puis LUN-146 (stage 2, avec une migration de la base)</span>
   </div>
   <p class="sub" style="margin-top:10px">De gauche à droite : l'ordre du récit (de l'installation de la crèche au suivi par les parents). De haut en bas : la priorité. Chaque ligne horizontale découpe une version ; tout ce qui est au-dessus de la ligne MVP suffit pour qu'une première crèche utilise Luniqo pour de vrai.</p>
 </section>
@@ -192,7 +192,7 @@
     <tr><td>Chaque version n'a qu'un nom.</td><td>Chaque version a un objectif et des critères de réussite.</td></tr>
     <tr><td>Un seul repère d'avancement (✅ = API faite), posé à tort sur la fiche de ménage, qui n'avait alors pas d'API.</td><td>Trois repères tirés de Jira et du code : API, écrans, tickets faits. Depuis, l'API du ménage existe (LUN-100, LUN-102, LUN-104) : le badge API est revenu, il manque les écrans.</td></tr>
     <tr><td>Socle technique dans la carte des utilisateurs.</td><td>Socle sorti de la carte, dans une bande de fondations, avec la gestion des erreurs imposée par le TD.</td></tr>
-    <tr><td>—</td><td>Les deux US fullstack du TD ont leur colonne : LUN-124 pour le stagiaire, LUN-128 pour l'équipe.</td></tr>
+    <tr><td>—</td><td>Les US fullstack du TD ont leur colonne : LUN-124 pour le stage 1 ; LUN-128, d'abord l'US de l'équipe, et LUN-146 pour le stage 2 (2026-11-20, LUN-149).</td></tr>
   </table>
 
   <h2>Actions Jira qui découlent de la carte</h2>
@@ -205,7 +205,7 @@
 </section>
 
 <footer>
-  Personas fictifs <code>[SIMULÉ]</code>. Clés et statuts vérifiés un à un dans Jira le 2026-11-17 (LUN-126) ; écrans vérifiés dans le code de <code>develop</code> le même jour. Jusqu'au 2026-10-29, le dépôt citait les épics avec 29 de trop et les stories et sous-tâches avec 7 de trop (voir <code>docs/projet/JIRA.md</code> § 8).
+  Personas fictifs <code>[SIMULÉ]</code>. Clés et statuts vérifiés un à un dans Jira le 2026-11-17 (LUN-126), puis le 2026-11-20 (LUN-149) ; écrans vérifiés dans le code de <code>develop</code> les mêmes jours. Jusqu'au 2026-10-29, le dépôt citait les épics avec 29 de trop et les stories et sous-tâches avec 7 de trop (voir <code>docs/projet/JIRA.md</code> § 8).
 </footer>
 
 <script>
@@ -226,11 +226,11 @@ const EPICS = {
   menage:   { key: "LUN-36", title: "Vivre la journée : le ménage", jira: "Fiche de ménage" },
 };
 
-// Tickets « Intégré » ou « Terminé » dans Jira au 2026-11-17.
+// Tickets « Intégré » ou « Terminé » dans Jira au 2026-11-20.
 const DONE = new Set([
   "LUN-54", "LUN-55", "LUN-58", "LUN-74", "LUN-76", "LUN-78", "LUN-79",
-  "LUN-87", "LUN-88", "LUN-89", "LUN-91", "LUN-92", "LUN-93",
-  "LUN-100", "LUN-102", "LUN-104", "LUN-119", "LUN-120", "LUN-121",
+  "LUN-84", "LUN-87", "LUN-88", "LUN-89", "LUN-91", "LUN-92", "LUN-93",
+  "LUN-100", "LUN-102", "LUN-104", "LUN-119", "LUN-120", "LUN-121", "LUN-125",
 ]);
 const isDone = key => {
   const keys = (key || "").match(/LUN-\d+/g) || [];
@@ -263,12 +263,12 @@ const COLUMNS = [
     p1: [],
     p2: [ t("Administration par l'éditeur, sans accès aux données des crèches", "LUN-56"),
           t("Facturation", null, [], true) ] },
-  { epic: "creches", key: "LUN-128", title: "Suivre la mise en route d'une crèche avec des succès", who: ["A","H"], owner: "team",
-    p0: [ t("Gagner un succès à chaque étape : 2FA activé, tablette enrôlée, 1re fiche de ménage remplie", "LUN-130", ["A","H"]),
+  { epic: "creches", key: "LUN-128", title: "Suivre la mise en route d'une crèche avec des succès", who: ["A","H"], owner: "intern",
+    p0: [ t("Gagner un succès à chaque étape : personnel avec accès, tablette active, premier pointage", "LUN-130", ["A","H"]),
           t("Voir la page de mise en route de sa crèche et les succès qui restent", "LUN-131", ["A","H"]) ],
     p1: [],
     p2: [] },
-  { epic: "creches", key: "LUN-124", title: "Voir l'état de chaque crèche depuis l'accueil", who: ["N","H"], owner: "intern",
+  { epic: "creches", key: "LUN-124", title: "Voir l'état de chaque crèche depuis l'accueil", who: ["N","H"], owner: "intern", api: true, screen: "done",
     p0: [],
     p1: [ t("Lire le résumé d'une crèche : inscrits, présents, personnel", "LUN-84", ["N"]),
           t("Voir une carte de résumé par crèche sur l'accueil", "LUN-125", ["N","H"]) ],
@@ -300,7 +300,11 @@ const COLUMNS = [
           t("Pointer un enfant d'un geste", "LUN-89"),
           t("Choisir l'adulte qui vient chercher ; départ refusé s'il n'est pas autorisé", "LUN-89") ],
     p1: [ t("Pointer une fratrie d'un seul geste", "LUN-90") ],
-    p2: [ t("Transmissions de la journée", null, [], true) ] },
+    p2: [] },
+  { epic: "pointage", key: "LUN-146", title: "Noter les transmissions de la journée", who: ["Y"], owner: "intern",
+    p0: [],
+    p1: [ t("Noter et lire les transmissions du jour sur chaque enfant (repas, sieste, humeur)", "LUN-147 · LUN-148", ["Y","H"]) ],
+    p2: [] },
   { epic: "pointage", key: "LUN-66", title: "Voir qui est présent", who: ["H","N"], api: true, screen: "done",
     p0: [ t("Voir les présents du jour, par crèche", "LUN-91") ],
     p1: [ t("Consulter l'historique des présences sur une période", "LUN-92"),

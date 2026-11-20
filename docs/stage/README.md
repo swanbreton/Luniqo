@@ -14,7 +14,7 @@ identifiant GitHub apparaît de lui-même sur leur PR.
 | Stage | US | Issue | PR | Dates | Rapports |
 |---|---|---|---|---|---|
 | 1 | **LUN-124** « Voir l'état de chaque crèche depuis l'accueil » (sous-tâches LUN-84 API, LUN-125 interface) | [#86](https://github.com/zharrow/Luniqo/issues/86) | [#89](https://github.com/zharrow/Luniqo/pull/89), fusionnée le 2026-11-19 | 2026-11-17 → 2026-11-19 | non rendus |
-| 2 | à choisir par Florent (LUN-128 proposée, voir plus bas) | à créer | — | à venir | — |
+| 2 | **LUN-128** « Suivre la mise en route d'une crèche avec des succès », puis **LUN-146** « Noter les transmissions de la journée sur un enfant » (migration de la base) | [#100](https://github.com/zharrow/Luniqo/issues/100), [#99](https://github.com/zharrow/Luniqo/issues/99) | — | à venir | — |
 
 **Ce que le stage 1 a appris** (relevé dans les traces, faute de rapport ;
 corrigé par LUN-145) :
@@ -74,22 +74,26 @@ Le minimum utile, rien à retirer à la fin (matrice complète dans
 - Contournement administrateur des rulesets : à réserver aux urgences, une PR
   de stage passe par une approbation.
 
-## US proposée pour le stage 2
+## Stage 2 : deux US
 
-**LUN-128** « Suivre la mise en route d'une crèche avec des succès »
-(sous-tâches LUN-130 API, LUN-131 interface). Cette US est en lecture seule et
-suit le même schéma que LUN-124. Avant de la confier, trois points à trancher :
+Le TD demande **deux US fullstack**, dont la seconde **modifie la base de
+données** (migration). Choisies le 2026-11-20 (LUN-149), dans cet ordre :
 
-1. **US de l'équipe** : la story map en fait l'US fullstack de l'équipe pour le
-   TD ([STORY-MAP.md](../produit/STORY-MAP.md)).
-2. **Taille** : 8 points et 5 domaines (second facteur, accès, tablettes,
-   présences, ménage), pour un stage d'environ 2 jours. Possibilité de la
-   réduire à 3 succès.
-3. **Critères d'acceptation à corriger** :
-   - liens vers des écrans qui n'existent pas encore dans le front v2
-     (employés, ménage, second facteur) ;
-   - succès « second facteur » toujours obtenu : sans lui, la direction n'ouvre
-     pas la page.
+| Ordre | US | Issue | Partie API | Partie interface |
+|---|---|---|---|---|
+| 1 | **LUN-128** « Suivre la mise en route d'une crèche avec des succès », réduite à 3 succès (personnel avec accès, tablette active, premier pointage) | [#100](https://github.com/zharrow/Luniqo/issues/100) | LUN-130 : `GET /nurseries/{id}/onboarding`, lecture seule | LUN-131 : page de la crèche |
+| 2 | **LUN-146** « Noter les transmissions de la journée sur un enfant » | [#99](https://github.com/zharrow/Luniqo/issues/99) | LUN-147 : **migration `0015`** (table `child_note`), écriture et lecture | LUN-148 : sous chaque enfant des présences du jour |
+
+**Écartées :**
+- **LUN-64** (accès du personnel) : elle ne modifie pas la base, les colonnes
+  existent. Elle reste au backlog de l'équipe, avec ses critères d'acceptation
+  prêts ; sans elle, le succès « Personnel » de LUN-128 n'a pas de lien.
+- **Sessions actives** : `user_session` stocke déjà l'appareil et la dernière
+  activité.
+
+**Durée de conservation des transmissions** : à décider par Florent. Elle
+relève de la purge RGPD (LUN-54, section « Reste à faire »), hors du périmètre
+de LUN-146.
 
 ## Rapports de fin de stage
 
