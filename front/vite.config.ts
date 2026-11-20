@@ -33,6 +33,10 @@ export default defineConfig({
   resolve: {
     alias: { '@': path.resolve(dirname, 'src') },
   },
+  // Tailwind passe par son plugin Vite. Configuration PostCSS en ligne : Vite ne cherche
+  // plus de fichier dans les dossiers parents, où il trouvait celui de la v1 (racine du
+  // dépôt, plugin non installé : « Cannot find module '@tailwindcss/postcss' », LUN-145).
+  css: { postcss: { plugins: [] } },
   server: {
     // Développement : l'API tourne derrière la passerelle de la pile Docker
     // (même origine pour le navigateur, comme en production).
@@ -54,7 +58,13 @@ export default defineConfig({
         // Le service worker de MSW (test/public/mockServiceWorker.js) n'est servi
         // qu'ici : il ne doit pas partir dans le build de production (public/).
         publicDir: 'test/public',
-        test: { name: 'browser', include: ['src/**/*.browser.test.tsx'], browser: browser() },
+        test: {
+          name: 'browser',
+          include: ['src/**/*.browser.test.tsx'],
+          // Styles réels dans chaque test : une vérification de mise en page en dépend.
+          setupFiles: ['test/browser-setup.ts'],
+          browser: browser(),
+        },
       },
       {
         extends: true,

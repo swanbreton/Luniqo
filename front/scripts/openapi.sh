@@ -9,7 +9,9 @@
 set -eu
 front=$(cd "$(dirname "$0")/.." && pwd)
 cd "$front/../api"
-"${PYTHON:-python}" - > "$front/src/api/openapi.json" <<'PY'
+# PYTHONUTF8=1 : sous Windows, la sortie standard de Python serait en cp1252 et
+# abîmerait les accents du schéma (LUN-145) ; sans effet ailleurs.
+PYTHONUTF8=1 "${PYTHON:-python}" - > "$front/src/api/openapi.json" <<'PY'
 import json
 import sys
 
