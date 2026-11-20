@@ -5,7 +5,7 @@ Carte du parcours des utilisateurs de Luniqo, selon la méthode de Jeff Patton
 persona, dans l'ordre**, et **qu'est-ce qui entre dans le MVP**.
 
 **Version 2**, conçue par Thomas Abadie (équipe du cours « Coordination Front &
-Back »), intégrée au dépôt le 2026-11-17 (LUN-126). Cette page en est la
+Back »), intégrée au dépôt le 2026-11-17 (LUN-126), mise à jour le 2026-11-20 pour le stage 2 (LUN-149). Cette page en est la
 transcription pour GitHub, qui n'affiche pas le HTML : la **version interactive**,
 avec les fiches des personas et la carte en post-it, est
 [story-map.html](story-map.html), à ouvrir dans un navigateur après avoir
@@ -37,8 +37,9 @@ l'historique git.
   - *à créer* : le besoin n'a pas encore de ticket dans Jira.
   - Personas : **H** Hélène, **Y** Yasmine, **M** Marc, **N** Nadia,
     🕹️ Alex et 🖥️ Margeritte (imposés par le TD).
-  - 🎓 **US du stagiaire** et 🤝 **US de l'équipe** : les deux US fullstack
-    demandées par le TD « Road to MVP ».
+  - 🎓 **US du stagiaire** : les US fullstack des stages du TD « Road to MVP ».
+    Stage 1 : LUN-124. Stage 2 : LUN-128, puis LUN-146, qui modifie la base de
+    données (exigence du TD pour la seconde US).
 
 ## Versions
 
@@ -68,8 +69,8 @@ l'historique git.
 | Étape (US) | P0 · MVP | P1 · 1.1 | P2 · plus tard |
 |---|---|---|---|
 | **LUN-63** Gérer ses crèches · H N · API ✓ · Écran en partie | Voir ses crèches et choisir la crèche courante : LUN-82<br>Créer, modifier, fermer une crèche : LUN-83 | | Administration par l'éditeur, sans accès aux données des crèches : LUN-56<br>Facturation : *à créer* |
-| 🤝 **LUN-128** Suivre la mise en route d'une crèche avec des succès · 🕹️ H | Gagner un succès à chaque étape (2FA activé, tablette enrôlée, 1re fiche de ménage remplie) : LUN-130<br>Voir la page de mise en route de sa crèche et les succès qui restent : LUN-131 | | |
-| 🎓 **LUN-124** Voir l'état de chaque crèche depuis l'accueil · N H | | Lire le résumé d'une crèche (inscrits, présents, personnel) : LUN-84<br>Voir une carte de résumé par crèche sur l'accueil : LUN-125 | |
+| 🎓 **LUN-128** Suivre la mise en route d'une crèche avec des succès · 🕹️ H | Gagner un succès à chaque étape (personnel avec accès, tablette active, premier pointage) : LUN-130<br>Voir la page de mise en route de sa crèche et les succès qui restent : LUN-131 | | |
+| 🎓 **LUN-124** Voir l'état de chaque crèche depuis l'accueil · N H · API ✓ · Écran ✓ | | Lire le résumé d'une crèche (inscrits, présents, personnel) : LUN-84 ✓<br>Voir une carte de résumé par crèche sur l'accueil : LUN-125 ✓ | |
 | **LUN-64** Donner accès au personnel · H N · API ✓ | Inviter un employé, qui crée son compte : LUN-55 ✓<br>Accorder ou retirer l'accès à une crèche : LUN-85<br>Débloquer le PIN d'un employé : LUN-85 | Retrouver un employé par nom ou e-mail : LUN-86 | Rôle de responsable de crèche, entre direction et employé : *à créer* |
 
 ### 3. Accueillir les familles (épic LUN-35)
@@ -83,7 +84,8 @@ l'historique git.
 
 | Étape (US) | P0 · MVP | P1 · 1.1 | P2 · plus tard |
 |---|---|---|---|
-| **LUN-65** Pointer arrivées et départs sur la tablette · Y · API ✓ · Écran ✓ | Enrôler la tablette de la crèche (direction) : LUN-87 ✓<br>Choisir ou changer son PIN depuis son accueil : LUN-119 ✓<br>Choisir son nom et taper son PIN, avec de grands boutons : LUN-88 ✓<br>Pointer un enfant d'un geste : LUN-89 ✓<br>Choisir l'adulte qui vient chercher, départ refusé s'il n'est pas autorisé : LUN-89 ✓ | Pointer une fratrie d'un seul geste : LUN-90 | Transmissions de la journée : *à créer* |
+| **LUN-65** Pointer arrivées et départs sur la tablette · Y · API ✓ · Écran ✓ | Enrôler la tablette de la crèche (direction) : LUN-87 ✓<br>Choisir ou changer son PIN depuis son accueil : LUN-119 ✓<br>Choisir son nom et taper son PIN, avec de grands boutons : LUN-88 ✓<br>Pointer un enfant d'un geste : LUN-89 ✓<br>Choisir l'adulte qui vient chercher, départ refusé s'il n'est pas autorisé : LUN-89 ✓ | Pointer une fratrie d'un seul geste : LUN-90 | |
+| 🎓 **LUN-146** Noter les transmissions de la journée · Y | | Noter et lire les transmissions du jour sur chaque enfant (repas, sieste, humeur) : LUN-147, LUN-148 | |
 | **LUN-66** Voir qui est présent · H N · API ✓ · Écran ✓ | Voir les présents du jour, par crèche : LUN-91 ✓ | Consulter l'historique des présences sur une période : LUN-92 ✓<br>Exporter les présences en CSV : LUN-93 ✓ | Statistiques multi-crèches (occupation, régularité du ménage, classement) 🕹️ : *à créer* |
 | **LUN-58** Corriger un pointage · H · API ✓ · Écran en partie | | Corriger un pointage avec un motif obligatoire : LUN-120, LUN-121 ✓<br>Voir l'historique des corrections : LUN-120, LUN-121 ✓<br>Corriger depuis les présences du jour : LUN-122 | |
 
@@ -117,7 +119,9 @@ l'historique git.
 - **Les personas imposés font apparaître des besoins absents du backlog** :
   portail en 800×600 et relevé PDF pour Margeritte, sessions actives, séries,
   badges et statistiques pour Alex. Ils sont notés *à créer*. Le succès de mise
-  en route d'Alex est devenu l'US de l'équipe (LUN-128).
+  en route d'Alex, d'abord l'US de l'équipe, est confié au stage 2 (LUN-128) ;
+  les transmissions de la journée, besoin de Yasmine, en sont la seconde US
+  (LUN-146).
 - **Les personas 3 et 4 restent ouverts** : notifications aux parents, rôle de
   responsable de crèche.
 
@@ -132,7 +136,7 @@ l'historique git.
 | Chaque version n'a qu'un nom | Chaque version a un objectif et des critères de réussite |
 | Un seul repère (✅ = API faite), posé à tort sur la fiche de ménage | Trois repères tirés de Jira et du code : API, écrans, tickets faits |
 | Socle technique dans la carte | Socle dans une bande de fondations, avec la gestion des erreurs |
-| — | Les deux US fullstack du TD ont leur ligne : LUN-124 (stagiaire), LUN-128 (équipe) |
+| — | Les US fullstack du TD ont leur ligne : LUN-124 (stage 1) ; LUN-128, d'abord l'US de l'équipe, et LUN-146 (stage 2) |
 
 ## Actions Jira qui découlent de la carte
 
