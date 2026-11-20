@@ -3,8 +3,9 @@ import { History, RefreshCw } from 'lucide-react'
 
 import { $api } from '@/api/client'
 import { Button } from '@/components/ui/button'
+import { AddPresence, CorrectPresence } from '@/features/attendance/corrections'
 import { DayBoard } from '@/features/attendance/day-board'
-import { formatTime } from '@/lib/dates'
+import { formatTime, todayInParis } from '@/lib/dates'
 import { retryFailed } from '@/lib/retry-failed'
 
 /** Présences du jour d'une crèche, pour la direction et les employés qui y ont accès. */
@@ -21,6 +22,9 @@ const REFRESH_MS = 30_000
 
 function PresencesPage() {
   const { nurseryId } = Route.useParams()
+  const { session } = Route.useRouteContext()
+  const manager = session.role === 'owner'
+  const today = todayInParis()
   const params = { params: { path: { nursery_id: nurseryId } } }
   const nursery = $api.useQuery('get', '/api/v2/nurseries/{nursery_id}', params)
   const presences = $api.useQuery('get', '/api/v2/nurseries/{nursery_id}/attendance', params, {
@@ -33,9 +37,14 @@ function PresencesPage() {
         <Link to="/accueil" className="text-sm text-primary underline underline-offset-4">
           Vos crèches
         </Link>
-        <h1 className="text-2xl font-semibold">
-          Présences du jour{nursery.data === undefined ? '' : ` · ${nursery.data.name}`}
-        </h1>
+        <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-3">
+          <h1 className="text-2xl font-semibold">
+            Présences du jour{nursery.data === undefined ? '' : ` · ${nursery.data.name}`}
+          </h1>
+          {manager && nursery.isSuccess && presences.isSuccess && (
+            <AddPresence nurseryId={nurseryId} today={today} defaultDay={today} />
+          )}
+        </div>
       </div>
       <div className="flex flex-wrap items-center gap-3 text-sm text-muted-foreground">
         {presences.dataUpdatedAt > 0 && (
@@ -64,6 +73,7 @@ function PresencesPage() {
         pending={presences.isPending}
         error={presences.error ?? nursery.error}
         onRetry={retryFailed(presences, nursery)}
+        action={manager ? (presence) => <CorrectPresence nurseryId={nurseryId} presence={presence} /> : undefined}
       />
     </div>
   )

@@ -95,13 +95,15 @@ export function CorrectionForm({
       }
     >
       <p className="text-sm text-muted-foreground">
-        {presence.child_name}, {formatLongDay(presence.day)}. Heures de Paris.
+        <span className="font-medium text-foreground">{presence.child_name}</span> · {formatLongDay(presence.day)}.
+        Heures de Paris.
       </p>
       <FormError message={unchanged ? 'La correction ne change rien.' : error} />
-      <div className="grid gap-4 sm:grid-cols-2">
+      <div className="grid items-start gap-4 sm:grid-cols-2">
         <Field label="Arrivée" type="time" error={errors.arrival?.message} {...form.register('arrival')} />
         <Field
-          label="Départ (vide si l'enfant est encore là)"
+          label="Départ"
+          hint="Laissez vide si l’enfant est encore là."
           type="time"
           error={errors.departure?.message}
           {...form.register('departure')}
@@ -123,7 +125,7 @@ export function CorrectionForm({
       </SelectField>
       <SelectField
         label="Parti·e avec"
-        hint="Seules les personnes autorisées à venir chercher l'enfant peuvent être choisies."
+        hint="Choisissez une personne autorisée."
         error={errors.pickedUpBy?.message}
         disabled={guardians === undefined}
         {...form.register('pickedUpBy')}
@@ -137,13 +139,8 @@ export function CorrectionForm({
           </option>
         ))}
       </SelectField>
-      <TextareaField
-        label="Motif de la correction"
-        hint="Gardé dans le journal des corrections, avec votre nom et l'heure."
-        error={errors.reason?.message}
-        {...form.register('reason')}
-      />
-      <div className="flex flex-wrap justify-between gap-3">
+      <TextareaField label="Motif de la correction" error={errors.reason?.message} {...form.register('reason')} />
+      <div className="flex flex-wrap gap-3">
         <Button type="submit" className="h-11" disabled={pending}>
           {pending ? 'Enregistrement…' : 'Enregistrer la correction'}
         </Button>

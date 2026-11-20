@@ -85,10 +85,10 @@ export const ErreursParChamp: Story = {
   args: { error: 'Certains champs sont invalides.', fieldErrors: { departed_at: 'Date et heure invalides' } },
   play: async ({ canvas }) => {
     await expect(canvas.getByRole('alert')).toHaveTextContent('Certains champs sont invalides.')
-    const field = canvas.getByLabelText("Départ (vide si l'enfant est encore là)")
+    const field = canvas.getByLabelText('Départ')
     await expect(await canvas.findByText('Date et heure invalides')).toBeVisible()
     await expect(field).toHaveAttribute('aria-invalid', 'true')
-    await expect(field).toHaveAccessibleDescription('Date et heure invalides')
+    await expect(field).toHaveAccessibleDescription('Laissez vide si l’enfant est encore là. Date et heure invalides')
   },
 }
 

@@ -17,7 +17,7 @@ type PresenceTableProps = {
    */
   today?: string
   /** Action sur une ligne (« Corriger », pour la direction) : ajoute une colonne. */
-  action?: (presence: Presence) => ReactNode
+  action?: ((presence: Presence) => ReactNode) | undefined
 }
 
 /** Une ligne par arrivée, avec qui a pointé et qui a amené ou cherché l'enfant (traçabilité du pointage). */

@@ -65,7 +65,7 @@ function DialogContent({ className, children }: { className?: string; children: 
         if (open) close()
       }}
       className={cn(
-        'm-auto max-h-[calc(100dvh-2rem)] w-[calc(100%-2rem)] max-w-lg overflow-y-auto rounded-lg border bg-background p-6 text-foreground shadow-lg backdrop:bg-black/50',
+        'm-auto max-h-[calc(100dvh-2rem)] w-[calc(100%-2rem)] max-w-lg overflow-y-auto rounded-lg border bg-background p-6 text-start text-foreground shadow-lg backdrop:bg-black/50',
         className,
       )}
     >
