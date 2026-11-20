@@ -1,5 +1,3 @@
-import '@/styles/index.css'
-
 import { createMemoryHistory } from '@tanstack/react-router'
 import { http, HttpResponse } from 'msw'
 import { describe, expect } from 'vitest'
