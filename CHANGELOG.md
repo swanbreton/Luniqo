@@ -9,6 +9,8 @@ Chaque ligne cite son ticket Jira `LUN-<n>`.
 
 ### Ajouté
 
+- API : mise en route d'une crèche (`GET /api/v2/nurseries/{id}/onboarding`), réservée à sa direction : succès « personnel » (un employé actif a accès), « tablette » (une tablette ni révoquée ni expirée) et « premier pointage », chacun daté de sa plus ancienne preuve encore valable et perdu si sa condition disparaît (LUN-128).
+- Front v2 : page « Mise en route » d'une crèche pour la direction, depuis sa carte sur l'accueil : progression, date de chaque succès, et pour chaque succès manquant ce qu'il faut faire, avec un lien vers les tablettes ou les présences du jour ; chargement, erreur avec « Réessayer », lisible en 800 × 600 (LUN-128).
 - Front v2 : depuis les présences du jour, la direction peut corriger un pointage ou ajouter une présence oubliée, avec un motif obligatoire et actualisation immédiate du tableau après enregistrement (LUN-122).
 - API : résumé de chaque crèche (`GET /api/v2/nurseries/{id}/summary`) avec les enfants accueillis (actifs et en adaptation), présents du jour à Paris et employés actifs ayant accès ; mêmes contrôles d'accès que la lecture d'une crèche (LUN-124).
 - Front v2 : chaque carte de l'accueil affiche les enfants accueillis, présents et le personnel de la crèche, avec actualisation toutes les 30 secondes ; chargement, valeurs nulles et erreur locale avec possibilité de réessayer, sans bloquer les autres cartes ni leurs liens ; présentation adaptée à 800 × 600 (LUN-124).
