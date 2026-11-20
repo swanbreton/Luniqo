@@ -1,0 +1,16 @@
+# Fins de ligne : LF dans le dépôt et dans chaque copie de travail, Windows compris
+# (LUN-145). Un clone en CRLF (core.autocrlf=true) cassait les scripts d'entrée et
+# les secrets des images Docker. Un clone fait avant ce fichier se remet à niveau
+# par : git rm -r --cached -q . && git reset --hard (voir ONBOARDING.md, § 2).
+* text=auto eol=lf
+
+# Binaires : jamais convertis.
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.webp binary
+*.ico binary
+*.gz binary
+
+# Export pour l'import dans Jira, gardé tel qu'il a été importé (CRLF).
+docs/projet/jira-import.csv -text
