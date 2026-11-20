@@ -100,10 +100,11 @@ export function AdditionForm({
         error={errors.day?.message}
         {...form.register('day')}
       />
-      <div className="grid gap-4 sm:grid-cols-2">
+      <div className="grid items-start gap-4 sm:grid-cols-2">
         <Field label="Arrivée" type="time" error={errors.arrival?.message} {...form.register('arrival')} />
         <Field
-          label="Départ (vide si l'enfant est encore là)"
+          label="Départ"
+          hint="Laissez vide si l’enfant est encore là."
           type="time"
           error={errors.departure?.message}
           {...form.register('departure')}
@@ -124,7 +125,7 @@ export function AdditionForm({
       </SelectField>
       <SelectField
         label="Parti·e avec"
-        hint="Seules les personnes autorisées à venir chercher l'enfant peuvent être choisies."
+        hint="Choisissez une personne autorisée."
         disabled={guardians === undefined}
         error={errors.pickedUpBy?.message}
         {...form.register('pickedUpBy')}
@@ -139,7 +140,7 @@ export function AdditionForm({
       </SelectField>
       <TextareaField
         label="Motif de l'ajout"
-        hint="Gardé dans le journal des corrections, avec votre nom et l'heure."
+        hint="Le journal conserve le motif, votre nom et l’heure."
         error={errors.reason?.message}
         {...form.register('reason')}
       />

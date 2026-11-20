@@ -1,9 +1,19 @@
 import { createMemoryHistory } from '@tanstack/react-router'
 import { http, HttpResponse } from 'msw'
-import { describe, expect, vi } from 'vitest'
+import { assert, describe, expect, vi } from 'vitest'
 import { render } from 'vitest-browser-react'
 
-import { dayAttendance, employee, nursery, nurserySummary } from '../../test/fixtures'
+import { parisInstant, todayInParis } from '@/lib/dates'
+
+import {
+  dayAttendance,
+  emmaDetail,
+  employee,
+  nursery,
+  nurseryChildren,
+  nurserySummary,
+  owner,
+} from '../../test/fixtures'
 import { apiErrors, networkError, reply } from '../../test/handlers/errors'
 import { test } from '../../test/msw'
 import { App, createApp } from './app'
@@ -11,6 +21,12 @@ import { App, createApp } from './app'
 async function start(url: string) {
   const app = createApp(createMemoryHistory({ initialEntries: [url] }))
   return { app, screen: await render(<App instance={app} />) }
+}
+
+function emmaPresence(day: string, arrival: string) {
+  const presence = dayAttendance.find((item) => item.child_id === emmaDetail.id)
+  assert(presence)
+  return { ...presence, day, arrived_at: parisInstant(day, arrival) }
 }
 
 describe('présences du jour', () => {
@@ -30,6 +46,74 @@ describe('présences du jour', () => {
     await expect.element(screen.getByRole('heading', { name: 'Présences du jour · Crèche Démo Nord' })).toBeVisible()
     await expect.element(screen.getByRole('row', { name: /Emma Lambert/ })).toBeVisible()
     await expect.element(screen.getByText(/^Mis à jour à \d{2}:\d{2}$/)).toBeVisible()
+    expect(screen.getByRole('button', { name: /^Corriger la présence/ }).elements()).toHaveLength(0)
+    expect(screen.getByRole('button', { name: 'Ajouter une présence oubliée' }).elements()).toHaveLength(0)
+  })
+
+  test('direction : la correction est visible dans le tableau sans actualisation manuelle', async ({ worker }) => {
+    const today = todayInParis()
+    const base = `/api/v2/nurseries/${nursery.id}`
+    let presence = emmaPresence(today, '08:45')
+    worker.use(
+      http.get('/api/v2/auth/me', () => HttpResponse.json({ ...owner, mfa: 'verified' })),
+      http.get(base, () => HttpResponse.json(nursery)),
+      http.get(`${base}/attendance`, () => HttpResponse.json([presence])),
+      http.get(`${base}/children/${emmaDetail.id}`, () => HttpResponse.json(emmaDetail)),
+      http.patch(`${base}/attendance/${presence.id}`, async ({ request }) => {
+        expect(await request.json()).toEqual({
+          arrived_at: parisInstant(today, '08:15'),
+          reason: 'Arrivée saisie en retard',
+        })
+        presence = { ...presence, arrived_at: parisInstant(today, '08:15'), corrected: true }
+        return HttpResponse.json(presence)
+      }),
+    )
+    const { screen } = await start(`/creches/${nursery.id}/presences`)
+    await screen.getByRole('button', { name: 'Corriger la présence de Emma Lambert, arrivée à 08:45' }).click()
+    const dialog = screen.getByRole('dialog', { name: 'Corriger la présence' })
+    await dialog.getByLabelText('Arrivée').fill('08:15')
+    await dialog.getByLabelText('Motif de la correction').fill('Arrivée saisie en retard')
+    await dialog.getByRole('button', { name: 'Enregistrer la correction' }).click()
+
+    await expect.element(screen.getByRole('dialog')).not.toBeInTheDocument()
+    const row = screen.getByRole('row', { name: /Emma Lambert/ })
+    await expect.element(row.getByText('08:15', { exact: true })).toBeVisible()
+    await expect.element(row.getByText('Corrigée', { exact: true })).toBeVisible()
+  })
+
+  test('direction : ajout depuis un tableau vide, avec le jour prérempli', async ({ worker }) => {
+    const today = todayInParis()
+    const base = `/api/v2/nurseries/${nursery.id}`
+    const presence = { ...emmaPresence(today, '08:15'), corrected: true }
+    let added = false
+    worker.use(
+      http.get('/api/v2/auth/me', () => HttpResponse.json({ ...owner, mfa: 'verified' })),
+      http.get(base, () => HttpResponse.json(nursery)),
+      http.get(`${base}/attendance`, () => HttpResponse.json(added ? [presence] : [])),
+      http.get(`${base}/children`, () => HttpResponse.json(nurseryChildren)),
+      http.get(`${base}/children/${emmaDetail.id}`, () => HttpResponse.json(emmaDetail)),
+      http.post(`${base}/attendance`, async ({ request }) => {
+        expect(await request.json()).toMatchObject({
+          child_id: emmaDetail.id,
+          arrived_at: presence.arrived_at,
+          reason: 'Arrivée oubliée sur la tablette',
+        })
+        added = true
+        return HttpResponse.json(presence, { status: 201 })
+      }),
+    )
+    const { screen } = await start(`/creches/${nursery.id}/presences`)
+    await expect.element(screen.getByText("Aucune arrivée pointée aujourd'hui.")).toBeVisible()
+    await screen.getByRole('button', { name: 'Ajouter une présence oubliée' }).click()
+    const dialog = screen.getByRole('dialog', { name: 'Ajouter une présence oubliée' })
+    await expect.element(dialog.getByLabelText('Jour')).toHaveValue(today)
+    await dialog.getByLabelText('Enfant').selectOptions('Emma Lambert')
+    await dialog.getByLabelText('Arrivée').fill('08:15')
+    await dialog.getByLabelText("Motif de l'ajout").fill('Arrivée oubliée sur la tablette')
+    await dialog.getByRole('button', { name: 'Ajouter la présence' }).click()
+
+    await expect.element(screen.getByRole('dialog')).not.toBeInTheDocument()
+    await expect.element(screen.getByRole('row', { name: /Emma Lambert/ })).toBeVisible()
   })
 
   test("refus de l'API (crèche d'une autre entreprise) : message affiché", async ({ worker }) => {

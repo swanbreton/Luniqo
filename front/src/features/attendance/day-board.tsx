@@ -1,3 +1,5 @@
+import type { ReactNode } from 'react'
+
 import type { Schemas } from '@/api/types'
 import { ActionError } from '@/components/action-error'
 
@@ -12,13 +14,14 @@ type DayBoardProps = {
   error: unknown
   /** Nouvel essai de la lecture (`refetch`), proposé sur une panne du serveur ou du réseau. */
   onRetry?: (() => void) | undefined
+  action?: ((presence: Presence) => ReactNode) | undefined
 }
 
 /**
  * Présences du jour d'une crèche : chiffres, puis une ligne par arrivée, avec
  * qui a pointé et qui a amené ou cherché l'enfant (traçabilité du pointage).
  */
-export function DayBoard({ presences, pending, error, onRetry }: DayBoardProps) {
+export function DayBoard({ presences, pending, error, onRetry, action }: DayBoardProps) {
   if (pending) return <p className="text-muted-foreground">Chargement des présences…</p>
   if (error !== null && error !== undefined) return <ActionError error={error} onRetry={onRetry} />
   if (presences === undefined || presences.length === 0) {
@@ -33,7 +36,7 @@ export function DayBoard({ presences, pending, error, onRetry }: DayBoardProps) 
         <Figure label="Arrivées" value={summary.arrivals} />
         <Figure label="Départs" value={summary.departures} />
       </dl>
-      <PresenceTable presences={presences} caption="Présences du jour, par heure d'arrivée" />
+      <PresenceTable presences={presences} caption="Présences du jour, par heure d'arrivée" action={action} />
     </div>
   )
 }

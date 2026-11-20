@@ -201,6 +201,8 @@ test('présences du jour : le pointage fait sur la tablette, vu depuis le web', 
   await expect(leo).toContainText('parti·e avec Alice G.')
   await expect(leo).toContainText('pointé par Lucas B.')
   await expect(page.getByText('Départs', { exact: true }).locator('xpath=following-sibling::dd')).toHaveText('1')
+  await expect(leo.getByRole('button', { name: /^Corriger la présence/ })).toHaveCount(0)
+  await expect(page.getByRole('button', { name: 'Ajouter une présence oubliée' })).toHaveCount(0)
   expect(errors).toEqual([])
 })
 
@@ -230,7 +232,9 @@ test("historique des présences : la journée de Léo, puis l'export CSV téléc
   expect(errors).toEqual([])
 })
 
-test('direction : présence oubliée ajoutée, corrigée puis retirée, chaque étape au journal', async ({ page }) => {
+test('direction : présence oubliée ajoutée, corrigée puis retirée, chaque étape au journal', async ({
+  page,
+}, testInfo) => {
   const errors = watchConsole(page)
   const backupCode = backupCodes.shift()
   test.skip(backupCode === undefined, "Codes de secours absents : le parcours d'activation doit passer avant.")
@@ -249,6 +253,9 @@ test('direction : présence oubliée ajoutée, corrigée puis retirée, chaque �
   )
   await page.getByRole('button', { name: 'Ajouter une présence oubliée' }).click()
   const addition = page.getByRole('dialog', { name: 'Ajouter une présence oubliée' })
+  await expect(addition.getByLabel('Départ', { exact: true })).toHaveAccessibleDescription(
+    'Laissez vide si l’enfant est encore là.',
+  )
   await addition.getByLabel('Enfant', { exact: true }).selectOption({ label: 'Emma Lambert' })
   await expect(addition.getByRole('option', { name: 'Sophie Lambert' }).first()).toBeAttached()
   await addition.getByLabel('Jour').fill(yesterday)
@@ -284,5 +291,23 @@ test('direction : présence oubliée ajoutée, corrigée puis retirée, chaque �
   await expect(emma).toHaveCount(0)
   await expect(page.getByText(/^Présence retirée · Emma Lambert/)).toBeVisible()
   await expect(page.getByRole('listitem').filter({ hasText: /^Présence/ })).toHaveCount(3)
+
+  await page.setViewportSize({ width: 800, height: 600 })
+  await page.getByRole('link', { name: 'Présences du jour' }).click()
+  const leo = page.getByRole('row', { name: /Léo Garnier/ })
+  await expect(leo.getByRole('button', { name: /^Corriger la présence/ })).toBeVisible()
+  await page.screenshot({ path: testInfo.outputPath('presences-du-jour.png'), fullPage: true })
+  await leo.getByRole('button', { name: /^Corriger la présence/ }).click()
+  await expect(correction).toHaveCSS('text-align', 'start')
+  const arrivalBox = await correction.getByLabel('Arrivée', { exact: true }).boundingBox()
+  const departureBox = await correction.getByLabel('Départ', { exact: true }).boundingBox()
+  expect(arrivalBox).not.toBeNull()
+  expect(departureBox?.y).toBe(arrivalBox?.y)
+  await correction.getByLabel('Amené·e par').selectOption({ label: 'Alice Garnier' })
+  await correction.getByLabel('Motif de la correction').fill('Personne ayant amené Léo précisée après le pointage')
+  await correction.getByRole('button', { name: 'Enregistrer la correction' }).click()
+  await expect(correction).toBeHidden()
+  await expect(leo).toContainText('amené·e par Alice G.')
+  await expect(leo).toContainText('Corrigée')
   expect(errors).toEqual([])
 })

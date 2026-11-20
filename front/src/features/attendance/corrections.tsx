@@ -70,7 +70,7 @@ export function CorrectPresence({ nurseryId, presence }: CorrectPresenceProps) {
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Corriger la présence</DialogTitle>
-          <DialogDescription>Le motif et votre nom sont gardés dans le journal des corrections.</DialogDescription>
+          <DialogDescription>Le journal des corrections conserve le motif, votre nom et l’heure.</DialogDescription>
         </DialogHeader>
         <CorrectionForm
           presence={presence}
@@ -131,7 +131,7 @@ export function AddPresence({ nurseryId, today, defaultDay }: AddPresenceProps) 
         <DialogHeader>
           <DialogTitle>Ajouter une présence oubliée</DialogTitle>
           <DialogDescription>
-            Pour une arrivée jamais pointée sur la tablette, sur les 31 derniers jours. Heures de Paris.
+            Vous pouvez ajouter une arrivée des 31 derniers jours. Les heures sont celles de Paris.
           </DialogDescription>
         </DialogHeader>
         <AdditionForm
