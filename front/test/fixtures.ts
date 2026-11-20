@@ -36,6 +36,15 @@ export const nursery: Schemas['NurseryOut'] = {
 
 export const nurserySummary: Schemas['NurserySummary'] = { children: 12, present: 8, staff: 4 }
 
+/** Mise en route de la Crèche Démo Nord : 2 succès sur 3, sans pointage (LUN-128). */
+export const nurseryOnboarding: Schemas['NurseryOnboarding'] = {
+  steps: [
+    { milestone: 'staff', achieved: true, achieved_at: '2026-11-03T09:00:00Z' },
+    { milestone: 'tablet', achieved: true, achieved_at: '2026-11-04T08:30:00Z' },
+    { milestone: 'first_attendance', achieved: false, achieved_at: null },
+  ],
+}
+
 /** Tablette de la Crèche Démo Nord, vue depuis la tablette elle-même (`GET /api/v2/tablet`). */
 export const tabletInfo: Schemas['TabletInfo'] = {
   tablet_id: '00000000-0000-4000-8000-0000000000a1',
